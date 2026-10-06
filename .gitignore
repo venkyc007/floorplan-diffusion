@@ -1,0 +1,30 @@
+# Datasets (too big for git) — keep only the placeholder file
+data/*
+!data/.gitkeep
+
+# Training outputs: checkpoints, logs, results — but keep the figures
+# directly in outputs/ (e.g. samples.png) so they can go in the report
+outputs/*
+!outputs/.gitkeep
+!outputs/*.png
+
+# Model checkpoints / weights anywhere in the project
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+checkpoints/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Gradio temporary files
+.gradio/
+flagged/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,28 @@
+# Python packages this project needs.
+# Install with:  pip install -r requirements.txt
+# (On Kaggle, torch/torchvision are already installed — skip them there.)
+
+# --- Deep learning ---
+torch>=2.2            # neural networks (CPU build locally, GPU on Kaggle)
+torchvision>=0.17     # image utilities for PyTorch
+diffusers>=0.27       # ready-made diffusion building blocks (UNet, noise schedulers)
+
+# --- Data handling ---
+numpy>=1.26           # arrays / math
+pandas>=2.1           # tables of plan info, metrics and results
+shapely>=2.0          # geometry (polygons/lines of walls, rooms, doors)
+opencv-python-headless>=4.9  # drawing geometry into 128x128 images, image ops
+scikit-image>=0.22    # connected components, morphology (for structural metrics)
+scipy>=1.11           # scientific helpers (e.g. matching components)
+pillow>=10.0          # loading/saving images
+
+# --- Config, logging, utilities ---
+pyyaml>=6.0           # reading configs/*.yaml
+tqdm>=4.66            # progress bars
+
+# --- Visualisation & interface ---
+matplotlib>=3.8       # plots and figures for the report
+gradio>=4.0           # the web demo in app/
+
+# --- Notebooks ---
+ipykernel>=6.29       # lets Jupyter / VS Code notebooks use this conda env
