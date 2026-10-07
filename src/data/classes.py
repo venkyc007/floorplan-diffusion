@@ -24,9 +24,10 @@ RESPLAN_FIELDS = {
 }
 
 # Fields that decide how a plan is scaled into the 128x128 frame: the
-# building itself (incl. balconies). Garden/land/parking are left out so a
-# big garden doesn't shrink the apartment; they are cut off at the frame edge.
-EXTENT_FIELDS = ["wall", "door", "front_door", "window", "balcony"] + RESPLAN_FIELDS[ROOM]
+# building's structure only (walls + doors + windows). Everything else
+# (balconies, outside stairs, garden, land, parking) is cropped where it
+# extends beyond the frame, so it can never shrink the building.
+EXTENT_FIELDS = ["wall", "door", "front_door", "window"]
 
 # Order in which classes are painted. Later ones are painted on top, so if two
 # shapes cover the same pixel, the later class wins: outdoor is the bottom

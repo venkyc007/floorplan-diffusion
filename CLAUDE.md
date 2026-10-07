@@ -34,7 +34,7 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - Channel order is defined once in `src/data/classes.py` — always import it from there.
 - Channels are mutually exclusive (one-hot: exactly one class per pixel). Paint order outdoor → room → wall → window → door, so doors/windows are drawn on top of walls.
 - ResPlan mapping: door = door + front_door; room = enclosed indoor rooms only (living, bedroom, bathroom, kitchen, storage, stair); outdoor = balcony, garden, land (yards/setbacks/light wells), parking, pool (ResPlan has no terrace class); inner/neighbor → background.
-- **Normalized per plan**: the building (walls, openings, rooms, balconies — not garden/land) is scaled so its longer side is 120 px (4 px padding), aspect ratio kept, centred; outdoor beyond the frame is clipped. Walls/doors are only ~2 px thick; doors/windows median ~27–30 px area, <0.1% under 6 px.
+- **Framing rule — normalized per plan on the building's structure**: the bounding box of walls + doors (incl. front door) + windows is scaled so its longer side is 120 px (4 px margin each side), aspect ratio kept, centred. Nothing else affects the frame; balconies, outside stairs, garden/land/parking that extend beyond the 128×128 image are cropped. (Before 2026-10-07 balconies/rooms counted too, so a protruding balcony or outside stair shrank the building.) See `docs/data_notes.md`. Walls/doors are only ~2 px thick; doors/windows median ~27–30 px area, <0.1% under 6 px.
 - **Real scale is preserved in metadata.csv**: `area_m2` (real area from the listing), `px_per_unit`, `metres_per_pixel` (= sqrt(area_m2 / (inner+wall area)) / px_per_unit), `wall_thickness_m`, and `scale_ok` (False for the 67 plans whose implied wall thickness is outside 0.10–0.40 m, i.e. a bad `area` value).
 
 ## Structural rules (for constraints and metrics)
@@ -63,6 +63,7 @@ src/        Python source code (the reusable logic: data, models, constraints, e
 configs/    YAML config files (hyperparameters, paths, experiment settings)
 notebooks/  Jupyter notebooks for exploration and Kaggle training runs
 app/        Gradio web interface
+docs/       Documentation (docs/data_notes.md = data pipeline decisions + numbers)
 data/       Datasets (git-ignored)
 outputs/    Checkpoints, logs, figures, results (git-ignored except *.png figures)
 ```

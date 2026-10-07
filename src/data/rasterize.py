@@ -1,9 +1,11 @@
 """Turning one vector floor plan into a 128x128 image ("rasterizing").
 
 Steps for one plan:
-  1. Find the bounding box of the building (walls, doors, rooms, balconies).
+  1. Find the bounding box of the building's structure (walls + doors +
+     windows).
   2. Scale it so the LONGER side fills the image minus the padding, keeping
-     the aspect ratio, and centre it.
+     the aspect ratio, and centre it. Anything outside the image (balconies,
+     outside stairs, garden, land ...) is simply cropped.
   3. Paint each class in PAINT_ORDER into a "label map": a 128x128 array where
      every pixel holds one class number (0=wall, 1=door, ... 5=background).
   4. Convert the label map to 6 channels ("one-hot"): channel c is 1 where
@@ -23,7 +25,8 @@ SHIFT = 4
 
 
 def plan_bounds(plan):
-    """Smallest box (xmin, ymin, xmax, ymax) containing the building."""
+    """Smallest box (xmin, ymin, xmax, ymax) containing the building's
+    structure (EXTENT_FIELDS: walls, doors, windows)."""
     boxes = [poly.bounds
              for field in EXTENT_FIELDS
              for poly in get_polygons(plan, field)]
