@@ -74,3 +74,41 @@ Outdoor anomaly scan on the final 15,558 plans (pixel heuristics; they mostly fl
 `data/processed/` (git-ignored): `train/val/test.npz` (`masks` (N,6,128,128) uint8, `plan_ids`), `all_labels.npz` (label maps of all 17,000 plans, for checks), `metadata.csv` (all plans; `split` ∈ train/val/test/removed_duplicate/excluded_augmented), `similar_pairs.csv`.
 
 Figures in `outputs/`: `samples.png`, `opening_sizes.png`, `duplicate_pairs.png`, `anomalies.png`, `raw_vs_processed.png`.
+
+## Corruptions (Day 2)
+
+Task = **mask-given inpainting**: the model gets the plan with a region blanked out plus a mask of that region, and redraws what is inside. Code: `src/data/corruptions.py`, settings: `configs/corruption.yaml`, every choice explained in `docs/decisions.md`.
+
+| Type | What is removed | Mask |
+|---|---|---|
+| door / window | one 4-connected door / window component | bounding box + random 2–6 px per side |
+| wall | one straight wall segment, 8–40 px long, between corners/junctions/openings | bounding box + random 2–6 px per side |
+| room | one room component (≥ 20 px, bounding box ≤ 50% of the building) + walls/doors/windows within 3 px | bounding box + random 2–6 px per side |
+| region | building pixels inside a random rectangle (sides 8–64 px, centred on a building pixel) | the rectangle |
+
+The mask is never the exact shape of what was removed, so it hints where to look but not what to draw.
+
+**Model input** (7 × 128 × 128): the 6 one-hot channels with every masked pixel set to 0, plus the mask as channel 7. **Target**: the clean 6-channel one-hot plan.
+
+**Metadata per corruption**: `type`, `location` (exterior if the removed pixels touch outdoor/background, else interior), `position` (mask-centre distance from the building centre ÷ building radius; edge if ≥ 0.55), `size_bin` (mask area as % of building area: small < 2.7% ≤ medium < 7.7% ≤ large; edges = tertiles over 1,500 train plans × 5 types), `mask_area`, `mask_pct`, `center_dist`, `n_components`.
+
+## Training dataset
+
+`src/data/dataset.py` → `CorruptionDataset(train.npz)`: every request draws a random rotation/flip (8 variants) and then a fresh corruption — 80% one part (type probabilities 0.2 each), 20% 2–3 parts at once (union of masks). Returns float tensors `(input 7×128×128, target 6×128×128, mask 1×128×128)`. Speed (Windows laptop): ~1,060 samples/s in one process, ~1,210 samples/s with 4 DataLoader workers.
+
+## Benchmarks
+
+`python -m src.data.make_benchmark` → `data/benchmarks/{test,val}_benchmark.npz` + `.csv`: for every plan, one corruption of each type with seed (2026, plan id, type). Arrays: `inputs` (corrupted label maps, 255 = masked), `targets`, `masks`, `plan_ids`; `corruptions.to_model_input()` gives the 7-channel input.
+
+| | test | val |
+|---|---|---|
+| samples | 7,774 | 7,772 |
+| door / window / wall / room / region | 1,556 / 1,551 / 1,556 / 1,555 / 1,556 | 1,556 / 1,549 / 1,556 / 1,555 / 1,556 |
+| skipped (nothing to remove) | window 5, room 1 | window 7, room 1 |
+| exterior / interior | 5,731 / 2,043 | 5,743 / 2,029 |
+| center / edge | 4,004 / 3,770 | 3,985 / 3,787 |
+| small / medium / large | 2,659 / 2,507 / 2,608 | 2,651 / 2,536 / 2,585 |
+
+Per type (test), the categories are uneven by nature: windows are 99% exterior (they sit in outer walls) and rooms 97% exterior (most rooms have an outer wall); doors are mostly small, rooms almost all large. Breakdowns by location therefore mostly reflect doors, walls and regions.
+
+Evaluation: `src/eval/metrics.py` (definitions in `docs/decisions.md`; strict + tolerant IoU, enclosed-region room count), baselines `python -m src.eval.baselines` → `outputs/baseline_results.md`.

@@ -24,5 +24,8 @@ tqdm>=4.66            # progress bars
 matplotlib>=3.8       # plots and figures for the report
 gradio>=4.0           # the web demo in app/
 
+# --- Testing ---
+pytest>=8              # runs the unit tests in tests/
+
 # --- Notebooks ---
 ipykernel>=6.29       # lets Jupyter / VS Code notebooks use this conda env

@@ -37,6 +37,18 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - **Framing rule — normalized per plan on the building's structure**: the bounding box of walls + doors (incl. front door) + windows is scaled so its longer side is 120 px (4 px margin each side), aspect ratio kept, centred. Nothing else affects the frame; balconies, outside stairs, garden/land/parking that extend beyond the 128×128 image are cropped. (Before 2026-10-07 balconies/rooms counted too, so a protruding balcony or outside stair shrank the building.) See `docs/data_notes.md`. Walls/doors are only ~2 px thick; doors/windows median ~27–30 px area, <0.1% under 6 px.
 - **Real scale is preserved in metadata.csv**: `area_m2` (real area from the listing), `px_per_unit`, `metres_per_pixel` (= sqrt(area_m2 / (inner+wall area)) / px_per_unit), `wall_thickness_m`, and `scale_ok` (False for the 67 plans whose implied wall thickness is outside 0.10–0.40 m, i.e. a bad `area` value).
 
+## Task design (Day 2): mask-given inpainting
+
+- The model gets the corrupted plan + a mask of the region to repair and redraws what is inside; everything outside the mask is known.
+- **Model input = 7 channels**: the 6 one-hot channels with masked pixels all zero + the mask as channel 7. **Target = clean 6-channel one-hot.** `src.data.corruptions.to_model_input(corrupted, mask)` builds the input; in corrupted label maps masked pixels are 255 (`UNKNOWN`).
+- **Mask rule (no leaking the answer)**: never the component's exact shape — its bounding box + random 2–6 px padding per side (independent), clipped to the image. Region type: the random rectangle itself.
+- **Corruption types** (`src/data/corruptions.py`, settings `configs/corruption.yaml`): door, window (one component), wall (one straight segment 8–40 px between corners/junctions/openings), room (one room component ≤ 50% of the building + its walls/openings within 3 px), region (random rectangle, sides 8–64 px). Metadata: type, location (exterior if removed pixels touch outdoor/background), position (center/edge, cutoff 0.55 of building radius), size bin (mask % of building: < 2.7 / < 7.7 / larger), mask area, n_components.
+- **Training data**: `src.data.dataset.CorruptionDataset` — fresh random corruption per request, random rotation/flip first, types 0.2 each, 20% multi-removals (2–3 parts). ~1,000+ samples/s.
+- **Benchmarks** (fixed, seeded): `python -m src.data.make_benchmark` → `data/benchmarks/{test,val}_benchmark.npz/.csv` (one sample per plan × type; 7,774 test / 7,772 val). Use **val for model selection, test only for final numbers**.
+- **Metrics** (`src/eval/metrics.py`, `evaluate_benchmark()`): prediction outside the mask is replaced by the known pixels before scoring. Per-class IoU in the mask (pooled) + per-sample mIoU (absent classes skipped) + pixel accuracy; **tolerant IoU** for wall/door/window (match within 1 px, mask pixels only) + tolerant mIoU, reported next to the strict ones; door/window/room component P/R/F1 (4-conn, Hungarian, IoU ≥ 0.5, TP/FP/FN summed); conn_err (|#boundary components| diff, 8-conn, whole plan); open_on_wall; room_leak (rooms in/next to the mask touching outdoor/background); room_count_err = |#enclosed regions| diff (4-connected non-boundary regions not touching the image edge; a hole in a wall merges rooms, so holes are penalised); alignment (share of boundary pixels in the mask on ≥ 5-px horizontal/vertical runs).
+- Baselines (`src/eval/baselines.py`): do-nothing, nearest-fill, ground truth → `outputs/baseline_results.md`. Tests: `python -m pytest tests/`.
+- Every self-made choice is logged in `docs/decisions.md` — add new ones there.
+
 ## Structural rules (for constraints and metrics)
 
 - **Boundary = wall + door + window together.** Connectivity constraints/metrics treat all three as one boundary; doors and windows fill gaps in walls (they don't overlap them).
@@ -55,6 +67,7 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - Conda env: `floorplan` (Python 3.11). Install deps with `pip install -r requirements.txt`.
 - On Kaggle, PyTorch is preinstalled — don't reinstall it there.
 - Shell is Windows (PowerShell / Git Bash); use `pathlib` for paths so code works on both Windows and Kaggle (Linux).
+- **Always pass `encoding="utf-8"` when reading/writing text files in Python** — Windows defaults to cp1252, which breaks on characters like ×, —, ≥.
 
 ## Project layout
 
@@ -63,7 +76,8 @@ src/        Python source code (the reusable logic: data, models, constraints, e
 configs/    YAML config files (hyperparameters, paths, experiment settings)
 notebooks/  Jupyter notebooks for exploration and Kaggle training runs
 app/        Gradio web interface
-docs/       Documentation (docs/data_notes.md = data pipeline decisions + numbers)
+docs/       Documentation (data_notes.md = data pipeline + benchmarks; decisions.md = every self-made choice)
+tests/      Unit tests (python -m pytest tests/)
 data/       Datasets (git-ignored)
 outputs/    Checkpoints, logs, figures, results (git-ignored except *.png figures)
 ```
