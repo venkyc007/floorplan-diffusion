@@ -13,8 +13,8 @@ Steps for one plan:
 import cv2
 import numpy as np
 
-from src.data.classes import (BACKGROUND, EXTENT_FIELDS, NUM_CLASSES,
-                              PAINT_ORDER, RESPLAN_FIELDS)
+from src.data.classes import (BACKGROUND, EXTENT_FIELDS, NUM_CLASSES, OUTDOOR,
+                              PAINT_ORDER, RESPLAN_FIELDS, ROOM)
 from src.data.resplan import get_polygons
 
 # cv2 draws with integer coordinates. Multiplying by 2**SHIFT first keeps
@@ -76,6 +76,15 @@ def rasterize_plan(plan, size=128, padding=4):
         polygons = [p for field in RESPLAN_FIELDS[cls]
                     for p in get_polygons(plan, field)]
         label[draw_polygons(polygons, size, to_pixels)] = cls
+
+    # Some plans (~0.5%) label open-air areas outside the walls as rooms
+    # (e.g. a 'living' polygon covering the whole plot). 'inner' is the
+    # indoor outline, so room pixels outside it are really outdoor.
+    # (Widened by 1 px so room edges right next to walls are not lost.)
+    inner = draw_polygons(get_polygons(plan, "inner"), size, to_pixels)
+    if inner.any():
+        inner = cv2.dilate(inner.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+        label[(label == ROOM) & ~inner] = OUTDOOR
     return label, scale
 
 

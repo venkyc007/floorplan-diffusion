@@ -9,14 +9,17 @@ Run from the project folder:
 
 What it does:
   1. Load ResPlan and convert every plan to a 128x128 label map.
-  2. Find near-duplicates and remove all but one copy of each.
-  3. Split the remaining plans 80/10/10, keeping similar plans together.
-     (Steps 2-3 are read from the old metadata.csv when --reuse-split is used.)
-  4. Save to data/processed/:
+  2. Leave out ResPlan's "augmented" plans (broken copies, see configs/data.yaml).
+  3. Find near-duplicates; remove each plan that directly matches a kept plan.
+  4. Split the remaining plans 80/10/10, keeping similar plans together.
+     (Steps 2-4 are read from the old metadata.csv when --reuse-split is used.)
+  5. Save to data/processed/:
        train.npz, val.npz, test.npz   arrays of shape (N, 6, 128, 128) + plan ids
+       all_labels.npz                 label maps (N, 128, 128) of ALL plans,
+                                      incl. removed ones (for checks/figures)
        metadata.csv                   one row per plan (including removed ones)
-       similar_pairs.csv              every similar pair found, for checking
-  5. Save a preview of 16 random plans to outputs/samples.png.
+       similar_pairs.csv              every candidate pair with its scores
+  6. Save a preview of 16 random plans to outputs/samples.png.
 """
 
 import argparse
@@ -29,7 +32,8 @@ import pandas as pd
 from shapely.validation import make_valid
 
 from src.data.classes import RESPLAN_FIELDS, DOOR, ROOM, WINDOW
-from src.data.dedup import find_similar_pairs, group_pairs
+from src.data.dedup import (confirm_candidates, find_candidates, group_pairs,
+                            remove_duplicates)
 from src.data.rasterize import rasterize_plan, to_onehot
 from src.data.resplan import get_polygons, load_plans
 from src.data.split import split_groups
@@ -92,18 +96,8 @@ def describe_plan(plan, scale, augmented_ids, resplan_split):
     }
 
 
-def choose_keepers(df, dup_group):
-    """In each duplicate group keep ONE plan: an original (non-augmented)
-    one if possible, then the lowest plan id. Returns the row index of the
-    kept plan for every row (a row that is kept points to itself)."""
-    best_first = df.assign(dup_group=dup_group).sort_values(["is_augmented", "plan_id"])
-    first_in_group = best_first.groupby("dup_group").head(1)
-    keeper_row = pd.Series(first_in_group.index, index=first_in_group["dup_group"])
-    return keeper_row.loc[dup_group].to_numpy()
-
-
 def rasterize_all(plans, cfg):
-    """Steps 1: label maps (N, 128, 128) + a metadata table, one row per plan."""
+    """Step 1: label maps (N, 128, 128) + a metadata table, one row per plan."""
     official = json.load(open(project_path(cfg["paths"]["resplan_split"])))
     augmented_ids = set(official["augmented"])
     resplan_split = {pid: name for name, ids in official.items() for pid in ids}
@@ -120,56 +114,79 @@ def rasterize_all(plans, cfg):
 
 
 def dedup_and_split(labels, df, cfg, out_dir):
-    """Steps 2-3: add 'duplicate_of', 'split' and 'similarity_group' columns."""
+    """Steps 2-4: add 'split', 'duplicate_of', 'duplicate_iou' and
+    'similarity_group' columns. 'split' is train / val / test, or
+    excluded_augmented / removed_duplicate for plans left out."""
     d = cfg["dedup"]
-    pairs = find_similar_pairs(labels, d["grid"], min(d["remove_threshold"], d["group_threshold"]))
-    keeper = choose_keepers(df, group_pairs(len(df), pairs, d["remove_threshold"]))
-    removed = keeper != np.arange(len(df))
-    df["duplicate_of"] = np.where(removed, df["plan_id"].to_numpy()[keeper], -1)
-    print(f"Found {len(pairs)} similar pairs; removing {removed.sum()} near-duplicates "
-          f"({removed[df['is_augmented']].sum()} of them augmented copies)")
+    df["split"] = ""
+    df["duplicate_of"] = -1
+    df["duplicate_iou"] = np.nan
 
+    # ---- 2. Leave out ResPlan's augmented copies
+    if cfg["exclude_augmented"]:
+        df.loc[df.is_augmented, "split"] = "excluded_augmented"
+    pool = np.flatnonzero(df.split == "")          # rows still in play
+    print(f"Excluded {len(df) - len(pool)} augmented plans; {len(pool)} remain")
+
+    # ---- 3. Near-duplicates (positions below are positions within `pool`)
+    candidates = find_candidates(labels[pool], d["grid"], d["candidate_cosine"])
+    print(f"Stage 1: {len(candidates)} candidate pairs (cosine >= {d['candidate_cosine']})")
+    pairs = confirm_candidates(labels[pool], candidates, d["iou_tolerance"])
+    ids = df.plan_id.to_numpy()[pool]
     pd.DataFrame(
-        [(df.plan_id[i], df.plan_id[j], round(s, 4)) for i, j, s in pairs],
-        columns=["plan_id_a", "plan_id_b", "similarity"],
+        [(ids[i], ids[j], round(cos, 4), round(iou, 4)) for i, j, cos, iou in pairs],
+        columns=["plan_id_a", "plan_id_b", "cosine", "iou"],
     ).to_csv(out_dir / "similar_pairs.csv", index=False)
 
-    # Split only the kept plans, in groups of similar plans.
-    kept = np.flatnonzero(~removed)
-    position = {row: k for k, row in enumerate(kept)}  # row in df -> position in kept
-    kept_pairs = [(position[i], position[j], s) for i, j, s in pairs
-                  if i in position and j in position]
-    groups = group_pairs(len(kept), kept_pairs, d["group_threshold"])
-    s = cfg["split"]
-    splits = split_groups(groups, {k: s[k] for k in ("train", "val", "test")}, s["seed"])
+    priority = np.argsort(ids, kind="stable")      # keep the lowest plan id first
+    dup_of, dup_iou = remove_duplicates(len(pool), pairs, d["remove_iou"], priority)
+    removed = dup_of >= 0
+    df.loc[pool[removed], "split"] = "removed_duplicate"
+    df.loc[pool[removed], "duplicate_of"] = ids[dup_of[removed]]
+    df.loc[pool[removed], "duplicate_iou"] = dup_iou[removed].round(4)
+    print(f"Stage 2: removed {removed.sum()} near-duplicates (tolerant IoU >= {d['remove_iou']})")
 
-    df["split"] = "removed_duplicate"
-    df.loc[kept, "split"] = splits
+    # ---- 4. Split the kept plans, in groups of similar plans
+    kept = np.flatnonzero(~removed)                # positions within pool
+    position = {p: k for k, p in enumerate(kept)}  # pool position -> kept position
+    links = [(position[i], position[j]) for i, j, cos, _ in pairs
+             if cos >= d["group_cosine"] and i in position and j in position]
+    groups = group_pairs(len(kept), links)
+    s = cfg["split"]
+    df.loc[pool[kept], "split"] = split_groups(
+        groups, {k: s[k] for k in ("train", "val", "test")}, s["seed"])
     df["similarity_group"] = -1
-    df.loc[kept, "similarity_group"] = df.plan_id.to_numpy()[kept][groups]  # name group by a member id
+    df.loc[pool[kept], "similarity_group"] = ids[kept][groups]  # name group by a member id
     return df
 
 
 def reuse_split(df, out_dir):
-    """Steps 2-3 alternative: copy the columns from the existing metadata.csv."""
+    """Steps 2-4 alternative: copy the columns from the existing metadata.csv."""
     old = pd.read_csv(out_dir / "metadata.csv").set_index("plan_id")
     missing = set(df.plan_id) - set(old.index)
     assert not missing, f"{len(missing)} plans are not in the old metadata.csv"
-    for col in ("duplicate_of", "split", "similarity_group"):
+    for col in ("split", "duplicate_of", "duplicate_iou", "similarity_group"):
         df[col] = df.plan_id.map(old[col]).to_numpy()
-    print("Reused duplicate removal + split from the existing metadata.csv")
+    print("Reused augmented exclusion + duplicate removal + split from metadata.csv")
     return df
 
 
 def check_no_leakage(df, cfg, out_dir):
-    """No similar pair (above the group threshold) may cross splits."""
+    """Checks that (a) no similar pair of kept plans crosses splits, and
+    (b) every removed plan directly matches a KEPT plan (no chains)."""
+    d = cfg["dedup"]
     pairs = pd.read_csv(out_dir / "similar_pairs.csv")
-    pairs = pairs[pairs.similarity >= cfg["dedup"]["group_threshold"]]
     split_of = df.set_index("plan_id")["split"]
-    a, b = pairs.plan_id_a.map(split_of), pairs.plan_id_b.map(split_of)
-    both_kept = (a != "removed_duplicate") & (b != "removed_duplicate")
-    crossing = int((both_kept & (a != b)).sum())
+    in_split = ("train", "val", "test")
+
+    linked = pairs[pairs.cosine >= d["group_cosine"]]
+    a, b = linked.plan_id_a.map(split_of), linked.plan_id_b.map(split_of)
+    crossing = int((a.isin(in_split) & b.isin(in_split) & (a != b)).sum())
     assert crossing == 0, f"{crossing} similar pairs cross splits!"
+
+    removed = df[df.split == "removed_duplicate"]
+    assert removed.duplicate_of.map(split_of).isin(in_split).all(), "removed plan points to a non-kept plan"
+    assert (removed.duplicate_iou >= d["remove_iou"]).all(), "removed plan below the IoU threshold"
 
 
 def main():
@@ -177,7 +194,7 @@ def main():
     parser.add_argument("--limit", type=int, default=None,
                         help="only use the first N plans (for testing)")
     parser.add_argument("--reuse-split", action="store_true",
-                        help="keep the duplicate removal + split in the existing metadata.csv")
+                        help="keep the exclusion + duplicate removal + split in the existing metadata.csv")
     args = parser.parse_args()
     cfg = load_config("data")
     out_dir = project_path(cfg["paths"]["processed_dir"])
@@ -191,8 +208,10 @@ def main():
     print(f"Loaded {len(plans)} plans ({time.time() - t0:.0f}s)")
     labels, df = rasterize_all(plans, cfg)
     print(f"Rasterized ({time.time() - t0:.0f}s)")
+    np.savez_compressed(out_dir / "all_labels.npz", labels=labels,
+                        plan_ids=df.plan_id.to_numpy())
 
-    # ---- 2-3. Near-duplicates + split -----------------------------------
+    # ---- 2-4. Exclusion + near-duplicates + split --------------------------
     if args.reuse_split:
         df = reuse_split(df, out_dir)
     else:
@@ -201,7 +220,7 @@ def main():
     df.to_csv(out_dir / "metadata.csv", index=False)
     print(f"Plans with a plausible real scale: {df.scale_ok.sum()}/{len(df)}")
 
-    # ---- 4. Save arrays ------------------------------------------------
+    # ---- 5. Save arrays ------------------------------------------------
     split_arr = df["split"].to_numpy()
     for name in ("train", "val", "test"):
         rows_in_split = np.flatnonzero(split_arr == name)
@@ -212,8 +231,8 @@ def main():
         )
         print(f"  {name}: {len(rows_in_split)} plans")
 
-    # ---- 5. Preview -------------------------------------------------------
-    kept = np.flatnonzero(split_arr != "removed_duplicate")
+    # ---- 6. Preview -------------------------------------------------------
+    kept = np.flatnonzero(np.isin(split_arr, ["train", "val", "test"]))
     pick = random.Random(0).sample(list(kept), min(16, len(kept)))
     save_grid([labels[i] for i in pick],
               [f"id {df.plan_id[i]} ({df.split[i]})" for i in pick],
