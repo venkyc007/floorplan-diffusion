@@ -11,8 +11,9 @@ Built for Kaggle's free GPUs, whose sessions end after a time limit:
 So you can just run the same command again in a new session. Keep max_steps
 the same across sessions: the learning-rate schedule is computed from it.
 
-Every `val_every` steps it scores the model on a fixed set of val-benchmark
-cases (same cases every time) and writes:
+Every `val_every` steps, or every `val_minutes` minutes if that comes sooner,
+it scores the model on a fixed set of val-benchmark cases (same cases every
+time) and writes:
   OUT/val_log.csv                 step, strict/tolerant mIoU, door/window/room F1
   OUT/checkpoints/best.pt         weights with the best tolerant mIoU so far
   OUT/samples/step_XXXXXXX.png    input | prediction | ground truth
@@ -91,6 +92,23 @@ class EMA:
             e.mul_(self.decay).add_(p.detach(), alpha=1 - self.decay)
         for e, b in zip(self.model.buffers(), model.buffers()):
             e.copy_(b)
+
+
+def train_step(model, ema, opt, sched, scaler, batch, device, use_fp16, grad_clip):
+    """One optimisation step (also used by src/speed_test.py). Returns the loss."""
+    cond, target, mask = (t.to(device, non_blocking=True) for t in batch)
+    with torch.autocast(device.type, dtype=torch.float16, enabled=use_fp16):
+        loss = model.loss(cond, target, mask)
+    opt.zero_grad(set_to_none=True)
+    scaler.scale(loss).backward()
+    scaler.unscale_(opt)                       # so clipping sees the real gradients
+    torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    scaler.step(opt)
+    scaler.update()
+    sched.step()
+    if ema:
+        ema.update(model)
+    return loss.item()
 
 
 # ------------------------------------------------------------ validation
@@ -238,21 +256,12 @@ def main():
     last_save, running, n_running = time.time(), 0.0, 0
     limit = tc["time_limit_hours"] * 3600
     model.train()
+    last_val = time.time()
+    val_seconds = tc.get("val_minutes", float("inf")) * 60
     while step < tc["max_steps"]:
-        cond, target, mask = (t.to(device, non_blocking=True) for t in next(batches))
-        with torch.autocast(device.type, dtype=torch.float16, enabled=use_fp16):
-            loss = model.loss(cond, target, mask)
-        opt.zero_grad(set_to_none=True)
-        scaler.scale(loss).backward()
-        scaler.unscale_(opt)                       # so clipping sees the real gradients
-        torch.nn.utils.clip_grad_norm_(model.parameters(), tc["grad_clip"])
-        scaler.step(opt)
-        scaler.update()
-        sched.step()
-        if ema:
-            ema.update(model)
+        loss = train_step(model, ema, opt, sched, scaler, next(batches), device, use_fp16, tc["grad_clip"])
         step += 1
-        running, n_running = running + loss.item(), n_running + 1
+        running, n_running = running + loss, n_running + 1
 
         if step % tc["log_every"] == 0:
             append_csv(out / "train_log.csv", {
@@ -261,7 +270,9 @@ def main():
             print(f"step {step}: loss {running / n_running:.4f}")
             running, n_running = 0.0, 0
 
-        if step % tc["val_every"] == 0 or step == tc["max_steps"]:
+        if (step % tc["val_every"] == 0 or step == tc["max_steps"]
+                or time.time() - last_val >= val_seconds):
+            last_val = time.time()
             scores, preds = validate(eval_model(), val, device)
             append_csv(out / "val_log.csv", {"step": step, **scores, "hours": hours()})
             save_grid(val, preds, out / "samples" / f"step_{step:07d}.png", tc["sample_grid_cases"])

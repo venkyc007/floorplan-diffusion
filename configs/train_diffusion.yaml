@@ -30,7 +30,8 @@ train:
   fp16: true                               # only used on a GPU
   seed: 0
   log_every: 100                           # steps between train-loss log lines
-  val_every: 2000                          # steps between validations
+  val_every: 2000                          # steps between validations ...
+  val_minutes: 30                          # ... or this many minutes, whichever comes first
   checkpoint_minutes: 30                   # save last.pt this often (wall clock)
   time_limit_hours: 8.5                    # stop gracefully (and save) after this long
   sample_grid_cases: 8                     # val cases drawn in each sample grid

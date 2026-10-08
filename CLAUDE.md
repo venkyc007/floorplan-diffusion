@@ -56,6 +56,13 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - `python -m src.evaluate --checkpoint <best.pt> --benchmark val|test` → full metric table. Compare/choose models on **val**; test only for final numbers.
 - Checks: `python -m src.overfit_check` (→ `outputs/overfit_check.png`), `--smoke` runs, `python -m pytest tests/` (14 tests). CPU is far too slow for real training (~7 s per step at batch 2) — train on Kaggle GPUs.
 
+## Kaggle (Day 4)
+
+- Workflow (upload code versions, launch, status, download, resume): **`docs/kaggle_workflow.md`**. Account `venkatesh007c`; private datasets `floorplan-data` (train/val label maps) and `floorplan-code` (`python -m src.kaggle_prep code`, then `kaggle datasets version -p .` run **from inside the folder**). Kernels live in `kaggle/kernels/<name>/`.
+- **Ask the user before every upload and every launch. Never print, copy or commit the Kaggle token** (`~/.kaggle/access_token`); don't run `kaggle config view`.
+- Measured on a Kaggle T4 (2026-10-08): batch 32 max (64 runs out of memory); U-Net 1.20 steps/s, diffusion 1.17 steps/s (~37 samples/s); validation over 256 cases takes 3 s for the U-Net and 130 s for diffusion (50 DDIM steps). Kaggle assigns T4 ×2; the code uses one.
+- U-Net baseline run: `max_steps` 8,000 (fixed), about 2 h.
+
 ## Structural rules (for constraints and metrics)
 
 - **Boundary = wall + door + window together.** Connectivity constraints/metrics treat all three as one boundary; doors and windows fill gaps in walls (they don't overlap them).

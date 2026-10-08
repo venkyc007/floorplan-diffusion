@@ -32,11 +32,16 @@ from src.data.dedup import dihedral_variants
 
 
 def load_labels(npz_path, chunk=1000):
-    """Load a split's one-hot masks and turn them into label maps (N, H, W) uint8.
+    """Load a split as label maps (N, H, W) uint8.
 
-    Done in chunks: label maps need 6x less memory than one-hot arrays.
+    Accepts both file formats: compact label maps (key "labels", used for
+    Kaggle uploads) or one-hot masks (key "masks", built by build_dataset),
+    which are converted in chunks (label maps need 6x less memory).
     """
-    onehot = np.load(npz_path)["masks"]
+    data = np.load(npz_path)
+    if "labels" in data.files:
+        return data["labels"]
+    onehot = data["masks"]
     labels = np.empty((len(onehot),) + onehot.shape[2:], np.uint8)
     for s in range(0, len(onehot), chunk):
         labels[s:s + chunk] = onehot[s:s + chunk].argmax(axis=1)

@@ -7,7 +7,12 @@ is scored on exactly the same task. Plans with nothing valid of a type
 
 Run from the project folder:
     python -m src.data.make_benchmark                 # test + val
+    python -m src.data.make_benchmark --splits val    # only val (e.g. on Kaggle)
     python -m src.data.make_benchmark --limit 50      # quick test
+
+Each run prints a checksum per benchmark; full (non --limit) runs also save
+it to configs/benchmark_checksums.json, so a copy rebuilt elsewhere (Kaggle)
+can be checked to be byte-identical.
 
 Saves to data/benchmarks/:
   <split>_benchmark.npz
@@ -22,6 +27,8 @@ Saves to data/benchmarks/:
 """
 
 import argparse
+import hashlib
+import json
 
 import numpy as np
 import pandas as pd
@@ -58,6 +65,16 @@ def make_benchmark(labels, plan_ids, cfg, limit=None):
     return arrays, pd.DataFrame(rows), skips
 
 
+def checksum(arrays):
+    """SHA-256 over the benchmark arrays (fixed key order): identical files
+    give identical checksums on any machine."""
+    h = hashlib.sha256()
+    for key in ("inputs", "targets", "masks", "plan_ids"):
+        a = np.ascontiguousarray(arrays[key])
+        h.update(key.encode() + str(a.dtype).encode() + str(a.shape).encode() + a.tobytes())
+    return h.hexdigest()
+
+
 def print_counts(meta, skips, name):
     print(f"\n{name}: {len(meta)} samples; skipped (no valid part): {skips}")
     for col in ("type", "location", "position", "size_bin"):
@@ -67,17 +84,26 @@ def print_counts(meta, skips, name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=None, help="only the first N plans per split")
+    parser.add_argument("--splits", nargs="+", default=["test", "val"], choices=["test", "val"])
     args = parser.parse_args()
     cfg = load_config("corruption")
     proc = project_path(load_config("data")["paths"]["processed_dir"])
     out = project_path(OUT_DIR)
     out.mkdir(parents=True, exist_ok=True)
-    for split in ("test", "val"):
+    sums_path = project_path("configs/benchmark_checksums.json")
+    sums = json.loads(sums_path.read_text(encoding="utf-8")) if sums_path.exists() else {}
+    for split in args.splits:
         npz = proc / f"{split}.npz"
         arrays, meta, skips = make_benchmark(load_labels(npz), np.load(npz)["plan_ids"], cfg, args.limit)
         np.savez_compressed(out / f"{split}_benchmark.npz", **arrays)
         meta.to_csv(out / f"{split}_benchmark.csv", index_label="sample")
         print_counts(meta, skips, f"{split} benchmark")
+        digest = checksum(arrays)
+        print(f"  checksum {digest}")
+        if args.limit is None:
+            sums[split] = digest
+    if args.limit is None:
+        sums_path.write_text(json.dumps(sums, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
