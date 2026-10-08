@@ -12,6 +12,7 @@ How training runs on Kaggle's free GPUs. All commands run from the project folde
 | Code (private dataset) | `venkatesh007c/floorplan-code` | `python -m src.kaggle_prep code` → `data/kaggle_upload/floorplan-code/code.zip` (src/, configs/, requirements.txt) |
 | Timing kernel | `venkatesh007c/floorplan-timing` | `kaggle/kernels/timing/` |
 | U-Net training kernel | `venkatesh007c/floorplan-unet` | `kaggle/kernels/unet/` |
+| Diffusion training kernel (training only, no full-val evaluation) | `venkatesh007c/floorplan-diffusion` | `kaggle/kernels/diffusion/` |
 
 Kernels are private Python scripts (`run.py` + `kernel-metadata.json`) with GPU and internet on. Each one:
 1. copies the code and data from `/kaggle/input` into `/tmp/code`;
@@ -54,7 +55,12 @@ Each push starts a new **version** of the kernel and runs it from the top. Use `
 
 ```bash
 kaggle kernels status venkatesh007c/floorplan-unet      # QUEUED / RUNNING / COMPLETE / ERROR
+kaggle kernels logs venkatesh007c/floorplan-diffusion   # the log so far, also while the kernel runs
 ```
+
+With two GPUs the log should show `process 0/2 on cuda:0 (Tesla T4)` and `process 1/2 on cuda:1 (Tesla T4)`, then `step N: loss ... (X samples/s)` every 50 steps. The 2-GPU timing run measured about 75 samples/s for diffusion and 78 for the U-Net.
+
+Times: Kaggle and the CLI report UTC. For India time use the Windows clock (`Get-Date` in PowerShell); Git Bash's `TZ=Asia/Kolkata date` prints UTC on this machine.
 
 On the website: <https://www.kaggle.com/code/venkatesh007c/floorplan-unet>. Open the running version to see the live log (training loss every 50 steps, validation scores). "Your Work" lists all kernels, and the Settings → Quotas page shows GPU hours used.
 

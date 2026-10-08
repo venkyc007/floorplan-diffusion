@@ -25,12 +25,12 @@ train:
   lr: 1.0e-4
   weight_decay: 0.01
   warmup_steps: 1000
-  max_steps: 200000                        # cosine decay length; the time limit usually stops earlier
+  max_steps: 31500                         # FIXED for this run: ~7.5 h at 1.166 steps/s on 2 T4s (64/step), ~10% margin under the 8.5 h stop
   grad_clip: 1.0
   ema_decay: 0.999
   fp16: true                               # only used on a GPU
   seed: 0
-  log_every: 100                           # steps between train-loss log lines
+  log_every: 50                            # steps between train-loss log lines
   val_every: 2000                          # steps between validations ...
   val_minutes: 30                          # ... or this many minutes, whichever comes first
   checkpoint_minutes: 30                   # save last.pt this often (wall clock)
