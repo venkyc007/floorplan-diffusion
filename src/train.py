@@ -4,6 +4,10 @@
     python -m src.train --config configs/train_unet.yaml --out outputs/runs/unet
     python -m src.train --config configs/train_diffusion.yaml --out outputs/runs/smoke --smoke
 
+On several GPUs (one process per GPU, see src/distributed.py):
+    torchrun --standalone --nproc_per_node=2 -m src.train --config ... --out ...
+`batch_size` in the config is PER GPU, so 2 GPUs see 2x the samples per step.
+
 Built for Kaggle's free GPUs, whose sessions end after a time limit:
   - saves a checkpoint (OUT/checkpoints/last.pt) every `checkpoint_minutes`,
   - stops cleanly (and saves) once `time_limit_hours` have passed,
@@ -11,13 +15,14 @@ Built for Kaggle's free GPUs, whose sessions end after a time limit:
 So you can just run the same command again in a new session. Keep max_steps
 the same across sessions: the learning-rate schedule is computed from it.
 
-Every `val_every` steps, or every `val_minutes` minutes if that comes sooner,
+Every `val_every` steps since the last validation, or after `val_minutes`
+minutes if that comes sooner (either one resets both),
 it scores the model on a fixed set of val-benchmark cases (same cases every
-time) and writes:
+time; diffusion uses `val_ddim_steps` sampling steps) and writes:
   OUT/val_log.csv                 step, strict/tolerant mIoU, door/window/room F1
   OUT/checkpoints/best.pt         weights with the best tolerant mIoU so far
   OUT/samples/step_XXXXXXX.png    input | prediction | ground truth
-Training loss goes to OUT/train_log.csv.
+Training loss (averaged over GPUs) and speed go to OUT/train_log.csv.
 
 --smoke uses the tiny settings in the config's `smoke:` section (CPU test).
 """
@@ -36,11 +41,14 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn as nn
 import yaml
-from torch.utils.data import DataLoader
+from torch.nn.parallel import DistributedDataParallel
+from torch.utils.data import DataLoader, DistributedSampler
 
 from src.data.corruptions import to_model_input
 from src.data.dataset import CorruptionDataset
+from src.distributed import Distributed
 from src.eval.figures import colorize
 from src.eval.metrics import load_benchmark, sample_stats, summarize
 from src.models import build_model
@@ -70,10 +78,30 @@ def lr_factor(step, warmup, total):
     return 0.5 * (1 + math.cos(math.pi * progress))
 
 
-def infinite(loader):
-    """Loop over the DataLoader forever (training is counted in steps)."""
+def infinite(loader, sampler=None):
+    """Loop over the DataLoader forever (training is counted in steps).
+    With several GPUs, the sampler reshuffles each process's share every pass."""
+    epoch = 0
     while True:
+        if sampler is not None:
+            sampler.set_epoch(epoch)
         yield from loader
+        epoch += 1
+
+
+class LossModule(nn.Module):
+    """Computes the training loss inside forward().
+
+    DistributedDataParallel only synchronises gradients for work done in
+    forward(), and our models compute their loss in .loss(); this wrapper
+    makes the loss part of forward()."""
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, cond, target, mask):
+        return self.model.loss(cond, target, mask)
 
 
 class EMA:
@@ -94,11 +122,14 @@ class EMA:
             e.copy_(b)
 
 
-def train_step(model, ema, opt, sched, scaler, batch, device, use_fp16, grad_clip):
-    """One optimisation step (also used by src/speed_test.py). Returns the loss."""
+def train_step(net, model, ema, opt, sched, scaler, batch, device, use_fp16, grad_clip):
+    """One optimisation step (also used by src/speed_test.py). Returns the loss.
+
+    net: LossModule(model), possibly wrapped in DistributedDataParallel;
+    model: the plain model (for clipping and EMA)."""
     cond, target, mask = (t.to(device, non_blocking=True) for t in batch)
     with torch.autocast(device.type, dtype=torch.float16, enabled=use_fp16):
-        loss = model.loss(cond, target, mask)
+        loss = net(cond, target, mask)
     opt.zero_grad(set_to_none=True)
     scaler.scale(loss).backward()
     scaler.unscale_(opt)                       # so clipping sees the real gradients
@@ -124,15 +155,16 @@ def val_subset(cfg):
 
 
 @torch.no_grad()
-def validate(model, val, device, batch_size=32):
-    """Score the model on the fixed val cases. Returns (metrics dict, predictions)."""
+def validate(model, val, device, steps=None, batch_size=32):
+    """Score the model on the fixed val cases. Returns (metrics dict, predictions).
+    steps: DDIM sampling steps (diffusion only; None = the config's ddim_steps)."""
     model.eval()
     gen = torch.Generator(device=device).manual_seed(0)  # same noise every validation
     preds = []
     for s in range(0, len(val["cond"]), batch_size):
         cond = val["cond"][s:s + batch_size].to(device)
         with torch.autocast(device.type, enabled=device.type == "cuda"):
-            preds.append(model.predict(cond, generator=gen).cpu().numpy())
+            preds.append(model.predict(cond, steps=steps, generator=gen).cpu().numpy())
     preds = np.concatenate(preds)
     scores = summarize([sample_stats(p, t, m) for p, t, m in zip(preds, val["targets"], val["masks"])])
     model.train()
@@ -194,6 +226,9 @@ def main():
     args = parser.parse_args()
 
     start = time.time()
+    dist = Distributed()
+    device, main_proc = dist.device, dist.is_main
+    log = print if main_proc else (lambda *a, **k: None)   # only rank 0 prints
     cfg = load_settings(args.config, args.smoke)
     tc = cfg["train"]
     if args.max_steps:
@@ -201,15 +236,19 @@ def main():
     if args.time_limit_hours:
         tc["time_limit_hours"] = args.time_limit_hours
     out = Path(args.out)
-    (out / "checkpoints").mkdir(parents=True, exist_ok=True)
-    (out / "samples").mkdir(exist_ok=True)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if main_proc:
+        (out / "checkpoints").mkdir(parents=True, exist_ok=True)
+        (out / "samples").mkdir(exist_ok=True)
     use_fp16 = tc["fp16"] and device.type == "cuda"
-    torch.manual_seed(tc["seed"])
+    # Different seed per process: different random corruptions on each GPU.
+    # (DDP copies rank 0's initial weights to all processes.)
+    torch.manual_seed(tc["seed"] + dist.rank)
+    name = torch.cuda.get_device_name(device) if device.type == "cuda" else "CPU"
+    print(f"process {dist.rank}/{dist.world_size} on {device} ({name})", flush=True)
 
-    # Model, EMA (diffusion only), optimiser, learning-rate schedule, fp16 scaler.
+    # Model, EMA (diffusion, main process only), optimiser, schedule, fp16 scaler.
     model = build_model(cfg["model"]).to(device)
-    ema = EMA(model, tc["ema_decay"]) if cfg["model"]["kind"] == "diffusion" else None
+    ema = EMA(model, tc["ema_decay"]) if cfg["model"]["kind"] == "diffusion" and main_proc else None
     opt = torch.optim.AdamW(model.parameters(), lr=tc["lr"], weight_decay=tc["weight_decay"])
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda s: lr_factor(s, tc["warmup_steps"], tc["max_steps"]))
@@ -217,7 +256,7 @@ def main():
     step, best, hours_before = 0, -1.0, 0.0   # hours_before: training time of earlier sessions
 
     last = out / "checkpoints" / "last.pt"
-    if last.exists():
+    if last.exists():   # every process loads the same checkpoint
         ckpt = torch.load(last, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model"])
         if ema:
@@ -226,23 +265,33 @@ def main():
         sched.load_state_dict(ckpt["scheduler"])
         scaler.load_state_dict(ckpt["scaler"])
         step, best, hours_before = ckpt["step"], ckpt["best_tmIoU"], ckpt.get("hours", 0.0)
-        torch.set_rng_state(ckpt["torch_rng"])
-        if ckpt["cuda_rng"] is not None and torch.cuda.is_available():
-            torch.cuda.set_rng_state_all(ckpt["cuda_rng"])
-        print(f"Resumed from {last} at step {step} (best tolerant mIoU {best:.4f})")
-    else:
+        if dist.enabled:   # the saved random state is rank 0's: give each process a fresh one
+            torch.manual_seed(tc["seed"] + dist.rank + step)
+        else:
+            torch.set_rng_state(ckpt["torch_rng"])
+            if ckpt["cuda_rng"] is not None and torch.cuda.is_available():
+                torch.cuda.set_rng_state_all(ckpt["cuda_rng"])
+        log(f"Resumed from {last} at step {step} (best tolerant mIoU {best:.4f})")
+    elif main_proc:
         with open(out / "config.yaml", "w", encoding="utf-8") as f:
             yaml.safe_dump(cfg, f)
-    print(f"{cfg['model']['kind']}: {count_parameters(model) / 1e6:.2f}M parameters on {device}"
-          f"{' (fp16)' if use_fp16 else ''}")
+    log(f"{cfg['model']['kind']}: {count_parameters(model) / 1e6:.2f}M parameters, "
+        f"{dist.world_size} process(es) on {device.type}{' (fp16)' if use_fp16 else ''}, "
+        f"batch {tc['batch_size']} per process = {tc['batch_size'] * dist.world_size} per step")
 
-    # Data: a fresh random corruption per sample; fixed val cases.
+    net = LossModule(model)
+    if dist.enabled:
+        net = DistributedDataParallel(net, device_ids=[dist.local_rank] if device.type == "cuda" else None)
+
+    # Data: a fresh random corruption per sample; each process gets its own share.
     dataset = CorruptionDataset(project_path(cfg["data"]["train_npz"]), load_config("corruption"))
-    loader = DataLoader(dataset, batch_size=tc["batch_size"], shuffle=True, drop_last=True,
-                        num_workers=cfg["data"]["num_workers"], pin_memory=device.type == "cuda",
-                        persistent_workers=cfg["data"]["num_workers"] > 0)
-    batches = infinite(loader)
-    val = val_subset(cfg)
+    sampler = (DistributedSampler(dataset, num_replicas=dist.world_size, rank=dist.rank,
+                                  shuffle=True, seed=tc["seed"], drop_last=True) if dist.enabled else None)
+    loader = DataLoader(dataset, batch_size=tc["batch_size"], shuffle=sampler is None, sampler=sampler,
+                        drop_last=True, num_workers=cfg["data"]["num_workers"],
+                        pin_memory=device.type == "cuda", persistent_workers=cfg["data"]["num_workers"] > 0)
+    batches = infinite(loader, sampler)
+    val = val_subset(cfg) if main_proc else None
     eval_model = lambda: ema.model if ema else model  # noqa: E731  (EMA weights for validation)
 
     def hours():
@@ -253,44 +302,63 @@ def main():
         state = training_state(step, model, ema, opt, sched, scaler, best, cfg, hours())
         save_checkpoint(out / "checkpoints" / f"{tag}.pt", state)
 
-    last_save, running, n_running = time.time(), 0.0, 0
+    last_save = last_val = time.time()
+    last_val_step = step   # validation counts steps from here (no back-to-back validations)
+    running, n_running, step_seconds = 0.0, 0, 0.0
     limit = tc["time_limit_hours"] * 3600
-    model.train()
-    last_val = time.time()
     val_seconds = tc.get("val_minutes", float("inf")) * 60
+    model.train()
     while step < tc["max_steps"]:
-        loss = train_step(model, ema, opt, sched, scaler, next(batches), device, use_fp16, tc["grad_clip"])
+        t0 = time.time()
+        loss = train_step(net, model, ema, opt, sched, scaler, next(batches), device, use_fp16, tc["grad_clip"])
+        step_seconds += time.time() - t0
         step += 1
         running, n_running = running + loss, n_running + 1
 
-        if step % tc["log_every"] == 0:
-            append_csv(out / "train_log.csv", {
-                "step": step, "loss": round(running / n_running, 6),
-                "lr": f"{sched.get_last_lr()[0]:.3e}", "hours": hours()})
-            print(f"step {step}: loss {running / n_running:.4f}")
-            running, n_running = 0.0, 0
+        if step % tc["log_every"] == 0:          # step-based: all processes take part
+            mean_loss = dist.mean(running / n_running)
+            samples = n_running * tc["batch_size"] * dist.world_size
+            if main_proc:
+                append_csv(out / "train_log.csv", {
+                    "step": step, "loss": round(mean_loss, 6), "lr": f"{sched.get_last_lr()[0]:.3e}",
+                    "samples_per_s": round(samples / step_seconds, 1), "gpus": dist.world_size,
+                    "hours": hours()})
+            log(f"step {step}: loss {mean_loss:.4f} ({samples / step_seconds:.1f} samples/s)")
+            running, n_running, step_seconds = 0.0, 0, 0.0
 
-        if (step % tc["val_every"] == 0 or step == tc["max_steps"]
-                or time.time() - last_val >= val_seconds):
-            last_val = time.time()
-            scores, preds = validate(eval_model(), val, device)
-            append_csv(out / "val_log.csv", {"step": step, **scores, "hours": hours()})
-            save_grid(val, preds, out / "samples" / f"step_{step:07d}.png", tc["sample_grid_cases"])
-            print(f"step {step}: val {scores}")
-            if scores["tmIoU"] > best:
-                best = scores["tmIoU"]
-                torch.save({"step": step, "model": eval_model().state_dict(), "config": cfg,
-                            "val": scores}, out / "checkpoints" / "best.pt")
-
-        if time.time() - last_save >= tc["checkpoint_minutes"] * 60:
-            save()
+        # Clock-based decisions: made by the main process, shared with all.
+        now = time.time()
+        do_val, do_save, do_stop = dist.broadcast_flags([
+            step - last_val_step >= tc["val_every"] or step == tc["max_steps"] or now - last_val >= val_seconds,
+            now - last_save >= tc["checkpoint_minutes"] * 60,
+            now - start >= limit])
+        if do_val:
+            last_val, last_val_step = time.time(), step
+            if main_proc:
+                t_val = time.time()
+                scores, preds = validate(eval_model(), val, device, steps=tc.get("val_ddim_steps"))
+                append_csv(out / "val_log.csv", {"step": step, **scores, "hours": hours(),
+                                                 "val_seconds": round(time.time() - t_val, 1)})
+                save_grid(val, preds, out / "samples" / f"step_{step:07d}.png", tc["sample_grid_cases"])
+                log(f"step {step}: val {scores}")
+                if scores["tmIoU"] > best:
+                    best = scores["tmIoU"]
+                    torch.save({"step": step, "model": eval_model().state_dict(), "config": cfg,
+                                "val": scores}, out / "checkpoints" / "best.pt")
+            dist.barrier()                       # the other processes wait here
+        if do_save:
+            if main_proc:
+                save()
             last_save = time.time()
-        if time.time() - start >= limit:
-            print(f"Time limit of {tc['time_limit_hours']} h reached at step {step}: saving and stopping.")
+        if do_stop:
+            log(f"Time limit of {tc['time_limit_hours']} h reached at step {step}: saving and stopping.")
             break
 
-    save()
-    print(f"Stopped at step {step}; checkpoint saved to {last}")
+    if main_proc:
+        save()
+    log(f"Stopped at step {step}; checkpoint saved to {last}")
+    dist.barrier()
+    dist.close()
 
 
 if __name__ == "__main__":

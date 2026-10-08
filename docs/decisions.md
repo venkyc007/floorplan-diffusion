@@ -109,9 +109,33 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **Batch size 32 for both models** — measured on a T4 (15.6 GB): 32 fits (10.9–11.0 GB peak), 64 runs out of memory.
 - **U-Net run: `max_steps` 8,000, fixed** — 1.196 steps/s measured, so about 1.86 h of training plus about 6 min overhead, which makes the requested ~2 h run.
 - **U-Net logging: loss every 50 steps; validation every 2,000 steps or 25 min, whichever comes first (`val_minutes`)** — to catch loss spikes like the overfit test's; U-Net validation costs only about 3 s.
-- **Only one of the two T4s is used** — the code is single-GPU; using both (DataParallel/DDP) could nearly double throughput, but is not implemented.
+- **Only one of the two T4s is used** — superseded below (multi-GPU added).
 - **Speed test reuses `train.py`'s exact training step (`train_step`)** — timings then reflect real training, EMA included.
 - **Windows CLI workaround: `kaggle datasets create/version` run from inside the folder with `-p .`** — the CLI breaks on nested relative paths on Windows.
+
+## Multi-GPU (Day 4)
+
+- **Both T4s used via PyTorch DistributedDataParallel, launched with `torchrun` (user decision: multi-GPU)** — built into PyTorch (no new dependency, unlike Accelerate) and the standard, most reliable route; without `torchrun` the same code runs as one process on one GPU or the CPU.
+- **Loss computed inside a `LossModule.forward()` wrapper** — DDP only synchronises gradients for work done in `forward()`, and our models compute the loss in `.loss()`.
+- **Only rank 0 writes files, logs, checkpoints and sample grids, and only rank 0 validates (the others wait at a barrier; process-group timeout 60 min)** — one writer avoids clobbered files; diffusion validation (about 1 min at 20 DDIM steps) is far below the timeout.
+- **Clock-based decisions (validate, checkpoint, stop at the time limit) are made by rank 0 and broadcast every step** — otherwise processes could disagree and deadlock; step-based logging is the same on every rank anyway.
+- **EMA kept on rank 0 only** — it is only needed for validation and checkpoints, which rank 0 does.
+- **`batch_size` is per GPU (32); 2 GPUs give 64 per step; learning rate unchanged** — 32 is the most a T4 fits; keeping the learning rate is the conservative choice (2× batch with the same rate is stable for AdamW at these values).
+- **`DistributedSampler` gives each process its own share of the plans; seeds are `seed + rank`** — otherwise both GPUs would draw the same random corruptions. DDP copies rank 0's initial weights to all processes.
+- **On resume with several processes, each re-seeds with `seed + rank + step`; the saved RNG state is used only in single-process runs** — the checkpoint stores rank 0's RNG state only.
+- **The logged loss is averaged over processes; `train_log.csv` also records samples/s (training time only) and the GPU count** — makes the speed-up directly visible.
+- **The Kaggle kernels log `nvidia-smi` utilisation of every GPU every 30 s to `gpu_usage.csv`** — direct evidence that both GPUs are busy.
+- **Validation during training uses `val_ddim_steps: 20`; final evaluation (`src/evaluate.py`) uses `ddim_steps: 50`** (user decision) — validation becomes about 2.5× cheaper.
+- **Tested locally: single-process smoke + resume (identical numbers to before), and a real 2-process DDP run on CPU (gloo backend), including resume and a synchronised time-limit stop** — `torchrun`'s own launcher fails on Windows (rendezvous store), so the two processes were started by hand with the same environment variables `torchrun` sets; on Kaggle (Linux) `torchrun` is used.
+- **The U-Net baseline was not re-run on 2 GPUs** (user decision) — the single-GPU run had finished and the 2-GPU timing run already proved the speed-up (2.0×, both GPUs at about 90% utilisation).
+- **Validation step counting starts from the last validation (`step - last_val_step >= val_every`)** — in the U-Net run, a time-triggered validation at step 1,833 was followed by a step-triggered one at 2,000; for diffusion each duplicate would waste about 1 minute.
+- **Kernel helpers moved into the code bundle (`src/kaggle_kernel.py`); each `run.py` only copies the code and imports them** — one copy of the setup logic instead of one per kernel.
+
+## Results so far
+
+- **U-Net baseline: 8,000 steps × 32 samples (256,000 samples) on 1 T4, 1.83 h; full-val tolerant mIoU 0.775 (strict 0.708) against nearest fill's 0.489 (0.437)** — it had not plateaued: validation tolerant mIoU was still rising at the end (0.782 → 0.794 over the last 2,000 steps, while the learning rate decayed to 0). It beats nearest fill on every metric except connectivity error (0.178 against 0.066): the sample grids show speckled stray wall pixels on large masks.
+- **TODO (fairness): after the diffusion results, retrain the U-Net baseline with the same number of training samples as the diffusion run (31,500 × 64 ≈ 2.0 M, about 7.9× the first run), on 2 GPUs** (user decision) — otherwise diffusion would be compared against a much shorter-trained baseline.
+- **U-Net run summaries committed in `outputs/unet_baseline/` (logs, evaluation tables, sample grids; no checkpoints)** — small report artefacts; the 400 MB of checkpoints stay in the git-ignored `outputs/kaggle/`.
 
 ## Tooling
 

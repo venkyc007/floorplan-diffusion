@@ -19,6 +19,10 @@ Kernels are private Python scripts (`run.py` + `kernel-metadata.json`) with GPU 
 3. rebuilds the val benchmark from its seed and checks it against `configs/benchmark_checksums.json`, stopping if it differs;
 4. runs the project commands. Anything written to `/kaggle/working` becomes the kernel's output.
 
+The setup logic lives in `src/kaggle_kernel.py`, inside the code bundle; each `run.py` only copies the code and imports it. Training goes through `kaggle_kernel.train()`, which uses `torchrun` with one process per GPU when Kaggle provides more than one (T4 ×2), and logs every GPU's utilisation to `gpu_usage.csv`.
+
+**Don't push a new version of a kernel that is still running.** It can replace the running session; use a separate kernel ID for a parallel run.
+
 **Windows CLI quirk:** `kaggle datasets create/version -p <relative/nested/path>` fails with a "No such file or directory … .kaggle/uploads" error. Run the command from **inside** the folder with `-p .` instead, as below.
 
 ## Upload a new code version

@@ -25,7 +25,7 @@ from torch.utils.data import DataLoader
 from src.data.dataset import CorruptionDataset
 from src.models import build_model
 from src.models.backbone import count_parameters
-from src.train import EMA, infinite, load_settings, lr_factor, train_step, val_subset, validate
+from src.train import EMA, LossModule, infinite, load_settings, lr_factor, train_step, val_subset, validate
 from src.utils import load_config, project_path
 
 CONFIGS = {"unet": "configs/train_unet.yaml", "diffusion": "configs/train_diffusion.yaml"}
@@ -37,14 +37,14 @@ def sync(device):
 
 
 def make_trainer(cfg, device):
-    """Model + EMA + optimiser + schedule + scaler, exactly as in train.py."""
+    """Loss module + model + EMA + optimiser + schedule + scaler, as in train.py (single GPU)."""
     tc = cfg["train"]
     model = build_model(cfg["model"]).to(device).train()
     ema = EMA(model, tc["ema_decay"]) if cfg["model"]["kind"] == "diffusion" else None
     opt = torch.optim.AdamW(model.parameters(), lr=tc["lr"], weight_decay=tc["weight_decay"])
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: lr_factor(s, tc["warmup_steps"], tc["max_steps"]))
     scaler = torch.amp.GradScaler(device.type, enabled=device.type == "cuda")
-    return model, ema, opt, sched, scaler
+    return LossModule(model), model, ema, opt, sched, scaler
 
 
 def free(device):
@@ -95,7 +95,7 @@ def measure(kind, args, device, dataset):
     # 2. Timed training steps with the real data pipeline.
     free(device)
     trainer = make_trainer(cfg, device)
-    result["parameters_M"] = round(count_parameters(trainer[0]) / 1e6, 2)
+    result["parameters_M"] = round(count_parameters(trainer[1]) / 1e6, 2)
     loader = DataLoader(dataset, batch_size=bs, shuffle=True, drop_last=True,
                         num_workers=cfg["data"]["num_workers"], pin_memory=device.type == "cuda",
                         persistent_workers=cfg["data"]["num_workers"] > 0)
@@ -119,11 +119,11 @@ def measure(kind, args, device, dataset):
     result["data_only_samples_per_second"] = round(n * bs / (time.time() - t), 1)
 
     # 4. One validation pass (EMA weights for diffusion, as in training).
-    model, ema = trainer[0], trainer[1]
+    model, ema = trainer[1], trainer[2]
     val = val_subset(cfg)
     sync(device)
     t = time.time()
-    validate(ema.model if ema else model, val, device)
+    validate(ema.model if ema else model, val, device, steps=cfg["train"].get("val_ddim_steps"))
     sync(device)
     result.update(val_cases=len(val["cond"]), val_seconds=round(time.time() - t, 1),
                   ddim_steps=cfg["model"].get("ddim_steps"))

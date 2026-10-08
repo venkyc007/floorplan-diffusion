@@ -60,7 +60,8 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 
 - Workflow (upload code versions, launch, status, download, resume): **`docs/kaggle_workflow.md`**. Account `venkatesh007c`; private datasets `floorplan-data` (train/val label maps) and `floorplan-code` (`python -m src.kaggle_prep code`, then `kaggle datasets version -p .` run **from inside the folder**). Kernels live in `kaggle/kernels/<name>/`.
 - **Ask the user before every upload and every launch. Never print, copy or commit the Kaggle token** (`~/.kaggle/access_token`); don't run `kaggle config view`.
-- Measured on a Kaggle T4 (2026-10-08): batch 32 max (64 runs out of memory); U-Net 1.20 steps/s, diffusion 1.17 steps/s (~37 samples/s); validation over 256 cases takes 3 s for the U-Net and 130 s for diffusion (50 DDIM steps). Kaggle assigns T4 ×2; the code uses one.
+- Measured on a Kaggle T4 (2026-10-08, single GPU): batch 32 max (64 runs out of memory); U-Net 1.20 steps/s, diffusion 1.17 steps/s (~37 samples/s); validation over 256 cases takes 3 s for the U-Net and 130 s for diffusion (50 DDIM steps).
+- **Multi-GPU (DDP)**: Kaggle gives T4 ×2. `torchrun --standalone --nproc_per_node=2 -m src.train ...` (the kernels do this automatically via `src/kaggle_kernel.py`); plain `python -m src.train` = one process. `batch_size` is per GPU. Only rank 0 writes files and validates; clock-based decisions are broadcast from rank 0 (`src/distributed.py`). Validation uses `val_ddim_steps` (20); `src/evaluate.py` uses `ddim_steps` (50). `torchrun` doesn't work on Windows: to test DDP locally, start the processes by hand with `WORLD_SIZE/RANK/LOCAL_RANK/MASTER_ADDR/MASTER_PORT` and `USE_LIBUV=0`.
 - U-Net baseline run: `max_steps` 8,000 (fixed), about 2 h.
 
 ## Structural rules (for constraints and metrics)

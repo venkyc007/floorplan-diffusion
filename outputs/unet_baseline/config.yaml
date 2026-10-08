@@ -1,0 +1,53 @@
+data:
+  num_workers: 4
+  train_npz: data/processed/train.npz
+  val_benchmark: data/benchmarks/val_benchmark.npz
+  val_cases: 256
+model:
+  attention_from_level: 3
+  attention_head_dim: 32
+  block_out_channels:
+  - 64
+  - 128
+  - 256
+  - 256
+  kind: unet
+  layers_per_block: 2
+  mask_weight: 5.0
+smoke:
+  data:
+    num_workers: 0
+    val_cases: 16
+  model:
+    attention_head_dim: 8
+    block_out_channels:
+    - 16
+    - 32
+    - 32
+    - 32
+    layers_per_block: 1
+    norm_num_groups: 8
+  train:
+    batch_size: 4
+    checkpoint_minutes: 0
+    log_every: 5
+    max_steps: 20
+    sample_grid_cases: 4
+    val_every: 10
+    warmup_steps: 5
+train:
+  batch_size: 32
+  checkpoint_minutes: 30
+  ema_decay: 0.999
+  fp16: true
+  grad_clip: 1.0
+  log_every: 50
+  lr: 0.0002
+  max_steps: 8000
+  sample_grid_cases: 8
+  seed: 0
+  time_limit_hours: 8.5
+  val_every: 2000
+  val_minutes: 25
+  warmup_steps: 1000
+  weight_decay: 0.01

@@ -10,7 +10,7 @@ model:
   attention_head_dim: 32
   num_train_timesteps: 1000
   beta_schedule: squaredcos_cap_v2         # cosine schedule
-  ddim_steps: 50                           # sampling steps (validation / evaluation)
+  ddim_steps: 50                           # sampling steps for final evaluation (src/evaluate.py)
   mask_weight: 5.0                         # loss weight of pixels inside the mask (outside = 1)
 
 data:
@@ -20,7 +20,8 @@ data:
   num_workers: 4
 
 train:
-  batch_size: 32
+  batch_size: 32                           # PER GPU (2 GPUs -> 64 per step); 64 per GPU does not fit a T4
+  val_ddim_steps: 20                       # sampling steps during training validation (faster)
   lr: 1.0e-4
   weight_decay: 0.01
   warmup_steps: 1000
@@ -41,4 +42,4 @@ smoke:
   model: {block_out_channels: [16, 32, 32, 32], layers_per_block: 1, norm_num_groups: 8, attention_head_dim: 8, ddim_steps: 5}
   data: {val_cases: 16, num_workers: 0}
   train: {batch_size: 4, warmup_steps: 5, max_steps: 20, log_every: 5, val_every: 10,
-          checkpoint_minutes: 0, sample_grid_cases: 4}
+          checkpoint_minutes: 0, sample_grid_cases: 4, val_ddim_steps: 5}

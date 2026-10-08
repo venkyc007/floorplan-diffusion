@@ -17,7 +17,7 @@ data:
   num_workers: 4
 
 train:
-  batch_size: 32
+  batch_size: 32                           # PER GPU (2 GPUs -> 64 per step); 64 per GPU does not fit a T4
   lr: 2.0e-4
   weight_decay: 0.01
   warmup_steps: 1000

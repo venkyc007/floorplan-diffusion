@@ -1,70 +1,66 @@
-"""Kaggle kernel: timing run (GPU speed of both models). See docs/kaggle_workflow.md.
+"""Kaggle kernel: timing run on all GPUs. See docs/kaggle_workflow.md.
+
+Runs the REAL training command (torchrun on every GPU) for a few hundred
+steps per model, so the measured speed includes the multi-GPU overhead.
 
 Inputs (private datasets): venkatesh007c/floorplan-data, venkatesh007c/floorplan-code.
-Outputs in /kaggle/working: speed_results.json, benchmark_check.json.
+Outputs in /kaggle/working: ddp_speed.json (summary), benchmark_check.json,
+timing/<model>/ (train_log.csv, val_log.csv, gpu_usage.csv, ...).
 """
 
+import csv
 import glob
 import json
 import os
 import shutil
-import subprocess
 import sys
 import zipfile
 
-CODE = "/tmp/code"          # working copy of the code (not saved as output)
-WORK = "/kaggle/working"    # everything here is saved as kernel output
+CODE = "/tmp/code"
+STEPS = 300
 
 
-def find(name, must_contain=""):
-    hits = [h for h in glob.glob(f"/kaggle/input/**/{name}", recursive=True) if must_contain in h]
-    return sorted(hits)
-
-
-def setup():
-    """Copy code + data into CODE, install missing packages."""
-    train_py = find("src/train.py", "floorplan-code")
-    if train_py:   # Kaggle unpacked code.zip into folders
-        shutil.copytree(os.path.dirname(os.path.dirname(train_py[0])), CODE, dirs_exist_ok=True)
+def copy_code():
+    """Find the code dataset (unpacked by Kaggle, or code.zip) and copy it to CODE."""
+    hits = [h for h in glob.glob("/kaggle/input/**/src/train.py", recursive=True) if "floorplan-code" in h]
+    if hits:
+        shutil.copytree(os.path.dirname(os.path.dirname(hits[0])), CODE, dirs_exist_ok=True)
     else:
-        zipfile.ZipFile(find("code.zip", "floorplan-code")[0]).extractall(CODE)
-    os.makedirs(f"{CODE}/data/processed", exist_ok=True)
-    for f in ("train.npz", "val.npz"):
-        shutil.copy(find(f, "floorplan-data")[0], f"{CODE}/data/processed/{f}")
-    missing = []
-    for module, package in [("diffusers", "diffusers"), ("cv2", "opencv-python-headless"),
-                            ("shapely", "shapely"), ("skimage", "scikit-image"), ("yaml", "pyyaml")]:
-        try:
-            __import__(module)
-        except ImportError:
-            missing.append(package)
-    if missing:
-        run(f"{sys.executable} -m pip install -q " + " ".join(missing))
-    run(f"{sys.executable} -c \"import torch, diffusers; print('torch', torch.__version__, "
-        f"'| diffusers', diffusers.__version__, '| cuda', torch.cuda.is_available())\"")
-    run("nvidia-smi --query-gpu=name,memory.total --format=csv")
+        z = [h for h in glob.glob("/kaggle/input/**/code.zip", recursive=True) if "floorplan-code" in h][0]
+        zipfile.ZipFile(z).extractall(CODE)
+    sys.path.insert(0, CODE)
 
 
-def run(cmd):
-    print(f"\n$ {cmd}", flush=True)
-    subprocess.run(cmd, shell=True, cwd=CODE if os.path.isdir(CODE) else None, check=True,
-                   env={**os.environ, "PYTHONUNBUFFERED": "1"})
-
-
-def check_val_benchmark():
-    """Rebuild the val benchmark from its seed; compare with the local checksum."""
-    sums = f"{CODE}/configs/benchmark_checksums.json"
-    expected = json.load(open(sums))["val"]
-    run(f"{sys.executable} -m src.data.make_benchmark --splits val")
-    got = json.load(open(sums))["val"]           # make_benchmark rewrites it
-    result = {"expected": expected, "kaggle": got, "match": expected == got}
-    json.dump(result, open(f"{WORK}/benchmark_check.json", "w"), indent=2)
-    print("VAL BENCHMARK CHECKSUM", "MATCHES" if result["match"] else "DIFFERS", result, flush=True)
-    if not result["match"]:
-        raise SystemExit("val benchmark differs from the local one")
+def summarize(run_dir):
+    import yaml
+    rows = list(csv.DictReader(open(f"{run_dir}/train_log.csv")))[1:]   # skip warm-up row
+    samples = sum(float(r["samples_per_s"]) for r in rows) / len(rows)
+    gpus = int(rows[-1]["gpus"])                                         # processes used
+    per_step = yaml.safe_load(open(f"{run_dir}/config.yaml"))["train"]["batch_size"] * gpus
+    val = list(csv.DictReader(open(f"{run_dir}/val_log.csv")))[-1]
+    usage = list(csv.reader(open(f"{run_dir}/gpu_usage.csv")))[1:]
+    busy = {}
+    for r in usage:   # timestamp, index, utilization.gpu [%], memory.used [MiB]
+        busy.setdefault(r[1].strip(), []).append(float(r[2].strip().split()[0]))
+    return {"gpus": gpus, "samples_per_s": round(samples, 1), "batch_per_step": per_step,
+            "steps_per_s": round(samples / per_step, 3), "val_seconds": float(val["val_seconds"]),
+            "mean_gpu_utilization_pct": {k: round(sum(v) / len(v), 1) for k, v in busy.items()}}
 
 
 if __name__ == "__main__":
+    copy_code()
+    from src.kaggle_kernel import WORK, check_val_benchmark, gpu_monitor, setup, train
     setup()
     check_val_benchmark()
-    run(f"{sys.executable} -m src.speed_test --steps 200 --out {WORK}/speed_results.json")
+    results = {}
+    for kind in ("unet", "diffusion"):
+        out = f"{WORK}/timing/{kind}"
+        monitor = gpu_monitor(f"{out}/gpu_usage.csv")
+        try:
+            train(f"configs/train_{kind}.yaml", out, f"--max-steps {STEPS}")
+        finally:
+            monitor.terminate()
+        results[kind] = summarize(out)
+        print(kind, json.dumps(results[kind]), flush=True)
+    json.dump(results, open(f"{WORK}/ddp_speed.json", "w"), indent=2)
+    print(json.dumps(results, indent=2))
