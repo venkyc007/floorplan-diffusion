@@ -1,0 +1,39 @@
+# Non-diffusion U-Net baseline: same backbone, predicts the 6 classes in one pass.
+#     python -m src.train --config configs/train_unet.yaml [--out DIR] [--smoke]
+# Reasons for the choices: docs/decisions.md (Day 3).
+
+model:
+  kind: unet
+  block_out_channels: [64, 128, 256, 256]
+  layers_per_block: 2
+  attention_from_level: 3
+  attention_head_dim: 32
+  mask_weight: 5.0                         # cross-entropy weight inside the mask (outside = 1)
+
+data:
+  train_npz: data/processed/train.npz
+  val_benchmark: data/benchmarks/val_benchmark.npz
+  val_cases: 256
+  num_workers: 4
+
+train:
+  batch_size: 32
+  lr: 2.0e-4
+  weight_decay: 0.01
+  warmup_steps: 1000
+  max_steps: 100000
+  grad_clip: 1.0
+  ema_decay: 0.999                         # used for the diffusion model only; ignored here
+  fp16: true
+  seed: 0
+  log_every: 100
+  val_every: 2000
+  checkpoint_minutes: 30
+  time_limit_hours: 8.5
+  sample_grid_cases: 8
+
+smoke:
+  model: {block_out_channels: [16, 32, 32, 32], layers_per_block: 1, norm_num_groups: 8, attention_head_dim: 8}
+  data: {val_cases: 16, num_workers: 0}
+  train: {batch_size: 4, warmup_steps: 5, max_steps: 20, log_every: 5, val_every: 10,
+          checkpoint_minutes: 0, sample_grid_cases: 4}

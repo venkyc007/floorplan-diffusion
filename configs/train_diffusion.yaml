@@ -1,0 +1,43 @@
+# Conditional diffusion inpainting model (Palette-style). Used by src/train.py:
+#     python -m src.train --config configs/train_diffusion.yaml [--out DIR] [--smoke]
+# Reasons for the choices: docs/decisions.md (Day 3).
+
+model:
+  kind: diffusion
+  block_out_channels: [64, 128, 256, 256]  # U-Net widths at 128, 64, 32, 16 px
+  layers_per_block: 2
+  attention_from_level: 3                  # self-attention at level 3 (16x16) + the middle block
+  attention_head_dim: 32
+  num_train_timesteps: 1000
+  beta_schedule: squaredcos_cap_v2         # cosine schedule
+  ddim_steps: 50                           # sampling steps (validation / evaluation)
+  mask_weight: 5.0                         # loss weight of pixels inside the mask (outside = 1)
+
+data:
+  train_npz: data/processed/train.npz
+  val_benchmark: data/benchmarks/val_benchmark.npz
+  val_cases: 256                           # fixed validation subset (same cases every time)
+  num_workers: 4
+
+train:
+  batch_size: 32
+  lr: 1.0e-4
+  weight_decay: 0.01
+  warmup_steps: 1000
+  max_steps: 200000                        # cosine decay length; the time limit usually stops earlier
+  grad_clip: 1.0
+  ema_decay: 0.999
+  fp16: true                               # only used on a GPU
+  seed: 0
+  log_every: 100                           # steps between train-loss log lines
+  val_every: 2000                          # steps between validations
+  checkpoint_minutes: 30                   # save last.pt this often (wall clock)
+  time_limit_hours: 8.5                    # stop gracefully (and save) after this long
+  sample_grid_cases: 8                     # val cases drawn in each sample grid
+
+# --smoke: tiny model, a few steps on CPU, to test the whole pipeline.
+smoke:
+  model: {block_out_channels: [16, 32, 32, 32], layers_per_block: 1, norm_num_groups: 8, attention_head_dim: 8, ddim_steps: 5}
+  data: {val_cases: 16, num_workers: 0}
+  train: {batch_size: 4, warmup_steps: 5, max_steps: 20, log_every: 5, val_every: 10,
+          checkpoint_minutes: 0, sample_grid_cases: 4}

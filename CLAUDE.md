@@ -49,6 +49,13 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - Baselines (`src/eval/baselines.py`): do-nothing, nearest-fill, ground truth → `outputs/baseline_results.md`. Tests: `python -m pytest tests/`.
 - Every self-made choice is logged in `docs/decisions.md` — add new ones there.
 
+## Models and training (Day 3)
+
+- `src/models/`: `DiffusionInpainter` (Palette-style: UNet2DModel on 13 ch = noisy one-hot target in [−1, 1] (6) + condition (7); predicts x0; cosine schedule, 1000 steps; DDIM sampling (50 steps) that overwrites outside-mask pixels with the known plan at the matching noise level; argmax at the end; weighted MSE, mask × 5) and `UNetInpainter` (same backbone, 7 ch in → 6 logits, weighted CE, mask × 5). Common API: `model.loss(cond, target, mask)`, `model.predict(cond)` → label maps. Backbone: channels 64/128/256/256, 2 layers/block, attention at 16×16 + middle → **25.3M params** (user decided to keep this size; see decisions.md).
+- `python -m src.train --config configs/train_{diffusion,unet}.yaml --out <run dir> [--smoke]`: AdamW + warm-up + cosine, fp16 on GPU, EMA 0.999 (diffusion), grad clip 1.0, `last.pt` every 30 min, **auto-resume** from `<run dir>/checkpoints/last.pt`, graceful stop at `time_limit_hours` (8.5). Validation every 2,000 steps on 256 fixed val-benchmark cases → `val_log.csv`, `best.pt` (by tolerant mIoU), `samples/`. **Keep `max_steps` unchanged across sessions.** Training needs the val benchmark (`python -m src.data.make_benchmark`) and `data/processed/train.npz`.
+- `python -m src.evaluate --checkpoint <best.pt> --benchmark val|test` → full metric table. Compare/choose models on **val**; test only for final numbers.
+- Checks: `python -m src.overfit_check` (→ `outputs/overfit_check.png`), `--smoke` runs, `python -m pytest tests/` (14 tests). CPU is far too slow for real training (~7 s per step at batch 2) — train on Kaggle GPUs.
+
 ## Structural rules (for constraints and metrics)
 
 - **Boundary = wall + door + window together.** Connectivity constraints/metrics treat all three as one boundary; doors and windows fill gaps in walls (they don't overlap them).
@@ -79,7 +86,7 @@ app/        Gradio web interface
 docs/       Documentation (data_notes.md = data pipeline + benchmarks; decisions.md = every self-made choice)
 tests/      Unit tests (python -m pytest tests/)
 data/       Datasets (git-ignored)
-outputs/    Checkpoints, logs, figures, results (git-ignored except *.png figures)
+outputs/    Figures + result tables (top-level *.png/*.md are committed); runs/ checkpoints & logs are git-ignored
 ```
 
 ## How to work with me (the user)

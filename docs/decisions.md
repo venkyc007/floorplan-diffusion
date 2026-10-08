@@ -65,6 +65,41 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **pytest added to requirements** — needed to run `tests/`.
 - **`outputs/*.md` committed like `outputs/*.png`** — `baseline_results.md` is a report artifact; the larger CSV stays ignored.
 
+## Models (Day 3)
+
+- **Architecture kept exactly as specified (channels 64/128/256/256, 2 layers per block, attention at 16×16 + middle block) at 25.3M parameters, not 30–40M** (user decision, 2026-10-08: keep 25.3M) — with a 128×128 input the 4 levels run at 128/64/32/16 px, so "attention at 16×16 and below" is only the last level; the spec's architecture and size disagree, and the architecture is the more concrete instruction. To reach the range: 3 layers per block → 33.3M, or last level 384 channels → 40.8M (attention also at 32×32 only adds 1.3M).
+- **Self-attention head size 32 channels** — a common default; gives 8 heads at 256 channels.
+- **Condition channels stay 0/1 (not scaled to [−1, 1]) while the noisy target is in [−1, 1]** — in the condition, "all zeros" means masked; scaling to [−1, 1] would turn masked pixels into "all −1", an ordinary-looking value.
+- **Training timesteps drawn uniformly from 0–999** — standard DDPM training.
+- **Predicted x0 clipped to [−1, 1] (`clip_sample`)** — the target lives in that range; clipping stops sampling from drifting.
+- **DDIM with eta = 0 (deterministic given the start noise), `set_alpha_to_one=True`** — standard DDIM; the last step then lands exactly on the predicted clean plan.
+- **Known-region overwrite: the start noise outside the mask is also replaced by the known plan noised to the first timestep; after each step, outside-mask pixels get the known plan noised to the NEXT timestep (clean after the last step)** — keeps the known region consistent with the current noise level throughout, as specified.
+- **Diffusion loss = Σ(weight × squared error) / (Σ weight × 6 channels), weight 5 inside the mask, 1 outside** — a weighted mean, so the loss scale does not depend on mask size.
+- **U-Net baseline reuses `UNet2DModel` with a constant timestep 0** — "same backbone" exactly; the time embedding is then a constant learned bias.
+- **U-Net cross-entropy normalised the same way (Σ weight × CE / Σ weight)** — same reason as the diffusion loss.
+- **GroupNorm group count configurable (`norm_num_groups`, default 32; 8 for smoke models)** — tiny test models have 16 channels, which 32 groups can't divide.
+
+## Training (Day 3)
+
+- **Training counted in steps, not epochs; batch 32** — corruptions are random per sample, so "epochs" carry no meaning; 32 fits a 16 GB Kaggle GPU at 128×128 with fp16 for a 25M U-Net.
+- **Learning rate 1e-4 (diffusion) / 2e-4 (U-Net), AdamW weight decay 0.01, 1,000 warm-up steps, cosine decay over `max_steps` (200k diffusion / 100k U-Net)** — common values for these model sizes; the U-Net's single-pass objective tolerates a higher rate. `max_steps` sets the schedule length; the 8.5 h time limit usually stops a session earlier and the next session resumes.
+- **`max_steps` must stay the same across resumed sessions** — the schedule is recomputed from it (changing it makes the learning rate jump, seen in the smoke test).
+- **EMA (0.999 per step) for diffusion only, as specified; validation and `best.pt` use the EMA weights; buffers are copied, not averaged** — EMA weights usually sample better.
+- **fp16 via autocast + GradScaler on GPU only; gradients unscaled before clipping (max norm 1.0)** — clipping must see the true gradient size. fp16 could not be tested here (no GPU).
+- **Checkpoints written to a temporary file and then renamed** — a session killed mid-save can't leave a broken `last.pt`.
+- **`last.pt` holds model, EMA, optimiser, scheduler, scaler, step, best score, cumulative training hours and torch/CUDA RNG states; resume is automatic when `OUT/checkpoints/last.pt` exists** — "run the same command again" is the whole resume procedure.
+- **DataLoader order and worker RNG are not restored on resume** — corruptions are random per sample anyway, so continuing with fresh randomness changes nothing meaningful.
+- **Time limit measured from process start (includes data loading)** — the safe side for Kaggle's session limit.
+- **Validation: 256 val-benchmark cases chosen by a seeded random draw (seed 1234), every 2,000 steps, diffusion noise seeded (0) so successive validations are comparable; best checkpoint by tolerant mIoU** — tolerant mIoU is the headline metric least sensitive to 1-px wall offsets.
+- **Sample grids show 8 fixed val cases (input | prediction composited with known pixels | ground truth)** — the same cases each time make progress visible.
+- **Logs as CSV (`train_log.csv` every 100 steps, `val_log.csv`), hours cumulative over sessions** — readable without extra tools.
+- **`src/evaluate.py` added (not requested)** — scores any checkpoint on the full val/test benchmark with all metrics; needed to compare models next.
+
+## Checks (Day 3)
+
+- **Overfit check: tiny models (0.39M), Adam lr 3e-3, no clipping, 400 steps; pass = final loss < 50% of initial** — a quick "can it learn at all" test; the U-Net's loss spiked once mid-run at this high rate and recovered, which the real training's warm-up and clipping avoid.
+- **Smoke settings: tiny models, batch 4, 20 steps, validation every 10 steps on 16 cases with 5 DDIM steps, checkpoint after every step** — exercises every code path (validation, best/last checkpoints, sample grids, resume, time-limit stop) in about a minute on CPU.
+
 ## Tooling
 
 - **Always pass `encoding="utf-8"` when Python reads/writes text files** — Windows defaults to cp1252; a write with "−" failed and emptied this file once (rebuilt from the session record).
