@@ -161,11 +161,31 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **Alignment = Σ|gx·gy| / Σ(gx² + gy²)/2 of the boundary probability (Sobel gradients), inside the region** — horizontal/vertical edges have one gradient component near 0, so the score is about 0 for axis-aligned structure and about 1 for 45° strokes; normalising by edge energy makes it independent of how much boundary there is. Real corners give a floor (about 0.04 on the ground truth).
 - **Openings and closure are normalised by the REGION size, not by the opening/room probability** — after the softmax every pixel keeps a tiny leftover probability of each class, so a region with no real door (or no room) divided a tiny unsupported amount by a tiny total and scored about 0.87 for nothing (found on a real val case).
 - **The on/off key is named `use`, not `on`** — YAML reads the word `on` as the boolean true, which silently broke the configs (caught by the smoke test; now covered by a unit test).
-- **Noise window `t_min <= t < t_max` instead of only `t < t_max`; the fine-tune uses ALL noise levels (t_min 0, t_max 1000), against the suggested "only t < 600"** — needs the user's confirmation. Measured on run 1: below t ≈ 600 its x0 guess is already as clean as the ground truth (every constraint at the ground-truth level), so a t < 600 window would leave the losses almost nothing to correct; the errors appear at t ≥ 800 (clDice 0.0007 → 0.016, openings 0.002 → 0.006 from t = 800 to 999), where the x0 guess is still sharp enough to judge (tolerant mIoU 0.95 at t = 800, 0.79 at t = 999).
-- **Weights: clDice 1.0, openings 1.0, closure 3.0, alignment 0.01** — chosen from the run-1 magnitudes so each weighted term is about 25–55% of the base loss (about 0.0027) averaged over noise levels; alignment is kept small because run 1 already sits at the ground-truth floor, so a large weight would mostly erode real corners.
+- **Noise window `t_min <= t < t_max` instead of only `t < t_max`; the fine-tune uses ALL noise levels (t_min 0, t_max 1000), against the suggested "only t < 600"** — the t < 600 overfit variant also hurt at the first weights, and the passing settings were tested with all levels. Measured on run 1: below t ≈ 600 its x0 guess is already as clean as the ground truth (every constraint at the ground-truth level), so a t < 600 window would leave the losses almost nothing to correct; the errors appear at t ≥ 800 (clDice 0.0007 → 0.016, openings 0.002 → 0.006 from t = 800 to 999), where the x0 guess is still sharp enough to judge (tolerant mIoU 0.95 at t = 800, 0.79 at t = 999).
+- **(Superseded by the overfit tests below.) First weights: clDice 1.0, openings 1.0, closure 3.0, alignment 0.01** — chosen from the run-1 magnitudes so each weighted term is about 25–55% of the base loss (about 0.0027) averaged over noise levels; alignment is kept small because run 1 already sits at the ground-truth floor, so a large weight would mostly erode real corners.
 - **Constraint losses are averaged with a per-sample noise weight (0/1) without re-normalising by the number of samples inside the window** — simple; with the full window every sample counts.
 - **Each loss part (mse and each constraint) is logged in `train_log.csv`, averaged over GPUs; validation now also logs conn_err, open_on_wall, room_leak, room_count_err and alignment** — so the effect of the constraints is visible during training, not only in tolerant mIoU. `best.pt` is still chosen by tolerant mIoU.
 - **Compute overhead of the constraints: within measurement noise on CPU (8.8 against 9.1 s per step); planned as 3%** — pooling and convolution on 128×128 maps are cheap next to the U-Net.
+
+## Constraint overfit tests and the fix (Day 5, evening)
+
+Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps, seed 0); tolerant mIoU on that batch after 20-step sampling (eta 0 / eta 1):
+
+| Variant | Final base MSE | Tolerant mIoU | Conn. error |
+|---|---|---|---|
+| No constraints | 0.0117 | 0.868 / 0.864 | 0.12 |
+| All 4 at the first weights (1, 1, 3, 0.01) | 0.073 | 0.365 (eta 1) | — |
+| All 4 at ¼ weight | 0.025 | 0.571 / 0.573 | 0.00 |
+| All 4, only t < 600 | 0.028 | 0.376 / 0.405 | 0.25 |
+| All 4, openings/closure/alignment ground-truth-relative | 0.074 | 0.213 / 0.231 | 0.12 |
+| clDice + closure (weights 1, 3) | 0.051 | 0.327 / 0.346 | 0.12 / 0.25 |
+| clDice only (weight 1) | 0.053 | 0.402 / 0.407 | 0.00 |
+| clDice only, weight 0.01 | 0.0104 | 0.930 / 0.879 | 0.00 |
+| **clDice 0.01 + closure 0.03 (chosen)** | **0.0099** | **0.947 / 0.968** | **0.00** |
+
+- **Openings, closure and alignment are ground-truth-relative: `max(0, L(prediction) − L(ground truth))` in the same region** (user decision) — removes any reward for deleting real doors or shrinking real rooms; a perfect prediction costs 0. It did not, on its own, fix the overfit damage.
+- **The damage came from the loss STRENGTH, not from which rule or from cheating** — clDice alone (ground-truth-based) hurt as much at weight 1, and matched/beat "no constraints" at weight 0.01. The first weights were chosen by matching loss VALUES to the base loss, but what counts is gradient size, which the sharp softmax (×5) and the skeleton operations amplify; about 100× too strong.
+- **Fine-tune uses clDice (0.01) + ground-truth-relative closure (0.03); openings and alignment off** (user decision: fallback to the ground-truth-based clDice plus closure; weights scaled by 1/100 after the test above). The same settings are in the control config, with only `enabled` differing.
 
 ## Fine-tunes (Day 5)
 

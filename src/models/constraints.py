@@ -129,18 +129,34 @@ def alignment_loss(p, region):
 # -------------------------------------------------------------- combined
 
 def constraint_losses(x0_pred, target, mask, ccfg):
-    """All enabled constraint losses, one value per sample each: {name: (B,)}."""
+    """All enabled constraint losses, one value per sample each: {name: (B,)}.
+
+    openings, closure and alignment are rules that don't look at the ground
+    truth, so on their own they can be "won" by cheating (no doors -> no
+    unsupported doors; smaller rooms -> less leak; less wall -> fewer
+    diagonals). They are therefore made GROUND-TRUTH-RELATIVE: only the part
+    of the score that is WORSE than the true plan's own score counts,
+        max(0, L(prediction) - L(ground truth)),
+    in the same region. A prediction as good as the real plan costs nothing,
+    so there is no reward for deleting real doors or shrinking real rooms.
+    clDice already compares with the ground truth and is used as is.
+    """
     p = probabilities(x0_pred.float(), ccfg["temperature"])
+    p_true = probabilities(target * 2 - 1, ccfg["temperature"])   # same transform: leftovers cancel
     region = grow(mask.float(), ccfg["dilate_px"])
+
+    def relative(fn, *args):
+        return F.relu(fn(p, *args) - fn(p_true, *args))
+
     out = {}
     if ccfg["cldice"]["use"]:
         out["cldice"] = cldice_loss(p, target, region, ccfg["cldice"]["iterations"])
     if ccfg["openings"]["use"]:
-        out["openings"] = openings_loss(p, region, ccfg["openings"]["iterations"])
+        out["openings"] = relative(openings_loss, region, ccfg["openings"]["iterations"])
     if ccfg["closure"]["use"]:
-        out["closure"] = closure_loss(p, region)
+        out["closure"] = relative(closure_loss, region)
     if ccfg["alignment"]["use"]:
-        out["alignment"] = alignment_loss(p, region)
+        out["alignment"] = relative(alignment_loss, region)
     return out
 
 

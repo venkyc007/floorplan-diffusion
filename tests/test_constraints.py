@@ -119,3 +119,43 @@ def test_losses_are_differentiable():
     total = sum(v.sum() for v in constraint_losses(x0 * 0.5, target_of(plan), EVERYWHERE, cfg).values())
     total.backward()
     assert x0.grad is not None and torch.isfinite(x0.grad).all() and x0.grad.abs().sum() > 0
+
+
+CFG = {"temperature": TEMPERATURE, "dilate_px": 3, "t_min": 0, "t_max": 1000,
+       "cldice": {"use": True, "iterations": 4}, "openings": {"use": True, "iterations": 12},
+       "closure": {"use": True}, "alignment": {"use": True}}
+
+
+def test_perfect_prediction_costs_nothing():
+    """Ground-truth-relative losses: predicting the true plan scores ~0 on
+    every constraint (real corners / real exterior doors are not penalised)."""
+    plan = toy_plan()
+    out = constraint_losses(as_x0(plan), target_of(plan), EVERYWHERE, CFG)
+    for name, value in out.items():
+        assert value.item() < 1e-3, (name, value.item())
+
+
+def test_no_reward_for_deleting_openings():
+    """Removing the real door (wall drawn instead) must not score BETTER than
+    the true plan on the openings rule (no cheating by deleting openings)."""
+    plan = toy_plan()
+    no_door = plan.copy()
+    no_door[18:22, 19:21] = WALL
+    target = target_of(plan)
+    honest = constraint_losses(as_x0(plan), target, EVERYWHERE, CFG)["openings"]
+    cheat = constraint_losses(as_x0(no_door), target, EVERYWHERE, CFG)["openings"]
+    assert cheat.item() >= honest.item() - 1e-6
+
+
+def test_relative_losses_still_catch_errors():
+    """Relative to the ground truth, a floating door and a leaking room are still penalised."""
+    plan = toy_plan()
+    target = target_of(plan)
+    floating = plan.copy()
+    floating[18:22, 19:21] = WALL
+    floating[24:26, 8:14] = DOOR
+    leaking = plan.copy()
+    leaking[4:6, 8:14] = ROOM
+    leaking[0:4, 8:14] = BACKGROUND
+    assert constraint_losses(as_x0(floating), target, EVERYWHERE, CFG)["openings"].item() > 1e-3
+    assert constraint_losses(as_x0(leaking), target, EVERYWHERE, CFG)["closure"].item() > 1e-3

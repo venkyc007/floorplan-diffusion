@@ -70,7 +70,8 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 
 - Default sampler: stochastic DDIM 50 (`ddim_eta: 1.0`). Best usable setting so far: **refine from the one-shot prediction at t = 600** (`src/sampling_experiment.py`; tolerant mIoU 0.794 ≈ U-Net, connectivity error 0.016 against 0.133, room leak 0.014 against 0.052). See `outputs/diffusion_run1_sampling.md`.
 - Constraint losses: `src/models/constraints.py` (clDice, openings, closure, alignment; on the softmax of x0 / 0.2, mask grown by 3 px; region-normalised). Configured under `model.constraints` (switch `use`, NOT `on` — YAML reads `on` as true), noise window `t_min..t_max`. Tests: `tests/test_constraints.py`.
-- Fine-tunes: `configs/finetune_constraints.yaml` / `finetune_control.yaml` (identical except `constraints.enabled`; `tests/test_finetune_configs.py`), started with `--init <run-1 best.pt>`; kernels `kaggle/kernels/finetune_{constraints,control}/`. 26,000 steps × 64, lr 2e-5.
+- Fine-tunes: `configs/finetune_constraints.yaml` / `finetune_control.yaml` (identical except `constraints.enabled`; `tests/test_finetune_configs.py`), started with `--init <run-1 best.pt>`; kernels `kaggle/kernels/finetune_{constraints,control}/`. 26,000 steps × 64, lr 2e-5. **Constraints used: clDice 0.01 + closure 0.03 (ground-truth-relative); openings and alignment off.**
+- **Constraint weights must be tiny (~0.01):** weights matched to loss values were ~100× too strong (the sharp softmax and skeleton ops amplify gradients) and wrecked reconstruction in the overfit test. Always run the diffusion overfit check (no constraints vs constraints, same seed) before a constrained run.
 
 ## Structural rules (for constraints and metrics)
 

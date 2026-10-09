@@ -24,10 +24,10 @@ model:
     dilate_px: 3                           # losses only in the mask region grown by 3 px
     t_min: 0                               # apply at noise levels t_min <= t < t_max: ALL levels,
     t_max: 1000                            # because run 1's x0 is already perfect below t ~ 600
-    cldice: {use: true, weight: 1.0, iterations: 4}
-    openings: {use: true, weight: 1.0, iterations: 12}
-    closure: {use: true, weight: 3.0}
-    alignment: {use: true, weight: 0.01}    # small: run 1 already sits at the ground-truth floor
+    cldice: {use: true, weight: 0.01, iterations: 4}     # 1.0 was ~100x too strong (overfit test)
+    openings: {use: false, weight: 1.0, iterations: 12}   # OFF: hurt reconstruction in the overfit test (docs/decisions.md)
+    closure: {use: true, weight: 0.03}                   # scaled down with clDice (3.0 / 100)
+    alignment: {use: false, weight: 0.01}   # OFF: hurt reconstruction in the overfit test (docs/decisions.md)
 
 data:
   train_npz: data/processed/train.npz

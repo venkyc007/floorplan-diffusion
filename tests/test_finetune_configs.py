@@ -27,7 +27,9 @@ def test_constraint_switches_parse_from_yaml():
     (YAML reads a key named `on` as the boolean True)."""
     c = load("finetune_constraints")["model"]["constraints"]
     for name in ("cldice", "openings", "closure", "alignment"):
-        assert c[name]["use"] is True and isinstance(c[name]["weight"], float), name
+        assert isinstance(c[name]["use"], bool) and isinstance(c[name]["weight"], float), name
+    # Fallback after the overfit test: only the ground-truth-based clDice + closure.
+    assert [n for n in ("cldice", "openings", "closure", "alignment") if c[n]["use"]] == ["cldice", "closure"]
 
 
 def test_finetune_settings():
