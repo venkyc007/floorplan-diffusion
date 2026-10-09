@@ -70,11 +70,13 @@ def check_val_benchmark():
 
 
 def gpu_monitor(path):
-    """Start logging GPU utilisation + memory to a CSV every 30 s. Returns the process."""
+    """Start logging every GPU's utilisation, memory, SM clock (current and max),
+    temperature and power to a CSV every 30 s (to spot clock throttling).
+    Returns the process. The first 4 columns keep their order (timing summaries)."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    return subprocess.Popen(
-        ["nvidia-smi", "--query-gpu=timestamp,index,utilization.gpu,memory.used",
-         "--format=csv", "-l", "30"], stdout=open(path, "w"), stderr=subprocess.DEVNULL)
+    fields = "timestamp,index,utilization.gpu,memory.used,clocks.sm,clocks.max.sm,temperature.gpu,power.draw"
+    return subprocess.Popen(["nvidia-smi", f"--query-gpu={fields}", "--format=csv", "-l", "30"],
+                            stdout=open(path, "w"), stderr=subprocess.DEVNULL)
 
 
 def train(config, out, extra=""):

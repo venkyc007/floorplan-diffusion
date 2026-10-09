@@ -62,7 +62,9 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - **Ask the user before every upload and every launch. Never print, copy or commit the Kaggle token** (`~/.kaggle/access_token`); don't run `kaggle config view`.
 - Measured on a Kaggle T4 (2026-10-08, single GPU): batch 32 max (64 runs out of memory); U-Net 1.20 steps/s, diffusion 1.17 steps/s (~37 samples/s); validation over 256 cases takes 3 s for the U-Net and 130 s for diffusion (50 DDIM steps).
 - **Multi-GPU (DDP)**: Kaggle gives T4 ×2. `torchrun --standalone --nproc_per_node=2 -m src.train ...` (the kernels do this automatically via `src/kaggle_kernel.py`); plain `python -m src.train` = one process. `batch_size` is per GPU. Only rank 0 writes files and validates; clock-based decisions are broadcast from rank 0 (`src/distributed.py`). Validation uses `val_ddim_steps` (20); `src/evaluate.py` uses `ddim_steps` (50). `torchrun` doesn't work on Windows: to test DDP locally, start the processes by hand with `WORLD_SIZE/RANK/LOCAL_RANK/MASTER_ADDR/MASTER_PORT` and `USE_LIBUV=0`.
-- U-Net baseline run: `max_steps` 8,000 (fixed), about 2 h.
+- U-Net baseline run: `max_steps` 8,000 (fixed), about 2 h, full-val tolerant mIoU 0.775.
+- **Plan long 2-GPU runs at ~66 samples/s**, not the short timing runs' 75: the T4s throttle (≈705 of 1,590 MHz, ~77 °C) after ~2 min. `gpu_usage.csv` logs clocks/temperature/power.
+- **Diffusion run 1** (30,490 × 64, 8.5 h): val tolerant mIoU 0.698 (DDIM 20) < U-Net 0.794. Diagnostic (`outputs/diffusion_run1_diagnostic.md`): denoiser excellent (≥ 0.99 up to t = 600); one-shot at t = T = U-Net (0.792); best sampler DDIM 50 eta 1 ≈ DDPM 250 (0.753); samplers are structurally cleaner (conn_err ≈ 0, speckles at GT level) but commit to one plausible layout, which pixel IoU penalises. `[final x_t]` = `[last x0]`; the known-region reset makes no difference.
 
 ## Structural rules (for constraints and metrics)
 

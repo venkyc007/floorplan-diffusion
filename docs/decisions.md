@@ -137,6 +137,14 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **TODO (fairness): after the diffusion results, retrain the U-Net baseline with the same number of training samples as the diffusion run (31,500 × 64 ≈ 2.0 M, about 7.9× the first run), on 2 GPUs** (user decision) — otherwise diffusion would be compared against a much shorter-trained baseline.
 - **U-Net run summaries committed in `outputs/unet_baseline/` (logs, evaluation tables, sample grids; no checkpoints)** — small report artefacts; the 400 MB of checkpoints stay in the git-ignored `outputs/kaggle/`.
 
+- **Diffusion run 1: 30,490 steps × 64 (1.95 M samples, 7.6× the U-Net's 256,000) on 2 T4s, stopped by the 8.5 h limit 1,000 steps short of `max_steps` 31,500** — it ran at 66 samples/s instead of the 75 measured in the 300-step timing run. Validation (20 DDIM steps) tolerant mIoU 0.698, below the U-Net's 0.794 on the same 256 cases; mostly plateaued.
+- **Planning speed for long runs: about 66 samples/s on 2 T4s, not the short timing runs' 75** — the T4s throttle to about 705 MHz (of 1,590) at about 77 °C within about 2 minutes of full load (`gpu_usage.csv` of the diagnostic).
+- **GPU log extended with SM clock, max SM clock, temperature and power** (user request) — to see throttling; the throttle-reasons field was left out because its name differs between `nvidia-smi` versions.
+- **Diagnostic of run 1 (`outputs/diffusion_run1_diagnostic.md`): the denoiser is excellent (tolerant mIoU ≥ 0.99 up to t = 600), its one-shot prediction at t = T equals the U-Net (0.792 against 0.793), and stochastic sampling (DDIM 50 eta 1, or DDPM 250) is the best sampler (0.753)** — the gap to the U-Net comes from samples committing to one plausible layout, which pixel IoU penalises against the per-pixel best guess; the samplers win on structure (connectivity error ≈ 0 against 0.133; speckles 0.04 against 0.24, the ground truth itself has 0.05).
+- **Diagnostic interpretation of "one-shot with the known region filled in": a clean known plan outside the mask in the noisy target at t = T** — the literal reading of "noised to t = T" would be pure noise again. It scores badly (0.528): the model never saw clean values at t = T.
+- **The diagnostic ran on the 256 fixed val cases only; the full-val 50-step evaluation was not run** (user decision) — it is deferred until the sampling setting is chosen.
+- **Run-1 summaries committed in `outputs/diffusion_run1/` (logs, config, GPU logs, diagnostic table, last sample grid; no checkpoints)** — same reasoning as `outputs/unet_baseline/`.
+
 ## Tooling
 
 - **Always pass `encoding="utf-8"` when Python reads/writes text files** — Windows defaults to cp1252; a write with "−" failed and emptied this file once (rebuilt from the session record).
