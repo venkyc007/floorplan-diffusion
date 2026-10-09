@@ -11,6 +11,7 @@ outputs/*
 # small run summaries for the report (no checkpoints: *.pt is ignored below)
 !outputs/unet_baseline/
 !outputs/diffusion_run1/
+!outputs/finetune_runs/
 
 # Model checkpoints / weights anywhere in the project
 *.pt

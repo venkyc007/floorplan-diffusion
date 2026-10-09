@@ -194,6 +194,11 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **Both fine-tunes run at the same time, as two separate kernels** — they then finish before the 05:30 IST quota reset (about 02:30 if launched at 19:00) and use about 15.2 h of the 18.8 h left; running two GPU kernels at once worked earlier (the 2-GPU timing run ran alongside the U-Net run).
 - **The control computes no constraint losses, so it runs slightly faster; it still stops at the same step** — equal training, not equal wall time.
 
+## Fine-tune results (Day 5 night)
+
+- **Constraint fine-tune vs control: no measurable difference on the 256 val cases (tolerant mIoU 0.7512 vs 0.7511 at 26,000 steps; structural metrics within noise)** — reported as a null ablation result in `outputs/finetune_ablation.md`; the full-val evaluation decides. Interpretation: at a strength that doesn't damage reconstruction, training-time constraints don't change the (already structurally clean) diffusion samples.
+- **Fine-tune summaries committed in `outputs/finetune_runs/` (logs, configs, GPU logs, last sample grid; no checkpoints)** — same reasoning as `outputs/unet_baseline/`.
+
 ## Tooling
 
 - **Always pass `encoding="utf-8"` when Python reads/writes text files** — Windows defaults to cp1252; a write with "−" failed and emptied this file once (rebuilt from the session record).
