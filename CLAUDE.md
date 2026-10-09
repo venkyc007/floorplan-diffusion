@@ -66,6 +66,12 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - **Plan long 2-GPU runs at ~66 samples/s**, not the short timing runs' 75: the T4s throttle (≈705 of 1,590 MHz, ~77 °C) after ~2 min. `gpu_usage.csv` logs clocks/temperature/power.
 - **Diffusion run 1** (30,490 × 64, 8.5 h): val tolerant mIoU 0.698 (DDIM 20) < U-Net 0.794. Diagnostic (`outputs/diffusion_run1_diagnostic.md`): denoiser excellent (≥ 0.99 up to t = 600); one-shot at t = T = U-Net (0.792); best sampler DDIM 50 eta 1 ≈ DDPM 250 (0.753); samplers are structurally cleaner (conn_err ≈ 0, speckles at GT level) but commit to one plausible layout, which pixel IoU penalises. `[final x_t]` = `[last x0]`; the known-region reset makes no difference.
 
+## Day 5: sampling + structural constraints
+
+- Default sampler: stochastic DDIM 50 (`ddim_eta: 1.0`). Best usable setting so far: **refine from the one-shot prediction at t = 600** (`src/sampling_experiment.py`; tolerant mIoU 0.794 ≈ U-Net, connectivity error 0.016 against 0.133, room leak 0.014 against 0.052). See `outputs/diffusion_run1_sampling.md`.
+- Constraint losses: `src/models/constraints.py` (clDice, openings, closure, alignment; on the softmax of x0 / 0.2, mask grown by 3 px; region-normalised). Configured under `model.constraints` (switch `use`, NOT `on` — YAML reads `on` as true), noise window `t_min..t_max`. Tests: `tests/test_constraints.py`.
+- Fine-tunes: `configs/finetune_constraints.yaml` / `finetune_control.yaml` (identical except `constraints.enabled`; `tests/test_finetune_configs.py`), started with `--init <run-1 best.pt>`; kernels `kaggle/kernels/finetune_{constraints,control}/`. 26,000 steps × 64, lr 2e-5.
+
 ## Structural rules (for constraints and metrics)
 
 - **Boundary = wall + door + window together.** Connectivity constraints/metrics treat all three as one boundary; doors and windows fill gaps in walls (they don't overlap them).

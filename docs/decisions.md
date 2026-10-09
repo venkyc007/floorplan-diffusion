@@ -145,6 +145,35 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **The diagnostic ran on the 256 fixed val cases only; the full-val 50-step evaluation was not run** (user decision) — it is deferred until the sampling setting is chosen.
 - **Run-1 summaries committed in `outputs/diffusion_run1/` (logs, config, GPU logs, diagnostic table, last sample grid; no checkpoints)** — same reasoning as `outputs/unet_baseline/`.
 
+## Sampling (Day 5)
+
+- **Stochastic DDIM (eta 1) is the default sampler (`model.ddim_eta: 1.0`)** (user decision) — the best sampler in the run-1 diagnostic (0.753 against 0.728 for eta 0) and structurally the cleanest; still reproducible with a fixed seed.
+- **"Refine from one-shot": the one-shot prediction is used as a SHARP plan (argmax as one-hot), noised to t0, then finished with the stochastic DDIM steps at or below t0 (of 50: 10/20/30 steps for t0 = 200/400/600)** — re-noising a committed plan lets the model rewrite only uncertain parts; using its blurry continuous values would keep the blur.
+- **Medoid of 4 = the sample with the highest mean tolerant mIoU against the other 3 (inside the mask); the pixel average of 4 = majority vote of their one-hot maps** — the medoid never looks at the ground truth; the vote is the simplest pixel average of discrete samples.
+- **Result: refine from one-shot at t = 600 is the best usable setting** (tolerant mIoU 0.794 ≈ U-Net 0.793, best door/window F1, connectivity error 0.016 against 0.133, room leak 0.014 against 0.052, speckles at ground-truth level, 0.32 s per case). The oracle best-of-4 (0.845) is reported as an upper bound only. Not yet made the default: it should be confirmed on the full val benchmark.
+
+## Structural constraints (Day 5)
+
+- **Losses on the predicted x0, turned into probabilities by `softmax(x0 / 0.2)`, computed only in the mask grown by 3 px; one on/off switch (`use`) and one weight each** (user spec) — temperature 0.2 keeps confident pixels near one-hot (ratio e^10) while blurry ones stay soft.
+- **Wall connectivity = 1 − soft clDice (Shit et al., CVPR 2021) between predicted and true boundary (wall + door + window); soft skeleton with 4 iterations** — walls are about 2 px thick, so 4 thinning steps reach the centre line.
+- **Openings on walls = unsupported door/window probability, with "wall support" spread from wall pixels THROUGH touching door/window pixels (12 steps of 3×3 dilation)** — a plain "3×3 neighbourhood touches a wall" test would wrongly penalise the middle pixels of a real 2 × 10–20 px door; 12 steps cover doors up to about 24 px.
+- **Room closure = room probability next to (3×3) outdoor/background probability** — as specified.
+- **Alignment = Σ|gx·gy| / Σ(gx² + gy²)/2 of the boundary probability (Sobel gradients), inside the region** — horizontal/vertical edges have one gradient component near 0, so the score is about 0 for axis-aligned structure and about 1 for 45° strokes; normalising by edge energy makes it independent of how much boundary there is. Real corners give a floor (about 0.04 on the ground truth).
+- **Openings and closure are normalised by the REGION size, not by the opening/room probability** — after the softmax every pixel keeps a tiny leftover probability of each class, so a region with no real door (or no room) divided a tiny unsupported amount by a tiny total and scored about 0.87 for nothing (found on a real val case).
+- **The on/off key is named `use`, not `on`** — YAML reads the word `on` as the boolean true, which silently broke the configs (caught by the smoke test; now covered by a unit test).
+- **Noise window `t_min <= t < t_max` instead of only `t < t_max`; the fine-tune uses ALL noise levels (t_min 0, t_max 1000), against the suggested "only t < 600"** — needs the user's confirmation. Measured on run 1: below t ≈ 600 its x0 guess is already as clean as the ground truth (every constraint at the ground-truth level), so a t < 600 window would leave the losses almost nothing to correct; the errors appear at t ≥ 800 (clDice 0.0007 → 0.016, openings 0.002 → 0.006 from t = 800 to 999), where the x0 guess is still sharp enough to judge (tolerant mIoU 0.95 at t = 800, 0.79 at t = 999).
+- **Weights: clDice 1.0, openings 1.0, closure 3.0, alignment 0.01** — chosen from the run-1 magnitudes so each weighted term is about 25–55% of the base loss (about 0.0027) averaged over noise levels; alignment is kept small because run 1 already sits at the ground-truth floor, so a large weight would mostly erode real corners.
+- **Constraint losses are averaged with a per-sample noise weight (0/1) without re-normalising by the number of samples inside the window** — simple; with the full window every sample counts.
+- **Each loss part (mse and each constraint) is logged in `train_log.csv`, averaged over GPUs; validation now also logs conn_err, open_on_wall, room_leak, room_count_err and alignment** — so the effect of the constraints is visible during training, not only in tolerant mIoU. `best.pt` is still chosen by tolerant mIoU.
+- **Compute overhead of the constraints: within measurement noise on CPU (8.8 against 9.1 s per step); planned as 3%** — pooling and convolution on 128×128 maps are cheap next to the U-Net.
+
+## Fine-tunes (Day 5)
+
+- **Two fine-tunes from run 1's `best.pt` (EMA weights, loaded with the new `--init`; ignored when resuming from `last.pt`): `finetune_constraints` (constraints on) and `finetune_control` (off), identical otherwise (enforced by `tests/test_finetune_configs.py`)** (user decision) — a fair ablation: same start, data order, seed, schedule and steps.
+- **Learning rate 2e-5 (user spec), 200 warm-up steps, cosine to 0 over 26,000 steps × 64 (2 T4s × 32)** — about 7.2 h of training at about 64 samples/s (the measured 66 with 3% constraint overhead), plus about 0.4 h of setup and validation: about 7.6 h, under the 8.5 h safety stop.
+- **Both fine-tunes run at the same time, as two separate kernels** — they then finish before the 05:30 IST quota reset (about 02:30 if launched at 19:00) and use about 15.2 h of the 18.8 h left; running two GPU kernels at once worked earlier (the 2-GPU timing run ran alongside the U-Net run).
+- **The control computes no constraint losses, so it runs slightly faster; it still stops at the same step** — equal training, not equal wall time.
+
 ## Tooling
 
 - **Always pass `encoding="utf-8"` when Python reads/writes text files** — Windows defaults to cp1252; a write with "−" failed and emptied this file once (rebuilt from the session record).

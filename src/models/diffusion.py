@@ -22,6 +22,7 @@ from diffusers import DDIMScheduler, DDPMScheduler
 
 from src.data.classes import NUM_CLASSES
 from src.models.backbone import build_unet
+from src.models.constraints import constraint_losses, noise_weight
 
 
 class DiffusionInpainter(nn.Module):
@@ -40,7 +41,10 @@ class DiffusionInpainter(nn.Module):
         return self.net(torch.cat([x_t, cond], dim=1), t).sample
 
     def loss(self, cond, target, mask):
-        """Weighted MSE between predicted and true x0 (mask pixels weigh more)."""
+        """Weighted MSE between predicted and true x0 (mask pixels weigh more),
+        plus the structural constraint losses if `constraints` is configured
+        and enabled (src/models/constraints.py). The parts are kept in
+        self.last_parts so training can log them separately."""
         x0 = target * 2 - 1
         noise = torch.randn_like(x0)
         t = torch.randint(0, self.mcfg["num_train_timesteps"], (len(x0),), device=x0.device)
@@ -48,11 +52,27 @@ class DiffusionInpainter(nn.Module):
         pred = self(x_t, cond, t)
         weight = 1 + (self.mcfg["mask_weight"] - 1) * mask      # (B, 1, H, W)
         err = ((pred.float() - x0) ** 2) * weight
-        return err.sum() / (weight.sum() * NUM_CLASSES)
+        total = err.sum() / (weight.sum() * NUM_CLASSES)
+        self.last_parts = {"mse": total.detach()}
+
+        ccfg = self.mcfg.get("constraints")
+        if ccfg and ccfg.get("enabled"):
+            per_t = noise_weight(t, ccfg)                         # 0 for noisy steps (t >= t_max)
+            for name, values in constraint_losses(pred, target, mask, ccfg).items():
+                term = (values * per_t).mean()
+                self.last_parts[name] = term.detach()
+                total = total + ccfg[name]["weight"] * term
+        return total
 
     @torch.no_grad()
-    def predict(self, cond, steps=None, generator=None):
-        """Generate label maps (B, H, W) for a batch of conditions (DDIM)."""
+    def predict(self, cond, steps=None, generator=None, eta=None):
+        """Generate label maps (B, H, W) for a batch of conditions (DDIM).
+
+        eta: 0 = deterministic DDIM, 1 = stochastic (fresh noise each step).
+        Default from the config (`ddim_eta`, 1.0): the run-1 diagnostic found
+        stochastic DDIM 50 best (tolerant mIoU 0.753 vs 0.728 for eta 0) and
+        structurally cleanest."""
+        eta = self.mcfg.get("ddim_eta", 1.0) if eta is None else eta
         sched = self.sample_scheduler
         sched.set_timesteps(steps or self.mcfg["ddim_steps"], device=cond.device)
         mask = cond[:, -1:]                                     # 1 = unknown
@@ -67,7 +87,7 @@ class DiffusionInpainter(nn.Module):
         x = torch.where(mask.bool(), x, noised_known(timesteps[0]))
         for i, t in enumerate(timesteps):
             pred_x0 = self(x, cond, t.expand(len(x)))
-            x = sched.step(pred_x0.float(), t, x, eta=0.0).prev_sample
+            x = sched.step(pred_x0.float(), t, x, eta=eta, generator=generator).prev_sample
             # Known region: noised to the NEXT step's level, or clean at the end.
             outside = noised_known(timesteps[i + 1]) if i + 1 < len(timesteps) else known
             x = torch.where(mask.bool(), x, outside)

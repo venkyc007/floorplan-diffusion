@@ -3,6 +3,7 @@
     python -m src.train --config configs/train_diffusion.yaml --out outputs/runs/diffusion
     python -m src.train --config configs/train_unet.yaml --out outputs/runs/unet
     python -m src.train --config configs/train_diffusion.yaml --out outputs/runs/smoke --smoke
+    python -m src.train --config configs/finetune_constraints.yaml --out OUT --init RUN1/best.pt
 
 On several GPUs (one process per GPU, see src/distributed.py):
     torchrun --standalone --nproc_per_node=2 -m src.train --config ... --out ...
@@ -168,7 +169,8 @@ def validate(model, val, device, steps=None, batch_size=32):
     preds = np.concatenate(preds)
     scores = summarize([sample_stats(p, t, m) for p, t, m in zip(preds, val["targets"], val["masks"])])
     model.train()
-    keep = ["mIoU", "tmIoU", "F1_door", "F1_window", "F1_room"]
+    keep = ["mIoU", "tmIoU", "F1_door", "F1_window", "F1_room",
+            "conn_err", "open_on_wall", "room_leak", "room_count_err", "alignment"]
     return {k: round(float(scores[k]), 4) for k in keep}, preds
 
 
@@ -223,6 +225,8 @@ def main():
     parser.add_argument("--smoke", action="store_true", help="tiny model, few steps (CPU test)")
     parser.add_argument("--max-steps", type=int, help="override train.max_steps")
     parser.add_argument("--time-limit-hours", type=float, help="override train.time_limit_hours")
+    parser.add_argument("--init", help="fine-tune: start from this checkpoint's weights "
+                                       "(best.pt = EMA weights); ignored when resuming from last.pt")
     args = parser.parse_args()
 
     start = time.time()
@@ -248,6 +252,11 @@ def main():
 
     # Model, EMA (diffusion, main process only), optimiser, schedule, fp16 scaler.
     model = build_model(cfg["model"]).to(device)
+    last = out / "checkpoints" / "last.pt"
+    if args.init and not last.exists():   # fine-tune: start from earlier weights (EMA copies them below)
+        init = torch.load(args.init, map_location=device, weights_only=False)
+        model.load_state_dict(init.get("ema") or init["model"])
+        log(f"Initialised from {args.init} (step {init.get('step')})")
     ema = EMA(model, tc["ema_decay"]) if cfg["model"]["kind"] == "diffusion" and main_proc else None
     opt = torch.optim.AdamW(model.parameters(), lr=tc["lr"], weight_decay=tc["weight_decay"])
     sched = torch.optim.lr_scheduler.LambdaLR(
@@ -255,7 +264,6 @@ def main():
     scaler = torch.amp.GradScaler(device.type, enabled=use_fp16)
     step, best, hours_before = 0, -1.0, 0.0   # hours_before: training time of earlier sessions
 
-    last = out / "checkpoints" / "last.pt"
     if last.exists():   # every process loads the same checkpoint
         ckpt = torch.load(last, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model"])
@@ -305,6 +313,7 @@ def main():
     last_save = last_val = time.time()
     last_val_step = step   # validation counts steps from here (no back-to-back validations)
     running, n_running, step_seconds = 0.0, 0, 0.0
+    parts = {}                 # loss parts (mse + each constraint), summed between log lines
     limit = tc["time_limit_hours"] * 3600
     val_seconds = tc.get("val_minutes", float("inf")) * 60
     model.train()
@@ -314,17 +323,21 @@ def main():
         step_seconds += time.time() - t0
         step += 1
         running, n_running = running + loss, n_running + 1
+        for name, value in getattr(model, "last_parts", {}).items():
+            parts[name] = parts.get(name, 0.0) + value.item()
 
         if step % tc["log_every"] == 0:          # step-based: all processes take part
             mean_loss = dist.mean(running / n_running)
             samples = n_running * tc["batch_size"] * dist.world_size
+            part_means = {name: round(dist.mean(total / n_running), 6) for name, total in sorted(parts.items())}
             if main_proc:
                 append_csv(out / "train_log.csv", {
-                    "step": step, "loss": round(mean_loss, 6), "lr": f"{sched.get_last_lr()[0]:.3e}",
+                    "step": step, "loss": round(mean_loss, 6), **part_means,
+                    "lr": f"{sched.get_last_lr()[0]:.3e}",
                     "samples_per_s": round(samples / step_seconds, 1), "gpus": dist.world_size,
                     "hours": hours()})
             log(f"step {step}: loss {mean_loss:.4f} ({samples / step_seconds:.1f} samples/s)")
-            running, n_running, step_seconds = 0.0, 0, 0.0
+            running, n_running, step_seconds, parts = 0.0, 0, 0.0, {}
 
         # Clock-based decisions: made by the main process, shared with all.
         now = time.time()

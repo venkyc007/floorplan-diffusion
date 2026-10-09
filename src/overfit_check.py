@@ -5,6 +5,7 @@ target, wrong loss, wrong input). Runs on CPU in a few minutes with tiny
 models (the `smoke:` sizes from the configs).
 
     python -m src.overfit_check [--steps 400]
+    python -m src.overfit_check --diffusion-config finetune_constraints   # with the constraint losses
 
 Saves outputs/overfit_check.png (loss curves + predictions) and prints
 whether each loss dropped enough.
@@ -56,17 +57,23 @@ def overfit(cfg_path, batch, steps, lr):
     model.eval()
     gen = torch.Generator().manual_seed(0)
     preds = model.predict(batch[0], steps=20, generator=gen).numpy()
+    parts = {k: round(v.item(), 5) for k, v in getattr(model, "last_parts", {}).items()}
+    if len(parts) > 1:
+        print(f"  final loss parts ({cfg_path}):", parts)
     return mcfg["kind"], np.array(losses), preds
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--steps", type=int, default=400)
+    parser.add_argument("--diffusion-config", default="train_diffusion",
+                        help="config whose (smoke-sized) model is used for the diffusion run")
+    parser.add_argument("--out", default="outputs/overfit_check.png")
     args = parser.parse_args()
     batch, bench, idx, types = fixed_batch()
 
     results = {}
-    for cfg_path, lr in (("train_unet", 3e-3), ("train_diffusion", 3e-3)):
+    for cfg_path, lr in (("train_unet", 3e-3), (args.diffusion_config, 3e-3)):
         t = time.time()
         kind, losses, preds = overfit(cfg_path, batch, args.steps, lr)
         first, last = losses[:20].mean(), losses[-20:].mean()
@@ -98,7 +105,7 @@ def main():
             ax.set_title(title, fontsize=9)
             ax.axis("off")
     fig.tight_layout()
-    fig.savefig(project_path("outputs/overfit_check.png"), dpi=90)
+    fig.savefig(project_path(args.out), dpi=90)
     if not all(r[2] for r in results.values()):
         raise SystemExit("overfit check FAILED")
 

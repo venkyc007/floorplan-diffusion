@@ -11,6 +11,7 @@ model:
   num_train_timesteps: 1000
   beta_schedule: squaredcos_cap_v2         # cosine schedule
   ddim_steps: 50                           # sampling steps for final evaluation (src/evaluate.py)
+  ddim_eta: 1.0                            # 1 = stochastic DDIM (best in the run-1 diagnostic), 0 = deterministic
   mask_weight: 5.0                         # loss weight of pixels inside the mask (outside = 1)
 
 data:
