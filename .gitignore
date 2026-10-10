@@ -12,6 +12,7 @@ outputs/*
 !outputs/unet_baseline/
 !outputs/diffusion_run1/
 !outputs/finetune_runs/
+!outputs/full_eval/
 
 # Model checkpoints / weights anywhere in the project
 *.pt

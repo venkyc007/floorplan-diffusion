@@ -199,6 +199,14 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **Constraint fine-tune vs control: no measurable difference on the 256 val cases (tolerant mIoU 0.7512 vs 0.7511 at 26,000 steps; structural metrics within noise)** — reported as a null ablation result in `outputs/finetune_ablation.md`; the full-val evaluation decides. Interpretation: at a strength that doesn't damage reconstruction, training-time constraints don't change the (already structurally clean) diffusion samples.
 - **Fine-tune summaries committed in `outputs/finetune_runs/` (logs, configs, GPU logs, last sample grid; no checkpoints)** — same reasoning as `outputs/unet_baseline/`.
 
+## Full val-benchmark evaluation (Day 6)
+
+- **All 7,772 val cases, all metrics, broken down by type/location/position/size (`outputs/full_eval.md`, kernel `floorplan-full-eval`): fine-tune + refine-from-one-shot t = 600 is the best method — tolerant mIoU 0.801 (U-Net 0.775, run 1 refine 0.786, run 1 DDIM 50 0.740, nearest fill 0.489)** — it also has the best door/window/room F1 (0.693 / 0.684 / 0.953) and much cleaner structure than the U-Net (connectivity error 0.039 vs 0.178, room leak 0.026 vs 0.065, room count error 0.202 vs 0.301), and beats the U-Net on every type and size. The U-Net keeps a slight edge only on room/outdoor pixel IoU and is ~35× faster (0.010 vs 0.35 s per case).
+- **Constraint fine-tune vs control on the full benchmark: identical overlap (0.801 both); structure slightly favours the constraints (room count error 0.202 vs 0.215, connectivity 0.039 vs 0.045; large holes 0.556 vs 0.592 and 0.112 vs 0.131)** — consistent but small; not yet tested for statistical significance (a paired bootstrap over cases would settle it).
+- **Plain DDIM 50 gives the cleanest structure (connectivity error 0.005, room leak 0.005) but the lowest diffusion overlap** — it commits to one plausible layout; reported as the structure-first option.
+- **Evaluation predictions are kept in the kernel's temporary storage; scoring runs on the CPU cores in parallel** — the predicted maps (~127 MB per setting) aren't needed afterwards, and CPU scoring outside the GPU processes keeps GPU time short.
+- **The large-hole figure (`outputs/full_eval_large_holes.png`) re-samples 8 cases locally from the evaluated checkpoints** — the scored predictions weren't kept; the figure is labelled accordingly.
+
 ## Tooling
 
 - **Always pass `encoding="utf-8"` when Python reads/writes text files** — Windows defaults to cp1252; a write with "−" failed and emptied this file once (rebuilt from the session record).
