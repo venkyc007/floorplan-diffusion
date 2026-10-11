@@ -40,15 +40,21 @@ from src.utils import project_path
 # setting: (checkpoint argument, method)
 SETTINGS = {
     "unet": ("unet", "unet"),
+    "unet_matched": ("unet_matched", "unet"),
     "run1_ddim50": ("run1", "ddim50"),
     "run1_refine600": ("run1", "refine600"),
     "ft_constraints_refine600": ("ft_constraints", "refine600"),
     "ft_control_refine600": ("ft_control", "refine600"),
+    # refine-level sweep of the constraint fine-tune (Day 6, B.3)
+    "ft_constraints_refine200": ("ft_constraints", "refine200"),
+    "ft_constraints_refine400": ("ft_constraints", "refine400"),
+    "ft_constraints_refine800": ("ft_constraints", "refine800"),
+    "ft_constraints_ddim50": ("ft_constraints", "ddim50"),
 }
 # Balanced over 2 GPUs (DDIM 50 ~ 0.5 s/case, refine-600 ~ 0.33 s/case, U-Net ~ 0.02 s/case).
 PARTS = {0: ["run1_ddim50", "run1_refine600"],
          1: ["unet", "ft_constraints_refine600", "ft_control_refine600"]}
-ORDER = ["nearest_fill", "unet", "run1_ddim50", "run1_refine600",
+ORDER = ["nearest_fill", "unet", "unet_matched", "run1_ddim50", "run1_refine600",
          "ft_constraints_refine600", "ft_control_refine600"]
 
 
@@ -72,9 +78,9 @@ def predict_all(model, method, bench, device, steps, seed, bs=64):
                 pred = model.predict(cond)
             elif method == "ddim50":
                 pred = sample(model, cond, "ddim", steps, 1.0, True, gen)[0]
-            else:  # refine600: one-shot, then refine from t = 600
+            else:  # refineT: one-shot, then refine from t = T (e.g. refine600)
                 start = one_shot(model, cond, False, gen)
-                pred = refine(model, cond, start, 600, steps, gen)
+                pred = refine(model, cond, start, int(method[len("refine"):]), steps, gen)
         out.append(pred.cpu().numpy().astype(np.uint8))
     return np.concatenate(out)
 
@@ -82,12 +88,13 @@ def predict_all(model, method, bench, device, steps, seed, bs=64):
 def run_part(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     bench, _ = benchmark(args.limit)
-    ckpts = {"unet": args.ckpt_unet, "run1": args.ckpt_run1,
+    ckpts = {"unet": args.ckpt_unet, "run1": args.ckpt_run1, "unet_matched": args.ckpt_unet_matched,
              "ft_constraints": args.ckpt_ft_constraints, "ft_control": args.ckpt_ft_control}
     preds = Path(args.preds)
     preds.mkdir(parents=True, exist_ok=True)
     timing = {}
-    for k, name in enumerate(PARTS[args.part] if args.parts > 1 else sum(PARTS.values(), [])):
+    names = args.only.split(",") if args.only else (PARTS[args.part] if args.parts > 1 else sum(PARTS.values(), []))
+    for k, name in enumerate(names):
         ckpt, method = SETTINGS[name]
         model, _ = load_trained(ckpts[ckpt], device)
         t0 = time.time()
@@ -96,6 +103,9 @@ def run_part(args):
             torch.cuda.synchronize()
         timing[name] = round((time.time() - t0) / len(labels), 4)
         np.save(preds / f"{name}.npy", labels)
+        if args.keep_preds:   # compressed per-case predictions for later metrics (no GPU needed)
+            Path(args.keep_preds).mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(Path(args.keep_preds) / f"{name}.npz", labels=labels, plan_ids=bench["plan_ids"])
         print(f"{name}: {len(labels)} cases, {timing[name]} s/case", flush=True)
     json.dump(timing, open(preds / f"timing_part{args.part}.json", "w"))
 
@@ -124,7 +134,8 @@ def score(args):
     timing = {}
     for p in preds.glob("timing_part*.json"):
         timing.update(json.load(open(p)))
-    names = ["nearest_fill"] + [n for n in ORDER[1:] if (preds / f"{n}.npy").exists()]
+    names = (args.only.split(",") if args.only else
+             ["nearest_fill"] + [n for n in ORDER[1:] if (preds / f"{n}.npy").exists()])
     with Pool(min(len(names), os.cpu_count() or 1)) as pool:
         tables = dict(pool.map(score_one, [(n, str(preds), args.limit) for n in names]))
     out = Path(args.out)
@@ -204,6 +215,9 @@ def main():
     parser.add_argument("--figure", action="store_true", help="draw 8 large-hole cases (local)")
     parser.add_argument("--ckpt-run1")
     parser.add_argument("--ckpt-unet")
+    parser.add_argument("--ckpt-unet-matched")
+    parser.add_argument("--only", help="comma-separated settings to run/score (default: all)")
+    parser.add_argument("--keep-preds", help="also save compressed per-case predictions (.npz) here")
     parser.add_argument("--ckpt-ft-constraints")
     parser.add_argument("--ckpt-ft-control")
     parser.add_argument("--limit", type=int, help="only the first N cases (code check)")

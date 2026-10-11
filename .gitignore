@@ -13,6 +13,8 @@ outputs/*
 !outputs/diffusion_run1/
 !outputs/finetune_runs/
 !outputs/full_eval/
+!outputs/unet_matched/
+!outputs/arch_eval/
 
 # Model checkpoints / weights anywhere in the project
 *.pt

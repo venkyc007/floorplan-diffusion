@@ -39,3 +39,11 @@ def test_finetune_settings():
     base = load("train_diffusion")
     for key in ("block_out_channels", "layers_per_block", "attention_from_level", "num_train_timesteps"):
         assert c["model"][key] == base["model"][key], key   # same architecture as run 1 (needed for --init)
+
+
+def test_matched_unet_differs_only_in_length():
+    """The matched-sample U-Net must equal the original baseline except max_steps."""
+    a, b = load("train_unet"), load("train_unet_matched")
+    assert b["train"]["max_steps"] == 30000
+    a["train"].pop("max_steps"); b["train"].pop("max_steps")
+    assert a == b

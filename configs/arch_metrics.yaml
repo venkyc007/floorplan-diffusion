@@ -1,0 +1,5 @@
+# Sliver thresholds for src/eval/arch_metrics.py (rule 7), computed by
+#     python -m src.eval.arch_metrics
+# from 74699 room components of the training plans: 1st percentiles.
+min_area: 72.0
+min_width: 7.64

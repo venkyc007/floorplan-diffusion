@@ -207,6 +207,45 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **Evaluation predictions are kept in the kernel's temporary storage; scoring runs on the CPU cores in parallel** — the predicted maps (~127 MB per setting) aren't needed afterwards, and CPU scoring outside the GPU processes keeps GPU time short.
 - **The large-hole figure (`outputs/full_eval_large_holes.png`) re-samples 8 cases locally from the evaluated checkpoints** — the scored predictions weren't kept; the figure is labelled accordingly.
 
+## Day 6: matched U-Net, architectural metrics, post-processing, statistics
+
+**A. Matched-sample U-Net**
+- **`configs/train_unet_matched.yaml` = the original U-Net config with only `max_steps` changed (30,000 × 64 on 2 T4s = 1.92 M samples, 98.4% of diffusion's 1.95 M); a test enforces "only max_steps differs"** (user decision: same architecture, data, augmentation, loss, mask weighting) — learning rate kept at 2e-4 although the batch per step doubled (as for the diffusion DDP runs).
+- **Length from the original U-Net speed scaled to 2 GPUs with the observed long-run throttling: about 70 samples/s → 30,000 steps ≈ 7.6 h (10.6% margin under the 8.5 h stop; still under it at 66 samples/s)** — 30,490 steps (exact match) would leave only about 7% margin.
+- **The kernel evaluates `best.pt` on the full val benchmark and saves its per-case predictions (`preds/unet_matched.npz`)** (user request) — so new metrics and statistics need no GPU.
+
+**B.1 Architectural metrics (`src/eval/arch_metrics.py`)**
+- **Every rule counts only items touching the mask grown by 3 px and is always reported next to the ground truth's own count on the same cases; a case is "valid" if, for rules 1–6, it has no more violations than the ground truth** (user spec).
+- **Dead ends use the wall skeleton with spurs shorter than 3 px ignored, and an end is legitimate if a door, window, outdoor or background pixel lies within 3 px** — skeletonisation creates tiny spurs at corners; walls legitimately end at openings and at the outside.
+- **Validated on 500 real ground-truth plans (val cases with their masks); rules that flagged many real plans were fixed:**
+  - **Opening fit flagged 72.6% of real plans.** Cause: the wall-thickness probe right next to an opening's end crossed the perpendicular wall at corners/T-junctions. Fixed by probing 1–4 px beyond each end and using the narrowest cross-section, then by comparing thickness with the NARROWER end wall and requiring alignment only as "both end walls cover the opening's thickness span, at least one matching it". Real openings now pass bridges 98.1%, thickness 90.1%, alignment 81.6% — but still **27.8% of real plans fail the full opening-fit rule, so only its "bridges" check counts towards validity (2.8% of real plans flagged); thickness/alignment are reported as diagnostics.**
+  - **Doors connecting two spaces flagged 8.8% of real plans: real front doors open onto background (the outside of the plot). Background now counts as an outside space → 1.6% flagged.** (Departs from the spec's "not wall/background"; only wall on a side is a failure.)
+  - Final real-plan flag rates of the validity rules: dead ends 11.0% (kept: real open passages leave free-standing stubs, and validity compares with the ground truth per case), fragments 0.0%, opening bridges 2.8%, door spaces 1.6%, windows facing outside 0.6%, unreachable rooms 1.2%.
+- **Sliver thresholds = 1st percentiles over 74,699 training room components: area < 72 px or inscribed width < 7.64 px** (`configs/arch_metrics.yaml`, `python -m src.eval.arch_metrics`).
+- **Rectangularity = room area / bounding-box area, reported as a mean next to the ground truth's mean (0.863 on 500 real plans); the figure marks rooms below 0.6** — it describes shape, not a defect, so it isn't in the validity score.
+- **Room reachability: rooms = enclosed regions; open gaps already merge regions; doors link the regions they touch (within 2 px); the outside (edge-touching areas) is one node; rooms outside the main group (the one with the outside, else the largest) are unreachable.**
+
+**B.2 Post-processing (`src/postprocess.py`)**
+- **Dead-end stubs inside the mask are first EXTENDED to a wall straight ahead within 4 px, otherwise REMOVED if shorter than N px; removed pixels take the most common non-wall class around them; pixels outside the mask never change** (user spec).
+- **N is chosen by the highest architectural validity among the N that alter at most 1% of REAL plans** — applied to 500 real plans, the clean-up changed 0.2% (N = 4), 1.0% (N = 6) and 2.2% (N = 8) of them: larger N also deletes legitimate short stubs, so validity on predictions alone would favour the most damaging setting.
+
+**B.3/B.4 Evaluation**
+- **One Kaggle kernel (`floorplan-arch-eval`) only generates and SAVES per-case predictions for the GPU methods; all scoring (Day 2 + architectural metrics, post-processing, sweep plot, figures) runs locally on the CPU (`src/arch_eval.py`)** — iterating on metrics costs no GPU quota. Its predictions are new samples, so its numbers may differ slightly from `full_eval.md` (sampling noise).
+- **The violation figure shows, for each violation type, a case where the prediction breaks the rule and the ground truth doesn't** (sources: U-Net, then the constraint fine-tune, then run 1).
+
+**C. Statistics (`src/stats.py`)**
+- **Paired bootstrap: 1,000 resamples of the val cases (seed 0); both methods scored on the same resampled cases with the reports' exact definitions (means for tolerant mIoU / connectivity / room count; pooled ratio for room leak; % valid for validity); 95% percentile intervals; "statistically clear" = interval excludes 0** (user spec).
+- **"Best diffusion" = constraint fine-tune + refine-from-one-shot t = 600** — the best tolerant mIoU in the full evaluation (tied with the control at 0.801).
+
+**Day 6 results (full val, 7,772 cases; `outputs/arch_eval.md`, `outputs/stats.md`)**
+- **Matched U-Net (30,000 × 64, 7.06 h, all steps done): tolerant mIoU 0.846, clearly above the best diffusion (0.801) and the original U-Net (0.775).** The original U-Net comparison was unfair (8,000 × 32 = 0.26 M samples against 1.95 M): with equal samples the U-Net wins on pixel overlap and room count error, while diffusion keeps clearly better structure (connectivity error 0.039 vs 0.092, room leak 0.026 vs 0.039, validity 83.6% vs 80.4%; all paired-bootstrap clear).
+- **Constraint fine-tune vs control: same tolerant mIoU and validity (no clear difference), but clearly lower connectivity error, room leak and room count error** (overall, room holes and large holes) — the first statistically supported effect of the structural constraints.
+- **Post-processing: N = 6 chosen (alters 0.86% of real plans; N = 8 alters 1.85%, over the 1% limit).** It never changes tolerant mIoU by more than 0.001; it helps most where stubs are common (U-Net connectivity error 0.178 → 0.128, matched U-Net 0.092 → 0.070); for diffusion the gain is small (validity +0.3 points).
+- **Refine sweep: t₀ = 200–600 give the same accuracy (0.801–0.803); t₀ = 800 trades 0.009 tolerant mIoU for 5× lower connectivity error (0.008) and +2.7 points validity; full DDIM 50 loses 0.04 more for little extra structure.** t₀ = 600 stays the main setting (it was chosen on the sampling experiment); t₀ = 800 is the "structure-first" option.
+- **Remaining gap to real plans: unreachable rooms (0.08 per case for diffusion vs 0.012 in the ground truth) and dead ends (0.20 vs 0.13)** — room holes and large holes remain the hard cases (validity ~57–60% vs 95%+ for doors/windows/walls).
+- **Violation figure: `violation_locations` now also draws unreachable rooms (the count is unchanged: `unreachable_rooms` = number of those masks), and every row uses a different case.**
+- **Per-case results (`outputs/arch_eval/per_case/*.csv.gz`, 9 MB) are committed so the statistics can be re-run without predictions; the predictions themselves (`outputs/kaggle/*/preds/`, ~1.5 MB per method) stay local / in the Kaggle outputs.**
+
 ## Tooling
 
 - **Always pass `encoding="utf-8"` when Python reads/writes text files** — Windows defaults to cp1252; a write with "−" failed and emptied this file once (rebuilt from the session record).

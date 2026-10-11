@@ -75,6 +75,12 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 
 - **Full val results** (`outputs/full_eval.md`, `python -m src.full_eval`, kernel `kaggle/kernels/full_eval/`): best = fine-tune + refine-from-one-shot t = 600, tolerant mIoU **0.801** vs U-Net 0.775; constraint fine-tune = control on overlap, slightly better structure (not yet significance-tested).
 
+## Day 6: matched U-Net, architectural metrics, statistics
+
+- Matched-sample U-Net (`configs/train_unet_matched.yaml`, 30,000 × 64): full-val tolerant mIoU **0.846** > best diffusion 0.801; diffusion keeps clearly better structure (connectivity, room leak, validity). Logs: `outputs/unet_matched/`.
+- Architectural rules: `src/eval/arch_metrics.py` (validity = no more violations than the ground truth on rules 1–6; only the "bridges" part of opening fit counts; doors may face background). Post-processing: `src/postprocess.py` (N = 6).
+- Scoring is local: Kaggle kernel `arch_eval` saves predictions → `python -m src.arch_eval --preds outputs/kaggle/arch_eval/preds --out outputs` → `outputs/arch_eval.md`, `refine_tradeoff.png`, `arch_violations.png`, per-case CSVs → `python -m src.stats` → `outputs/stats.md` (paired bootstrap).
+
 ## Structural rules (for constraints and metrics)
 
 - **Boundary = wall + door + window together.** Connectivity constraints/metrics treat all three as one boundary; doors and windows fill gaps in walls (they don't overlap them).

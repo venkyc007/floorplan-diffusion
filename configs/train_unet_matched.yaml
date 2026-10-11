@@ -1,0 +1,43 @@
+# Matched-sample U-Net baseline (fairness check): same architecture, data,
+# augmentation, loss and mask weighting as configs/train_unet.yaml, but trained
+# from scratch for about as many samples as the diffusion pipeline
+# (run 1: 30,490 steps x 64 = 1.95 M). Only max_steps differs (checked by a test).
+#     torchrun ... -m src.train --config configs/train_unet_matched.yaml --out OUT
+# Reasons: docs/decisions.md (Day 6).
+
+model:
+  kind: unet
+  block_out_channels: [64, 128, 256, 256]
+  layers_per_block: 2
+  attention_from_level: 3
+  attention_head_dim: 32
+  mask_weight: 5.0                         # cross-entropy weight inside the mask (outside = 1)
+
+data:
+  train_npz: data/processed/train.npz
+  val_benchmark: data/benchmarks/val_benchmark.npz
+  val_cases: 256
+  num_workers: 4
+
+train:
+  batch_size: 32                           # PER GPU (2 GPUs -> 64 per step); 64 per GPU does not fit a T4
+  lr: 2.0e-4
+  weight_decay: 0.01
+  warmup_steps: 1000
+  max_steps: 30000                         # FIXED: 30,000 x 64 = 1.92 M samples (98% of diffusion's 1.95 M); ~7.6 h at ~70 samples/s on 2 T4s
+  grad_clip: 1.0
+  ema_decay: 0.999                         # used for the diffusion model only; ignored here
+  fp16: true
+  seed: 0
+  log_every: 50                            # often: the overfit test showed a loss spike; lower lr if spikes recur
+  val_every: 2000                          # validate every 2,000 steps ...
+  val_minutes: 25                          # ... or every 25 minutes, whichever comes first
+  checkpoint_minutes: 30
+  time_limit_hours: 8.5
+  sample_grid_cases: 8
+
+smoke:
+  model: {block_out_channels: [16, 32, 32, 32], layers_per_block: 1, norm_num_groups: 8, attention_head_dim: 8}
+  data: {val_cases: 16, num_workers: 0}
+  train: {batch_size: 4, warmup_steps: 5, max_steps: 20, log_every: 5, val_every: 10,
+          checkpoint_minutes: 0, sample_grid_cases: 4}
