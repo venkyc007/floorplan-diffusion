@@ -81,6 +81,11 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - Architectural rules: `src/eval/arch_metrics.py` (validity = no more violations than the ground truth on rules 1–6; only the "bridges" part of opening fit counts; doors may face background). Post-processing: `src/postprocess.py` (N = 6).
 - Scoring is local: Kaggle kernel `arch_eval` saves predictions → `python -m src.arch_eval --preds outputs/kaggle/arch_eval/preds --out outputs` → `outputs/arch_eval.md`, `refine_tradeoff.png`, `arch_violations.png`, per-case CSVs → `python -m src.stats` → `outputs/stats.md` (paired bootstrap).
 
+## Day 7: final selection (no training)
+
+- Hybrid = matched U-Net prediction (saved `unet_matched.npz`) as the sketch → noised to t₀ → constraint fine-tune, stochastic DDIM (`hybrid_refineT` in `src/full_eval.py`, `--sketch`; kernel `kaggle/kernels/selection/`). `python -m src.selection` → `outputs/selection.md`, `pareto{,_room,_large}.png`.
+- **Recommended final configuration: size-adaptive hybrid, t₀ = 400 / 600 / 700 for small / medium / large holes** — val tolerant mIoU 0.842 (matched U-Net 0.846), validity 88.0% (80.4%), connectivity error 0.011 (0.092). Single-setting fallback: hybrid t₀ = 600. Test-set numbers still to be produced.
+
 ## Structural rules (for constraints and metrics)
 
 - **Boundary = wall + door + window together.** Connectivity constraints/metrics treat all three as one boundary; doors and windows fill gaps in walls (they don't overlap them).

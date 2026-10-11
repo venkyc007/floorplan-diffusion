@@ -7,6 +7,9 @@ Settings:
   run1_refine600                 diffusion run 1, refine from one-shot at t = 600
   ft_constraints_refine600       constraint fine-tune, refine from one-shot at t = 600
   ft_control_refine600           control fine-tune, refine from one-shot at t = 600
+  ft_constraints_refineT         constraint fine-tune, refine from its own one-shot at t = T
+  hybrid_refineT                 HYBRID: the matched U-Net's saved prediction (--sketch) is the
+                                 starting plan, noised to t = T and finished by the constraint fine-tune
 
 Step 1 (one process per GPU) samples its settings and saves the predicted
 label maps (uint8). Step 2 scores every setting with all metrics (overall +
@@ -50,6 +53,10 @@ SETTINGS = {
     "ft_constraints_refine400": ("ft_constraints", "refine400"),
     "ft_constraints_refine800": ("ft_constraints", "refine800"),
     "ft_constraints_ddim50": ("ft_constraints", "ddim50"),
+    # selection experiment (Day 7): fill in the diffusion curve + U-Net-sketch hybrids
+    "ft_constraints_refine700": ("ft_constraints", "refine700"),
+    "ft_constraints_refine900": ("ft_constraints", "refine900"),
+    **{f"hybrid_refine{t}": ("ft_constraints", f"sketch{t}") for t in (400, 600, 700, 800, 900)},
 }
 # Balanced over 2 GPUs (DDIM 50 ~ 0.5 s/case, refine-600 ~ 0.33 s/case, U-Net ~ 0.02 s/case).
 PARTS = {0: ["run1_ddim50", "run1_refine600"],
@@ -66,8 +73,9 @@ def benchmark(limit=None):
 
 
 @torch.no_grad()
-def predict_all(model, method, bench, device, steps, seed, bs=64):
-    """Label maps for every case; the 7-channel inputs are built batch by batch."""
+def predict_all(model, method, bench, device, steps, seed, bs=64, sketch=None):
+    """Label maps for every case; the 7-channel inputs are built batch by batch.
+    `sketch` (N,128,128 label maps, benchmark order) is the starting plan of the sketchT methods."""
     gen = torch.Generator(device=device).manual_seed(seed)
     out = []
     for s in range(0, len(bench["masks"]), bs):
@@ -78,11 +86,22 @@ def predict_all(model, method, bench, device, steps, seed, bs=64):
                 pred = model.predict(cond)
             elif method == "ddim50":
                 pred = sample(model, cond, "ddim", steps, 1.0, True, gen)[0]
+            elif method.startswith("sketch"):  # sketchT: given plan (e.g. U-Net output), refine from t = T
+                start = torch.from_numpy(sketch[s:s + bs]).long().to(device)
+                pred = refine(model, cond, start, int(method[len("sketch"):]), steps, gen)
             else:  # refineT: one-shot, then refine from t = T (e.g. refine600)
                 start = one_shot(model, cond, False, gen)
                 pred = refine(model, cond, start, int(method[len("refine"):]), steps, gen)
         out.append(pred.cpu().numpy().astype(np.uint8))
     return np.concatenate(out)
+
+
+def load_sketch(path, bench):
+    """Saved predictions (.npz with labels + plan_ids), checked to be in benchmark order."""
+    z = np.load(path)
+    n = len(bench["plan_ids"])
+    assert (z["plan_ids"][:n] == bench["plan_ids"]).all(), "sketch case order differs from the benchmark"
+    return z["labels"][:n]
 
 
 def run_part(args):
@@ -93,12 +112,15 @@ def run_part(args):
     preds = Path(args.preds)
     preds.mkdir(parents=True, exist_ok=True)
     timing = {}
+    sketch = load_sketch(args.sketch, bench) if args.sketch else None
     names = args.only.split(",") if args.only else (PARTS[args.part] if args.parts > 1 else sum(PARTS.values(), []))
     for k, name in enumerate(names):
         ckpt, method = SETTINGS[name]
         model, _ = load_trained(ckpts[ckpt], device)
         t0 = time.time()
-        labels = predict_all(model, method, bench, device, 3 if args.quick else 50, seed=100 + k)
+        if method.startswith("sketch") and sketch is None:
+            raise SystemExit(f"{name} needs --sketch (saved U-Net predictions)")
+        labels = predict_all(model, method, bench, device, 3 if args.quick else 50, seed=100 + k, sketch=sketch)
         if device.type == "cuda":
             torch.cuda.synchronize()
         timing[name] = round((time.time() - t0) / len(labels), 4)
@@ -220,6 +242,7 @@ def main():
     parser.add_argument("--keep-preds", help="also save compressed per-case predictions (.npz) here")
     parser.add_argument("--ckpt-ft-constraints")
     parser.add_argument("--ckpt-ft-control")
+    parser.add_argument("--sketch", help="saved U-Net predictions (.npz) used as the starting plan of hybrid_* settings")
     parser.add_argument("--limit", type=int, help="only the first N cases (code check)")
     parser.add_argument("--quick", action="store_true", help="3 sampling steps (code check)")
     args = parser.parse_args()
