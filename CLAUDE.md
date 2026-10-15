@@ -7,6 +7,20 @@ Context for Claude Code. Read this at the start of every session.
 **Diffusion-Based Reconstruction of Missing Architectural Floor Plan Components**
 Solo course project. Started 2026-10-06, deadline ~2026-10-20 (about 2 weeks) — favor simple, working solutions over ambitious ones.
 
+## Status
+
+**Day 8 interface merged; next: TA approval, then final test evaluation.**
+
+## Standing rules (always apply)
+
+- **Never delete anything without asking first.** That covers files, folders, branches and data. When files are in the way, list them, compare them, and wait for an answer. Moving them to a backup folder is the agreed fallback, and only with approval.
+- **Ask before every commit, every push, every Kaggle upload and every Kaggle launch.**
+- **Never print, copy or commit the Kaggle token** (`~/.kaggle/access_token`, anything in `.kaggle/`); don't run `kaggle config view`.
+- **UTF-8 only**: write every text file as UTF-8, and always pass `encoding="utf-8"` in Python.
+- **Interface settings are frozen** (`configs/app.yaml` = the Day 7 val selection). Never tune them on what the app shows.
+- **Test set: run it once, and only after the TA approves.** Use val for every choice; test only for the final numbers.
+- **Every self-made choice goes in `docs/decisions.md`; this file keeps the standing rules and the current status.**
+
 ## Deliverables
 
 1. **Dataset + controlled corruption** — floor plan dataset, plus code that removes components (walls, doors, windows, rooms) in a controlled way by *type*, *location*, and *size*.
@@ -84,13 +98,15 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 ## Day 7: final selection (no training)
 
 - Hybrid = matched U-Net prediction (saved `unet_matched.npz`) as the sketch → noised to t₀ → constraint fine-tune, stochastic DDIM (`hybrid_refineT` in `src/full_eval.py`, `--sketch`; kernel `kaggle/kernels/selection/`). `python -m src.selection` → `outputs/selection.md`, `pareto{,_room,_large}.png`.
-- **Recommended final configuration: size-adaptive hybrid, t₀ = 400 / 600 / 700 for small / medium / large holes** — val tolerant mIoU 0.842 (matched U-Net 0.846), validity 88.0% (80.4%), connectivity error 0.011 (0.092). Single-setting fallback: hybrid t₀ = 600. Test-set numbers still to be produced.
+- **Recommended final configuration: size-adaptive hybrid, t₀ = 400 / 600 / 700 for small / medium / large holes** — val tolerant mIoU 0.842 (matched U-Net 0.846), validity 88.0% (80.4%), connectivity error 0.011 (0.092). Single-setting fallback: hybrid t₀ = 600. Test-set numbers still to be produced: one run only, after TA approval.
 
 ## Day 8: Gradio interface
 
 - `python app/app.py` (port 7860; gallery once via `python -m src.interface.make_gallery`). UI only in `app/app.py`; logic in `src/interface/`; settings (frozen Day 7 selection) in `configs/app.yaml`. Design + tests + timing: `docs/interface.md`.
 - Checkpoints load lazily (first use, then kept; ≤ 2 models, ~0.75 GB RAM). CPU: hybrid 29–52 s per repair, U-Net 1.4 s (`outputs/interface/cpu_timing.md`).
-- Test the app by calling its handlers in Python (`setup()` then e.g. `repair(...)`), not through the browser — the laptop is short on RAM.
+- Test the app by calling its handlers in Python (`setup()` then e.g. `repair(...)`), not through the browser — the laptop is short on RAM. Browser checks: at most 2–3 screenshots, at the end.
+- Committed screenshots: only `outputs/interface/01_plan_and_mask.png` and `02_repair_result.png`. The 8 older screenshots (`01_start.png` … `08_editor_drawn.png`) in the main folder were deliberately left out (user decision). They are untracked; don't commit them.
+- Git workflow used for Day 8 (user-approved, 2026-10-15): work on branch `worktree-gradio-interface` → push → fast-forward `main` (no force push). Before the pull, the main folder's 15 uncommitted interface files were moved, not deleted, to `C:\Users\lenovo\floorplan-diffusion-backup\2026-10-15-before-day8-pull\`. 9 of them were identical to the commit and 6 were older drafts with no unique work.
 
 ## Structural rules (for constraints and metrics)
 
