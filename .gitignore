@@ -15,6 +15,7 @@ outputs/*
 !outputs/full_eval/
 !outputs/unet_matched/
 !outputs/arch_eval/
+!outputs/interface/
 
 # Model checkpoints / weights anywhere in the project
 *.pt

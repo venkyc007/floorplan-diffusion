@@ -86,6 +86,12 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - Hybrid = matched U-Net prediction (saved `unet_matched.npz`) as the sketch → noised to t₀ → constraint fine-tune, stochastic DDIM (`hybrid_refineT` in `src/full_eval.py`, `--sketch`; kernel `kaggle/kernels/selection/`). `python -m src.selection` → `outputs/selection.md`, `pareto{,_room,_large}.png`.
 - **Recommended final configuration: size-adaptive hybrid, t₀ = 400 / 600 / 700 for small / medium / large holes** — val tolerant mIoU 0.842 (matched U-Net 0.846), validity 88.0% (80.4%), connectivity error 0.011 (0.092). Single-setting fallback: hybrid t₀ = 600. Test-set numbers still to be produced.
 
+## Day 8: Gradio interface
+
+- `python app/app.py` (port 7860; gallery once via `python -m src.interface.make_gallery`). UI only in `app/app.py`; logic in `src/interface/`; settings (frozen Day 7 selection) in `configs/app.yaml`. Design + tests + timing: `docs/interface.md`.
+- Checkpoints load lazily (first use, then kept; ≤ 2 models, ~0.75 GB RAM). CPU: hybrid 29–52 s per repair, U-Net 1.4 s (`outputs/interface/cpu_timing.md`).
+- Test the app by calling its handlers in Python (`setup()` then e.g. `repair(...)`), not through the browser — the laptop is short on RAM.
+
 ## Structural rules (for constraints and metrics)
 
 - **Boundary = wall + door + window together.** Connectivity constraints/metrics treat all three as one boundary; doors and windows fill gaps in walls (they don't overlap them).

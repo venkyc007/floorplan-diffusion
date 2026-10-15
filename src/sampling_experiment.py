@@ -53,8 +53,9 @@ def score(preds, targets, masks):
 
 
 @torch.no_grad()
-def refine(model, cond, start_labels, t0, steps, gen):
-    """Noise a sharp starting plan to level t0, then denoise with stochastic DDIM."""
+def refine(model, cond, start_labels, t0, steps, gen, callback=None):
+    """Noise a sharp starting plan to level t0, then denoise with stochastic DDIM.
+    `callback(done, total)` (optional) is called after every denoising step, e.g. for a progress bar."""
     sched = schedulers(model.mcfg)["ddim"]
     sched.set_timesteps(steps, device=cond.device)
     ts = [t for t in sched.timesteps if t <= t0]
@@ -72,6 +73,8 @@ def refine(model, cond, start_labels, t0, steps, gen):
         x0 = net(model, x, cond, t).clamp(-1, 1)
         x = sched.step(x0, t, x, eta=1.0, generator=gen).prev_sample
         x = torch.where(mask, x, noised(known, ts[i + 1]) if i + 1 < len(ts) else known)
+        if callback:
+            callback(i + 1, len(ts))
     return x.argmax(1)
 
 
