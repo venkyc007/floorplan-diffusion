@@ -13,6 +13,7 @@ How training runs on Kaggle's free GPUs. All commands run from the project folde
 | Timing kernel | `venkatesh007c/floorplan-timing` | `kaggle/kernels/timing/` |
 | U-Net training kernel | `venkatesh007c/floorplan-unet` | `kaggle/kernels/unet/` |
 | Diffusion training kernel (training only, no full-val evaluation) | `venkatesh007c/floorplan-diffusion` | `kaggle/kernels/diffusion/` |
+| Stage 2 data (CPU; CubiCasa5K → parser + completion sets) | `venkatesh007c/floorplan-stage2-data` | `kaggle/kernels/stage2_data/` (input: public `qmarva/cubicasa5k`). Later kernels attach it via `kernel_sources`. Download only the reports: `kaggle kernels output venkatesh007c/floorplan-stage2-data -p outputs/kaggle/stage2_data --file-pattern "report/"` |
 
 Kernels are private Python scripts (`run.py` + `kernel-metadata.json`) with GPU and internet on. Each one:
 1. copies the code and data from `/kaggle/input` into `/tmp/code`;

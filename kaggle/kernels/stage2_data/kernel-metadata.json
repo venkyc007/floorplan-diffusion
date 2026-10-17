@@ -1,0 +1,18 @@
+{
+  "id": "venkatesh007c/floorplan-stage2-data",
+  "title": "floorplan-stage2-data",
+  "code_file": "run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [
+    "qmarva/cubicasa5k",
+    "venkatesh007c/floorplan-code"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

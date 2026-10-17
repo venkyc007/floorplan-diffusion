@@ -1,0 +1,152 @@
+# Stage 2: the 16 classes and how CubiCasa5K's SVG names map onto them.
+# Read by src/stage2/data/classes16.py (never hard-code class indices elsewhere).
+#
+# CubiCasa SVG elements (see docs/stage2_data.md):
+#   walls / railings / windows / doors  -> <g id="Wall|Railing|Window|Door">
+#   spaces                              -> <g class="Space <Type> [Subtype]">
+#   fixtures                            -> <g class="FixedFurniture <Name> [Subtype]">
+# The <Type>/<Name> token (2nd word of the class) is looked up below. The room
+# groups follow CubiCasa's own 12-class grouping (floortrans/loaders/house.py,
+# rooms_selected), then the user's Stage 2 mapping (Entry -> hallway;
+# Storage / Garage / Undefined -> other-room).
+
+# Index = position in this list. Order: structure | spaces | outside | fixtures.
+classes:
+  - wall
+  - door
+  - window
+  - railing
+  - living
+  - bedroom
+  - kitchen
+  - bathroom
+  - hallway
+  - other_room
+  - outdoor
+  - background
+  - toilet
+  - sink
+  - bath_shower
+  - appliance
+
+# Colours for figures (RGB). Background white; structure dark; rooms pastel; fixtures saturated.
+colours:
+  wall: [30, 30, 30]
+  door: [220, 40, 40]
+  window: [40, 120, 230]
+  railing: [140, 90, 40]
+  living: [250, 210, 140]
+  bedroom: [170, 210, 250]
+  kitchen: [250, 170, 170]
+  bathroom: [160, 230, 220]
+  hallway: [215, 215, 150]
+  other_room: [205, 185, 230]
+  outdoor: [170, 220, 150]
+  background: [255, 255, 255]
+  toilet: [230, 0, 200]
+  sink: [0, 170, 170]
+  bath_shower: [0, 90, 200]
+  appliance: [255, 140, 0]
+
+# Space <Type>  ->  class. Any Type not listed here goes to `space_default`
+# (counted in the build log so new names are visible).
+spaces:
+  # CubiCasa "LivingRoom" group
+  LivingRoom: living
+  Lounge: living
+  Dining: living
+  EatingArea: living
+  Bedroom: bedroom
+  Kitchen: kitchen
+  # CubiCasa "Bath" group (Sauna is in it)
+  Bath: bathroom
+  Sauna: bathroom
+  # CubiCasa "Entry" group -> hallway
+  Entry: hallway
+  DraughtLobby: hallway
+  HallWay: hallway
+  # CubiCasa "Storage" group (Closet and DressingRoom SPACES are in it)
+  Storage: other_room
+  Closet: other_room
+  DressingRoom: other_room
+  # CubiCasa "Garage" group
+  Garage: other_room
+  CarPort: other_room
+  Outdoor: outdoor
+space_default: other_room   # CubiCasa "Undefined" group: Room, Hall, Office, Utility, Alcove, ...
+
+# FixedFurniture <Name>  ->  class, or `ignore` (not painted: the room/wall underneath stays).
+# Names not listed are ignored and counted in the build log.
+fixtures:
+  Toilet: toilet
+  Urinal: toilet
+  Sink: sink
+  SideSink: sink
+  RoundSink: sink
+  CornerSink: sink
+  DoubleSink: sink
+  DoubleSinkRight: sink
+  WaterTap: sink
+  Bathtub: bath_shower
+  BathtubRound: bath_shower
+  Shower: bath_shower          # CubiCasa's own grouping leaves showers out; Stage 2 counts them as bath/shower
+  ShowerCab: bath_shower
+  ShowerPlatform: bath_shower
+  Jacuzzi: bath_shower         # FLAGGED: CubiCasa ignores it
+  ElectricalAppliance: appliance
+  WoodStove: appliance
+  GasStove: appliance
+  IntegratedStove: appliance
+  Dishwasher: appliance
+  GeneralAppliance: appliance
+  WashingMachine: appliance    # FLAGGED: CubiCasa ignores it
+  SaunaStove: ignore           # FLAGGED: CubiCasa counts it as an appliance
+  ShowerScreen: ignore         # a glass line, not a fixture area
+  ShowerScreenRoundLeft: ignore
+  ShowerScreenRoundRight: ignore
+  Closet: ignore
+  ClosetRound: ignore
+  ClosetTriangle: ignore
+  CoatCloset: ignore
+  CoatRack: ignore
+  CounterTop: ignore
+  Housing: ignore
+  Fireplace: ignore
+  FireplaceCorner: ignore
+  FireplaceRound: ignore
+  PlaceForFireplace: ignore
+  PlaceForFireplaceCorner: ignore
+  PlaceForFireplaceRound: ignore
+  Chimney: ignore
+  SaunaBench: ignore
+  SaunaBenchHigh: ignore
+  SaunaBenchLow: ignore
+  SaunaBenchMid: ignore
+  BaseCabinet: ignore
+  BaseCabinetRound: ignore
+  BaseCabinetTriangle: ignore
+  WallCabinet: ignore
+  Misc: ignore
+# A fixture whose 3rd class word names a sub-type listed here uses that entry
+# instead (e.g. "FixedFurniture ElectricalAppliance SaunaStove" -> SaunaStove).
+fixture_subtypes_override: [SaunaStove, WashingMachine]
+
+# Paint order (later layers overwrite earlier ones). Spaces: outdoor first, then rooms.
+# Fixtures are painted last but only onto space/outdoor/background pixels, never over
+# wall/door/window/railing (a fixture box overlapping a wall by a pixel must not cut it).
+paint_order: [background, outdoor, rooms, wall, railing, openings, fixtures]
+fixtures_overwrite_structure: false
+
+# Groups used by the constraints (docs/constraints_spec.md §0).
+groups:
+  W: [wall]
+  D: [door]
+  N: [window]
+  RL: [railing]
+  S: [living, bedroom, kitchen, bathroom, hallway, other_room]
+  OD: [outdoor]
+  BG: [background]
+  OUT: [outdoor, background]
+  F: [toilet, sink, bath_shower, appliance]
+  PASS: [living, bedroom, kitchen, bathroom, hallway, other_room, outdoor, door]
+  BOUNDARY: [wall, door, window, railing]

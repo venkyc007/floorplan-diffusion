@@ -279,3 +279,35 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 ## Tooling
 
 - **Always pass `encoding="utf-8"` when Python reads/writes text files** — Windows defaults to cp1252; a write with "−" failed and emptied this file once (rebuilt from the session record).
+
+# Stage 2 (from 2026-10-17)
+
+## Scope and plan (user decisions, 2026-10-17)
+
+- **Scope changed to the TA's clarified Stage 2** (real black-and-white drawings → find and generate missing components, 16 classes, PARSE → CHECK → FILL → VERIFY; see CLAUDE.md) — the TA's new scope replaces the pending Stage 1 approval. Stage 1 is tagged `stage1-final` and becomes the "before prep review" chapter.
+- **Own parser** (U-Net, ImageNet-initialised ResNet-34 encoder) — ImageNet init is standard transfer learning, not a pretrained floor-plan model, so the parser stays our own work.
+- **Parser constraints in two steps (v1 plain CE + Dice, v2 constraint fine-tune)** — a working plain parser exists early; the constraint effect on parsing is measurable as v1 vs v2.
+- **CubiCasa's pretrained model only as a fallback** if by Sunday noon our parser's val wall IoU < 0.5 or door/window component F1 < 0.3 — protects the schedule without giving up our own parser by default.
+- **Constrained vs control diffusion is the only ablation with its own training run**; all other ablations are evaluation switches (guidance on/off, verifier on/off, rules vs detector) — GPU budget (~26 of 30 h this week).
+- **Missing-component detection = union of rules and a learned detector** — rules are explainable and need no training; the detector catches omissions rules can't express.
+- **Stage 1 test set evaluated once, Sunday, with the frozen Day 7 configs.**
+
+## Organisation (2026-10-17)
+
+- **Stage 2 code in separate folders** (`src/stage2/`, `configs/stage2/`, `kaggle/kernels/stage2_*`, `outputs/stage2/`, `tests/stage2/`) — Stage 1 stays intact and runnable until the Tuesday tidy.
+- **Stage 1 detail moved from CLAUDE.md to `docs/stage1_summary.md` verbatim** — CLAUDE.md is read every session and must stay short (< 8 KB); nothing is lost.
+- **Work happens in a new worktree/branch `stage2`** (created from `f1d26ba`, = `main`) — the old `worktree-gradio-interface` worktree can then be removed (asked first).
+
+## Stage 2 data (2026-10-17)
+
+- **Source: Kaggle dataset `qmarva/cubicasa5k`** — checked complete: 5,000 plan folders, each with `model.svg`, `F1_original.png`, `F1_scaled.png`, plus the official `train.txt` (4,199) / `val.txt` (399) / `test.txt` (399); same layout as Zenodo 2613548, so no Zenodo download is needed. 3 folders are in no list and are not used.
+- **SVG reading follows CubiCasa's own loader (`floortrans/loaders/house.py`)**: SVG coordinates are the pixel frame of `F1_scaled.png` (the SVG's width/height attributes are not); walls/railings/windows/doors by `id`, spaces by `class="Space <Type>"`, fixtures by `class="FixedFurniture <Name>"` with their transform (and the `FixedFurnitureSet` parent's). Checked by overlay on two sample plans before the full run.
+- **Room grouping = CubiCasa's own 12-class grouping (`rooms_selected`), then the user's mapping** (Entry → hallway; Storage/Garage/Undefined → other_room). So Dining/Lounge/EatingArea → living; Sauna → bathroom; DraughtLobby/HallWay → hallway; Closet/DressingRoom *spaces* → other_room (via Storage); CarPort → other_room (via Garage); every other type (Room, Hall, Office, Utility, …) → other_room.
+- **Fixtures**: toilet = Toilet, Urinal; sink = all sink types + WaterTap; bath_shower = Bathtub(Round), Shower, ShowerCab, ShowerPlatform, Jacuzzi; appliance = ElectricalAppliance (all sub-types), Wood/Gas/IntegratedStove, Dishwasher, GeneralAppliance, WashingMachine. Ignored (room/wall underneath kept): closets, coat racks, counter tops, housings, fireplaces, chimneys, sauna benches, cabinets, shower screens, SaunaStove, Misc. Departures from CubiCasa's grouping (flagged to the user): showers and Jacuzzi counted as bath/shower, WashingMachine as appliance, SaunaStove ignored.
+- **Fixtures are painted last but never over wall/door/window/railing** — fixture outlines often overlap the wall they stand against by a pixel or two; painting them over the wall would cut walls. The share of fixture pixels affected is reported in `data_stats.md`.
+- **Spaces painted outdoor first, then rooms** — a room drawn over an outdoor polygon keeps the room.
+- **Wall thickness per plan = length-weighted median of the wall polygons' thickness**, computed exactly for rectangles from area and perimeter (t, L = roots of x² − (P/2)x + A); only elongated pieces (L ≥ 2t) count — square corner pieces have no meaningful thickness.
+- **Scale: parser set s = 8 / t (long side capped at 2048 px, then walls < 8 px, recorded per plan); completion set s = 3 / t.** Labels drawn from the polygons at each scale with sub-pixel precision (cv2.fillPoly, 4 fractional bits; pixel-centre shift −0.5).
+- **Parser image = the higher-resolution of F1_original / F1_scaled, greyscale (transparent → white), resized with area averaging (cubic when enlarging)** — F1_original is the same drawing uniformly rescaled (checked: identical ratio in x and y); used only when its x/y ratios agree within 2%.
+- **Storage: PNGs inside uncompressed zip files per split** (`parser_{split}.zip`, `completion_{split}.zip`) — few output files, no pickles, readable without unpacking.
+- **Constants from the train split only**, at completion scale; percentiles in `configs/stage2/data.yaml`. Square widths use the chessboard distance (largest odd square = 2·maxDT − 1), because opn() with a k×k square removes a component exactly when that width is < k. k_clear = 2·floor(p2 door-to-fixture distance) − 1 (so ~2% of real doors violate C14); k_fix = 2·ceil(p98 fixture-to-room distance) + 1. C6 adjacency counts pixel pairs touching directly vs separated only by boundary ≤ 6 px.

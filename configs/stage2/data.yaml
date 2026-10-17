@@ -1,0 +1,33 @@
+# Stage 2 data: CubiCasa5K rasterised from its SVGs (src/stage2/data/build_cubicasa.py).
+# Runs on Kaggle (kernel kaggle/kernels/stage2_data); the dataset never comes to the laptop.
+
+source:
+  kaggle_dataset: qmarva/cubicasa5k   # complete public mirror of Zenodo record 2613548 (5,000 plans + split lists)
+  root_marker: train.txt              # the folder holding train/val/test.txt is the dataset root
+
+parser_set:            # greyscale drawing + label map, for the segmentation model (PARSE)
+  wall_px: 8           # median wall thickness after scaling
+  max_side: 2048       # long side cap; plans that hit it get thinner walls (recorded per plan)
+
+completion_set:        # label map only, for detection and completion (CHECK / FILL)
+  wall_px: 3
+
+# Plans whose wall thickness cannot be measured, or whose image cannot be read, are dropped
+# (the reason is recorded in metadata.csv).
+min_walls_for_thickness: 1
+
+# Size constants (spec section 0) from ground-truth percentiles of the completion set.
+constants:
+  opening_low_pct: 2      # Lmin_door / Lmin_win
+  opening_high_pct: 98    # Lmax_door / Lmax_win
+  wall_max_pct: 98        # T_wall_max
+  min_width_pct: 2        # k_c (minimum width per space / fixture class)
+  clearance_pct: 2        # k_clear (door-to-fixture distance)
+  fixture_room_pct: 98    # k_fix (fixture-to-room distance)
+  contact_exclude_rate: 0.01   # C6: drop space pairs whose direct contact > 1% of their adjacency
+  adjacency_max_gap: 6         # C6: max boundary thickness (px) counted as "across a wall"
+  fixture_room_share: 0.05     # C15: A(f) = room types holding >= 5% of a fixture class's pixels
+
+report:
+  overlay_plans: 12
+  seed: 0
