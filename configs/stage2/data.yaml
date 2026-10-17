@@ -21,13 +21,21 @@ constants:
   opening_low_pct: 2      # Lmin_door / Lmin_win
   opening_high_pct: 98    # Lmax_door / Lmax_win
   wall_max_pct: 98        # T_wall_max
-  min_width_pct: 2        # k_c (minimum width per space / fixture class)
-  clearance_pct: 2        # k_clear (door-to-fixture distance)
+  min_width_pct: 2        # k_c: p2 over PIXELS of the largest opening each pixel survives (user, 2026-10-17)
+  clearance_pct: 10       # k_clear (door-to-fixture distance; user: p10, C14 GT-hinged)
   fixture_room_pct: 98    # k_fix (fixture-to-room distance)
-  contact_exclude_rate: 0.01   # C6: drop space pairs whose direct contact > 1% of their adjacency
+  contact_exclude_rate: 0.10   # C6: exclude pairs with direct-contact rate >= 10% (user, 2026-10-17)
+  c6_never_exclude: [bathroom]               # never exclude a pair involving these
+  c6_always_exclude: [[outdoor, background]]
   adjacency_max_gap: 6         # C6: max boundary thickness (px) counted as "across a wall"
+  room_area_pct: [1, 99]       # R1: room area range per type
+  door_pair_min_share: 0.005   # R3: door-connected pairs on < 0.5% of door connections are forbidden
+  door_pair_bathroom:          # rare bathroom pairs, decided by the user (2026-10-17)
+    allow: [[bedroom, bathroom], [bathroom, outdoor]]
+    forbid: [[bathroom, background]]
   fixture_room_share: 0.05     # C15: A(f) = room types holding >= 5% of a fixture class's pixels
 
 report:
   overlay_plans: 12
+  overlay_must_include: [high_quality_architectural-11784]   # the black-padding case (user, 2026-10-17)
   seed: 0

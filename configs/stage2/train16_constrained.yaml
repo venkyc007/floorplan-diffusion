@@ -1,0 +1,45 @@
+# Stage 2 FILL, K1 GPU0: 16-class diffusion WITH all constraint losses from step 0.
+# Identical to train16_control.yaml except `model.constraints.enabled`
+# (enforced by tests/stage2/test_train16_configs.py).
+# Warm start: Stage 1 constraint fine-tune best.pt, class-expanded (src/stage2/complete/warm_start.py).
+
+model:
+  kind: diffusion
+  block_out_channels: [64, 128, 256, 256]   # same backbone as Stage 1 (warm start)
+  layers_per_block: 2
+  attention_from_level: 3
+  attention_head_dim: 32
+  num_train_timesteps: 1000
+  beta_schedule: squaredcos_cap_v2
+  ddim_steps: 50
+  ddim_eta: 1.0
+  mask_weight: 5.0
+  constraints:
+    enabled: true
+    temperature: 0.2            # P = softmax(x0 / 0.2) (spec section 0)
+    ramp_steps: 1000            # linear 0 -> 1 (spec section 2)
+    gate: {t_full: 400, t_zero: 800}   # g(t) (spec section 2)
+    K: 96                       # flood-fill steps for C2 / C8 on 128-px windows
+    active: [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18]
+    modes: {}                   # per-constraint mode overrides decided by gate G2
+    weights: {}                 # FILLED by the gradient calibration (spec section 3)
+
+data:
+  completion_zip: completion_train.zip      # data kernel output (completion set, walls 3 px)
+  val_zip: completion_val.zip
+  window: 128
+  num_workers: 4
+
+train:
+  batch_size: 32                # per GPU
+  lr: 2.0e-5                    # warm-started: fine-tune rate as in Stage 1
+  weight_decay: 0.01
+  warmup_steps: 200
+  grad_clip: 1.0
+  ema_decay: 0.999
+  fp16: true
+  seed: 0
+  log_every: 50
+  checkpoint_minutes: 30
+  val_minutes: 30
+  time_limit_hours: 8.5

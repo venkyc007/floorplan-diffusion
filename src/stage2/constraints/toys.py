@@ -124,3 +124,36 @@ def broken(name):
     else:
         raise KeyError(name)
     return lab, h
+
+
+# ---------------------------------------------------------------- toys sized by real constants
+
+def real_constant_cases(const):
+    """{name: (valid label, broken label)} for the checks whose toy above is too small for the
+    REAL constants (configs/stage2/constraint_constants.yaml): C7 (room widths k_c), C13 (door
+    lengths up to Lmax_door) and R3 (a pair from the data's forbidden list). Every other
+    constraint uses the standard toys with the real constants unchanged."""
+    out = {}
+    # C7: one living room wide enough for k_living; broken by a living sliver 7 px wide (< k)
+    v = np.full((SIZE, SIZE), I["background"], np.uint8)
+    box(v, 10, 85, 10, 85, "wall")
+    box(v, 13, 82, 13, 82, "living")
+    b = v.copy()
+    box(b, 30, 60, 86, 92, "living")
+    out["C7"] = (v, b)
+    # C13: a door one px longer than Lmax_door, in the bottom wall
+    v = valid_plan()
+    b = v.copy()
+    n = min(const["Lmax_door"] + 1, 42)
+    box(b, 85, 87, 12, 12 + n - 1, "door")
+    out["C13"] = (v, b)
+    # R3: a door joining the first forbidden pair the toy can show (living / bedroom / kitchen)
+    pairs = [p for p in const.get("forbidden_door_pairs", []) if set(p) <= {"bedroom", "kitchen", "living"}]
+    a, c = pairs[0] if pairs else ("bedroom", "bedroom")
+    v = valid_plan()
+    b = v.copy()
+    b[v == I["bedroom"]] = I[a]                         # left room becomes type a
+    b[v == I["kitchen"]] = I[c]                         # middle room becomes type c
+    box(b, 60, 69, 30, 32, "door")                      # door through the wall between them
+    out["R3"] = (v, b)
+    return out

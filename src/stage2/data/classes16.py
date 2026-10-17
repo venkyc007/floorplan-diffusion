@@ -40,19 +40,37 @@ class Classes16:
         name = self.cfg["spaces"].get(space_type, self.cfg["space_default"])
         return self.index[name]
 
-    def fixture_class(self, class_words):
-        """Class index for 'FixedFurniture <Name> [Subtype]' words, or None if ignored.
-
-        class_words = the element's class attribute split on spaces, without
-        'FixedFurniture'. A listed sub-type override (e.g. SaunaStove) wins.
+    def fixture_target(self, class_words):
+        """'FixedFurniture <Name> [Subtype ...]' words (without 'FixedFurniture') ->
+        (target, key): target is a class name, 'ignore' or 'appliance_candidate';
+        key is the appliance sub-type (the word after ElectricalAppliance, else the name).
         """
-        table = self.cfg["fixtures"]
         name = class_words[0] if class_words else "Misc"
-        for sub in class_words[1:]:
-            if sub in self.cfg["fixture_subtypes_override"]:
-                name = sub
-        target = table.get(name, "ignore")
+        if any(w.startswith(p) for w in class_words for p in self.cfg["fixture_ignore_prefixes"]):
+            return "ignore", name
+        target = self.cfg["fixtures"].get(name, "ignore")
+        key = class_words[1] if name == "ElectricalAppliance" and len(class_words) > 1 else name
+        return target, key
+
+    def fixture_class(self, class_words, appliance_subtypes):
+        """Class index for fixture words, or None if not painted.
+
+        appliance_subtypes: set of sub-type keys that count as appliances, or "all"
+        (survey pass: every candidate is painted as an appliance).
+        """
+        target, key = self.fixture_target(class_words)
+        if target == "appliance_candidate":
+            target = "appliance" if appliance_subtypes == "all" or key in appliance_subtypes else "ignore"
         return None if target == "ignore" else self.index[target]
+
+    @cached_property
+    def appliance_subtypes(self):
+        """Appliance sub-types chosen by the survey (configs/stage2/appliance_subtypes.yaml)."""
+        path = CONFIG.parent / "appliance_subtypes.yaml"
+        if not path.exists():
+            raise FileNotFoundError(f"{path} missing: run python -m src.stage2.data.survey first")
+        with open(path, encoding="utf-8") as f:
+            return set(yaml.safe_load(f)["appliance"])
 
     def colourise(self, label):
         """(H, W) label map -> (H, W, 3) uint8 RGB image. 255 (unknown) -> grey."""

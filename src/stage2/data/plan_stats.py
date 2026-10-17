@@ -118,3 +118,99 @@ def fixture_room_distances(label):
     worst = np.zeros(n + 1)
     np.maximum.at(worst, comp.ravel(), dist.ravel())
     return worst[1:].tolist()
+
+
+def pixel_open_hist(label, classes, kmax=64):
+    """Per-pixel width statistics for C7: for every pixel of class c, the largest k such
+    that it survives an opening with a k x k square (= it lies in a k x k square fully
+    inside the class). Returns {c: histogram over k = 0..kmax} (kmax means ">= kmax").
+
+    Like the torch erosion, the image border counts as inside (borderValue = max).
+    """
+    out = {}
+    for c in classes:
+        mask = (label == c).astype(np.uint8)
+        if not mask.any():
+            continue
+        best = mask.astype(np.int32)                 # every pixel survives k = 1
+        for k in range(2, kmax + 1):
+            fits = cv2.erode(mask, np.ones((k, k), np.uint8), anchor=(0, 0))     # square with top-left here fits
+            if not fits.any():
+                break
+            covered = cv2.dilate(fits, np.ones((k, k), np.uint8), anchor=(k - 1, k - 1)) > 0
+            best[covered & (mask > 0)] = k
+        out[c] = np.bincount(best[mask > 0], minlength=kmax + 1)[: kmax + 1]
+    return out
+
+
+def room_areas(label):
+    """{room class: [area of each 4-connected room instance in px]}; fixtures count as their room."""
+    label = fill_fixtures(label)
+    out = {}
+    for c in C16.group("S"):
+        n, _, st, _ = cv2.connectedComponentsWithStats((label == c).astype(np.uint8), connectivity=4)
+        if n > 1:
+            out[c] = st[1:, cv2.CC_STAT_AREA].tolist()
+    return out
+
+
+SIDE_CLASSES = C16.group("S") + C16.group("OD") + C16.group("BG")
+
+
+def door_side_pair(label, door, k):
+    """The space types on the two faces of one door component (bool mask), or None.
+
+    The door's longer bounding-box side gives its direction; the faces are probed k px
+    away perpendicular to it, and each face takes its most common space type.
+    """
+    ys, xs = np.nonzero(door)
+    if len(ys) == 0:
+        return None
+    h, w = label.shape
+    horizontal = (xs.max() - xs.min()) >= (ys.max() - ys.min())
+    sides = []
+    for sgn in (-1, 1):
+        y = np.clip(ys + sgn * k, 0, h - 1) if horizontal else ys
+        x = xs if horizontal else np.clip(xs + sgn * k, 0, w - 1)
+        v = label[y, x]
+        v = v[np.isin(v, SIDE_CLASSES)]
+        if len(v) == 0:
+            return None
+        sides.append(int(np.bincount(v).argmax()))
+    return tuple(sorted(sides))
+
+
+def door_pairs(label, k):
+    """Space-type pairs joined by each door of the plan: [(a, b)] with class indices a <= b."""
+    n, comp = components(label == C16.index["door"])
+    pairs = [door_side_pair(label, comp == i, k) for i in range(1, n + 1)]
+    return [p for p in pairs if p is not None]
+
+
+def fill_fixtures(label, max_steps=200):
+    """Copy of `label` in which every fixture pixel takes the room type of the room it stands in
+    (user rule 2026-10-17: a room instance includes the fixtures standing in it).
+
+    Rooms grow into fixture pixels one 4-neighbour step at a time, so the fill never crosses a
+    wall (a straight-line nearest room could lie behind a 3-px wall). Fixtures touching no room
+    keep their class.
+    """
+    fix = np.isin(label, C16.group("F"))
+    if not fix.any() or not np.isin(label, C16.group("S")).any():
+        return label
+    out = label.copy()
+    cross = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], np.uint8)
+    for _ in range(max_steps):
+        todo = np.isin(out, C16.group("F"))
+        if not todo.any():
+            break
+        changed = False
+        for c in C16.group("S"):
+            grow = (cv2.dilate((out == c).astype(np.uint8), cross) > 0) & todo
+            if grow.any():
+                out[grow] = c
+                todo &= ~grow
+                changed = True
+        if not changed:
+            break
+    return out

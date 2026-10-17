@@ -60,6 +60,18 @@ def draw_labels(plan, frame_hw, scale):
     return label, before_fixtures
 
 
+def untyped_rooms(plan, frame_hw, scale, label):
+    """Boolean map of the room pixels (in `label`) that come from an untyped space
+    (raw type in classes16.yaml `untyped_space_names`, e.g. "Undefined").
+    Spaces are drawn in the same order as in draw_labels, so the last one wins."""
+    idx, names = C16.index, set(C16.cfg["untyped_space_names"])
+    mask = np.zeros(label.shape, np.uint8)
+    spaces = plan.of_kind("space")
+    for s in [s for s in spaces if s.cls == idx["outdoor"]] + [s for s in spaces if s.cls != idx["outdoor"]]:
+        _fill(mask, s.points, scale, 1 if s.name in names else 0)
+    return (mask > 0) & np.isin(label, C16.group("S"))
+
+
 def fixture_footprint(plan, frame_hw, scale):
     """Boolean map of every fixture polygon (ignoring what lies underneath)."""
     mask = np.zeros(frame_size(frame_hw, scale), np.uint8)
@@ -68,17 +80,52 @@ def fixture_footprint(plan, frame_hw, scale):
     return mask > 0
 
 
-def load_grey(path):
-    """Read a PNG as greyscale uint8; transparent pixels become white paper."""
+def load_grey(path, info=None):
+    """Read a PNG as greyscale uint8; any alpha channel is composited onto WHITE paper.
+
+    info (dict, optional) receives "had_alpha": True if the file had transparent pixels.
+    """
     im = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
     if im is None:
         raise FileNotFoundError(path)
+    if im.dtype != np.uint8:                         # 16-bit PNGs
+        im = (im / 257).astype(np.uint8)
+    if info is not None:
+        info["had_alpha"] = bool(im.ndim == 3 and im.shape[2] == 4 and (im[:, :, 3] < 255).any())
     if im.ndim == 2:
         return im
     if im.shape[2] == 4:
         alpha = im[:, :, 3:4].astype(np.float32) / 255
         im = (im[:, :, :3].astype(np.float32) * alpha + 255 * (1 - alpha)).astype(np.uint8)
     return cv2.cvtColor(im[:, :, :3], cv2.COLOR_BGR2GRAY)
+
+
+def whiten_padding(img, lbl, dark=10, min_share=0.005, min_bg=0.98):
+    """Turn baked-in black padding into white paper (some CubiCasa images are padded with black).
+
+    Padding = a 4-connected region of near-black pixels (<= dark) that touches the image
+    border, covers >= min_share of the image and is >= min_bg labelled background. Real black
+    walls are labelled wall and fail the last test. (No shape test: padding blocks joined by a
+    thin black line, as in plan 11784, form one non-rectangular region.)
+    Returns (image, number of pixels whitened).
+    """
+    n, comp, st, _ = cv2.connectedComponentsWithStats((img <= dark).astype(np.uint8), connectivity=4)
+    h, w = img.shape
+    out, changed = img, 0
+    bg = C16.index["background"]
+    for i in range(1, n):
+        x, y, bw, bh, area = st[i]
+        touches = x == 0 or y == 0 or x + bw == w or y + bh == h
+        if not touches or area < min_share * h * w:
+            continue
+        m = comp == i
+        if (lbl[m] == bg).mean() < min_bg:
+            continue
+        if out is img:
+            out = img.copy()
+        out[m] = 255
+        changed += int(area)
+    return out, changed
 
 
 def make_image(grey, out_hw):

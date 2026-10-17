@@ -317,22 +317,21 @@ REQUIRED = {"bathroom": ("toilet", "bath_shower"), "kitchen": ("sink", "applianc
 def _required_instances(Y, hole):
     """GT bathroom / kitchen instances fully inside the window that overlap the hole.
 
-    An instance = a 4-connected component of (room type + fixtures) that contains pixels of
-    that room type, so the fixtures standing in the room belong to it.
+    An instance = a 4-connected region of that room type after every fixture pixel took the
+    type of the nearest room pixel (so the fixtures standing in the room belong to it; same
+    definition as R1, user rule 2026-10-17).
     Returns [(sample index, room name, bool mask tensor (H, W))].
     """
+    from src.stage2.data.plan_stats import fill_fixtures
     out = []
     lab = Y.argmax(1).cpu().numpy()
     hl = hole[:, 0].cpu().numpy() > 0.5 if hole is not None else np.ones(lab.shape, bool)
     for b in range(lab.shape[0]):
+        filled = fill_fixtures(lab[b])
         for room in REQUIRED:
-            is_room = lab[b] == C16.index[room]
-            area = is_room | np.isin(lab[b], C16.group("F"))
-            n, comp = cv2.connectedComponents(area.astype(np.uint8), connectivity=4)
+            n, comp = cv2.connectedComponents((filled == C16.index[room]).astype(np.uint8), connectivity=4)
             for i in range(1, n):
                 m = comp == i
-                if not (m & is_room).any():
-                    continue
                 if m[0].any() or m[-1].any() or m[:, 0].any() or m[:, -1].any() or not (m & hl[b]).any():
                     continue
                 out.append((b, room, torch.from_numpy(m).to(Y.device)))
@@ -402,7 +401,7 @@ REGISTRY = {
     "C11": Spec(c11_door_spaces, "absolute", title="door joins two spaces"),
     "C12": Spec(c12_window_sides, "absolute", title="window: inside one side, outside other"),
     "C13": Spec(c13_length, "gt_hinged", title="opening length in range"),
-    "C14": Spec(c14_clearance, "absolute", title="door clearance"),
+    "C14": Spec(c14_clearance, "gt_hinged", title="door clearance"),   # user: GT-hinged (2026-10-17)
     "C15": Spec(c15_fixture_room, "absolute", title="fixture in a compatible room"),
     "C16": Spec(c16_against_wall, "gt_hinged", title="fixture against a wall"),
     "C17": Spec(c17_required_fixtures, "gt_relative", training_only=True, title="required fixtures"),

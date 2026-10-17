@@ -14,7 +14,10 @@ Both label maps are drawn straight from the polygons, never downsampled.
 
 Output (<out>):
   parser_{train,val,test}.zip      <plan>_img.png (greyscale) + <plan>_lbl.png (uint8 class ids)
-  completion_{train,val,test}.zip  <plan>.png (uint8 class ids)
+  completion_{train,val,test}.zip  <plan>.png (uint8 class ids); untyped plans left out
+Untyped plans (raw "Undefined" > 50% of room pixels) stay in the parser set with their
+room-type pixels set to 255 (ignore) and are left out of the completion set and all statistics.
+Needs configs/stage2/appliance_subtypes.yaml from the survey pass (survey.py).
   report/metadata.csv              one row per plan (kept or dropped, with the reason)
   report/stats.npz                 pooled statistics for report.py
 Plan id = "<category>-<number>", e.g. "high_quality_architectural-6044".
@@ -33,10 +36,11 @@ import pandas as pd
 from src.stage2.data import plan_stats as ps
 from src.stage2.data.classes16 import C16
 from src.stage2.data.cubicasa_svg import opening_length, parse_svg, thickness_length, wall_thickness
-from src.stage2.data.rasterise import draw_labels, fixture_footprint, load_grey, make_image
+from src.stage2.data.rasterise import draw_labels, fixture_footprint, load_grey, make_image, untyped_rooms, whiten_padding
 from src.utils import load_config
 
 CFG = load_config("stage2/data")
+IGNORE = 255   # parser label value for "no label" (room types of untyped plans)
 
 
 def find_root(path):
@@ -81,18 +85,20 @@ def process(job):
         row["drop_reason"] = "no measurable walls"
         return row, {}, None
     try:
-        scaled = load_grey(folder / "F1_scaled.png")
+        info_s = {}
+        scaled = load_grey(folder / "F1_scaled.png", info_s)
     except Exception:
         row["drop_reason"] = "F1_scaled.png unreadable"
         return row, {}, None
     frame = scaled.shape[:2]
     source, src_name = scaled, "F1_scaled"
     try:
-        orig = load_grey(folder / "F1_original.png")
+        info_o = {}
+        orig = load_grey(folder / "F1_original.png", info_o)
         rw, rh = orig.shape[1] / frame[1], orig.shape[0] / frame[0]
         row["orig_ratio"] = rw
         if abs(rw - rh) / rw < 0.02 and rw > 1:     # same drawing, higher resolution
-            source, src_name = orig, "F1_original"
+            source, src_name, info_s = orig, "F1_original", info_o
     except Exception:
         row["orig_ratio"] = np.nan
 
@@ -105,6 +111,9 @@ def process(job):
     lbl_par, _ = draw_labels(plan, frame, s_par)
     lbl_com, before = draw_labels(plan, frame, s_com)
     img_par = make_image(source, lbl_par.shape)
+    img_par, n_white = whiten_padding(img_par, lbl_par)      # baked-in black padding -> white paper
+    row.update(had_alpha=info_s.get("had_alpha", False),
+               black_padding_share=round(n_white / img_par.size, 4))
     if not np.isin(lbl_com, C16.group("W")).any():
         row["drop_reason"] = "no wall pixels after drawing"
         return row, {}, None
@@ -114,6 +123,17 @@ def process(job):
                parser_w=lbl_par.shape[1], scale_completion=s_com, completion_h=lbl_com.shape[0],
                completion_w=lbl_com.shape[1], capped=bool(long_side > pcfg["max_side"]))
     row.update({f"default_space_{k}": v for k, v in plan.default_spaces.items()})
+
+    # ---- untyped plans: "Undefined" covers > 50% of room pixels -> parser set only, rooms = ignore
+    rooms = np.isin(lbl_com, C16.group("S"))
+    share = untyped_rooms(plan, frame, s_com, lbl_com).sum() / max(int(rooms.sum()), 1)
+    untyped = bool(rooms.any() and share > C16.cfg["untyped_max_share"])
+    row.update(untyped_share=round(float(share), 4), untyped=untyped, in_completion=not untyped)
+    if untyped:
+        lbl_par = lbl_par.copy()
+        lbl_par[np.isin(lbl_par, C16.group("S"))] = IGNORE
+        return row, {f"parser_{split}/{plan_id}_img.png": png(img_par),
+                     f"parser_{split}/{plan_id}_lbl.png": png(lbl_par)}, None
 
     # ---- statistics (completion scale)
     walls = np.array([thickness_length(s.points) for s in plan.of_kind("wall")]).reshape(-1, 2) * s_com
@@ -134,6 +154,9 @@ def process(job):
         "fixture_room": ps.fixture_room_distances(lbl_com),
         "fixture_on_structure": int((foot & np.isin(before, C16.group("BOUNDARY"))).sum()),
         "fixture_pixels": int(foot.sum()),
+        "open_hist": ps.pixel_open_hist(lbl_com, C16.group("S") + C16.group("OD") + C16.group("F")),
+        "room_areas": ps.room_areas(lbl_com),
+        "door_pairs": ps.door_pairs(lbl_com, CFG["completion_set"]["wall_px"] + 2),
         "raw_names": {"ignored": plan.ignored_fixtures,
                       "fixtures": _count([s.name for s in plan.of_kind("fixture")]),
                       "spaces": _count([s.name for s in plan.of_kind("space")])},

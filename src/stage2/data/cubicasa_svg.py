@@ -33,6 +33,7 @@ class Shape:
     cls: int             # Stage 2 class index (C16)
     name: str            # raw CubiCasa name (e.g. "Bedroom", "Toilet", "Wall External")
     points: np.ndarray   # (N, 2) float x, y in F1_scaled pixel coordinates
+    key: str = ""        # fixtures: appliance sub-type key (see Classes16.fixture_target)
 
 
 @dataclass
@@ -133,8 +134,14 @@ def fixture_polygon(el, parent):
     return apply(m, local)
 
 
-def parse_svg(path_or_text):
-    """Parse a CubiCasa model.svg (path or SVG text) into a ParsedPlan."""
+def parse_svg(path_or_text, appliance_subtypes=None):
+    """Parse a CubiCasa model.svg (path or SVG text) into a ParsedPlan.
+
+    appliance_subtypes: which appliance sub-types are painted (default: the survey's
+    configs/stage2/appliance_subtypes.yaml; "all" during the survey itself).
+    """
+    if appliance_subtypes is None:
+        appliance_subtypes = C16.appliance_subtypes
     text = path_or_text
     if not str(path_or_text).lstrip().startswith("<"):
         with open(path_or_text, encoding="utf-8") as f:
@@ -164,7 +171,8 @@ def parse_svg(path_or_text):
             pts = first_polygon(el)
         elif words[:1] == ["FixedFurniture"]:
             name = " ".join(words[1:]) or "Misc"
-            cls = C16.fixture_class(words[1:])
+            cls = C16.fixture_class(words[1:], appliance_subtypes)
+            key = C16.fixture_target(words[1:])[1]
             if cls is None:
                 plan.ignored_fixtures[name] = plan.ignored_fixtures.get(name, 0) + 1
                 continue
@@ -175,7 +183,7 @@ def parse_svg(path_or_text):
         if pts is None or len(pts) < 3 or polygon_area(pts) <= 0:
             plan.n_bad += 1
             continue
-        plan.shapes.append(Shape(kind, cls, name, pts))
+        plan.shapes.append(Shape(kind, cls, name, pts, key if kind == "fixture" else ""))
     return plan
 
 

@@ -6,6 +6,7 @@
 torch>=2.2            # neural networks (CPU build locally, GPU on Kaggle)
 torchvision>=0.17     # image utilities for PyTorch
 diffusers>=0.27       # ready-made diffusion building blocks (UNet, noise schedulers)
+segmentation-models-pytorch==0.3.4  # Stage 2 parser: U-Net with an ImageNet ResNet-34 encoder
 
 # --- Data handling ---
 numpy>=1.26           # arrays / math

@@ -142,3 +142,42 @@ def test_smax_between_mean_and_max():
     s = float(ops.smax(x, region))
     assert 0.5 < s <= 1.0
     assert float(ops.smax(x, torch.zeros_like(region))) == 0.0
+
+
+# ------------------------------------------------------------------ G1 with the REAL constants
+
+from src.stage2.constraints.constraints import load_constants  # noqa: E402
+
+REAL = load_constants()
+REAL_CASES = toys.real_constant_cases(REAL)
+
+
+def real_pair(name):
+    """(valid, broken, hole) for a check under the real constants."""
+    if name in REAL_CASES:
+        v, b = REAL_CASES[name]
+        return v, b, None
+    b, hole = toys.broken(name)
+    return toys.valid_plan(), b, hole
+
+
+def real_ctx(name, valid, hole):
+    if name in NO_GT:
+        return Ctx(const=REAL, K=200)
+    h = None if hole is None else torch.from_numpy(hole).float()[None, None]
+    return Ctx(hole=h, Y=P_of(valid), const=REAL, K=200)
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_real_constants_valid_clean_broken_violates(name):
+    valid, broken, hole = real_pair(name)
+    ctx = real_ctx(name, valid, hole)
+    assert float(violation_map(name, P_of(valid), ctx).max()) < 1e-4, f"{name} fires on the valid plan"
+    assert float(violation_map(name, P_of(broken), ctx).sum()) > 0.5, f"{name} misses its broken plan"
+
+
+@pytest.mark.parametrize("rule,fn", [("R1", r1_room_area), ("R3", r3_adjacency), ("R4", r4_exterior_door)])
+def test_rules_real_constants(rule, fn):
+    valid, broken, _ = real_pair(rule)
+    assert not fn(valid, REAL)[0]
+    assert fn(broken, REAL)[0]

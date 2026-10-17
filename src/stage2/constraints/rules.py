@@ -14,9 +14,10 @@ import numpy as np
 
 from src.stage2.constraints.constraints import CONST
 from src.stage2.data.classes16 import C16
+from src.stage2.data.plan_stats import door_side_pair, fill_fixtures
 
 ROOMS = C16.group("S")
-DEFAULT_FORBIDDEN = [["bathroom", "kitchen"]]     # placeholder until door-adjacency statistics exist
+DEFAULT_FORBIDDEN = [["bathroom", "kitchen"]]     # only used if the constants file has no list
 
 
 def components(mask):
@@ -25,8 +26,10 @@ def components(mask):
 
 
 def room_instances(label):
-    """[(class index, bool mask)] for every 4-connected room component."""
-    return [(c, m) for c in ROOMS for m in components(label == c)]
+    """[(class index, bool mask)] for every room instance: a 4-connected region of one room
+    type INCLUDING the fixtures standing in it (fixtures take the nearest room type first)."""
+    filled = fill_fixtures(label)
+    return [(c, m) for c in ROOMS for m in components(filled == c)]
 
 
 def r1_room_area(label, const=CONST):
@@ -65,13 +68,17 @@ def _door_sides(label, door, k):
 
 
 def r3_adjacency(label, const=CONST):
-    """R3: a door joining a forbidden pair of room types (e.g. bathroom entered from the kitchen)."""
+    """R3: a door joining a forbidden pair of space types (e.g. bathroom entered from the kitchen).
+
+    The pair is read exactly as in the statistics (plan_stats.door_side_pair), so the
+    forbidden list (pairs on < 0.5% of real door connections) applies one to one.
+    """
     k = const["T_wall"] + 2
-    pairs = [{C16.index[a], C16.index[b]} for a, b in const.get("forbidden_door_pairs", DEFAULT_FORBIDDEN)]
+    pairs = {tuple(sorted((C16.index[a], C16.index[b])))
+             for a, b in const.get("forbidden_door_pairs", DEFAULT_FORBIDDEN)}
     bad = np.zeros(label.shape, bool)
     for door in components(label == C16.index["door"]):
-        sides = _door_sides(label, door, k)
-        if any(p <= sides for p in pairs):
+        if door_side_pair(label, door, k) in pairs:
             bad |= door
     return bool(bad.any()), bad
 
