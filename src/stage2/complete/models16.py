@@ -80,7 +80,8 @@ class Diffusion16(nn.Module):
         if constraints and ccfg and ccfg.get("enabled"):
             P = F.softmax(pred.float() / ccfg["temperature"], dim=1)
             r = ramp(step, ccfg)
-            for name, term in constraint_terms(P, target, mask, ccfg, gate(t, ccfg)).items():
+            self.last_parts_live = constraint_terms(P, target, mask, ccfg, gate(t, ccfg))
+            for name, term in self.last_parts_live.items():
                 self.last_parts[name] = term.detach()
                 total = total + r * ccfg["weights"].get(name, 0.0) * term
         return total

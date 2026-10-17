@@ -137,7 +137,9 @@ def main():
     lines += ["", "Raw G per batch (rows = constraint, values in batch order):", "", "```"]
     lines += [f"{n:4s} " + " ".join(f"{v:.3g}" for v in vals) for n, vals in G.items()]
     lines += ["```"]
+    WEIGHTS_YAML.parent.mkdir(parents=True, exist_ok=True)
     WEIGHTS_YAML.write_text(yaml.safe_dump({"weights": w, "G0": g0, "rho": rho}, sort_keys=False), encoding="utf-8")
+    OUT_MD.parent.mkdir(parents=True, exist_ok=True)
     OUT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
     if args.write:

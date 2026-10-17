@@ -31,6 +31,7 @@ from src.utils import PROJECT_ROOT
 CFG = PROJECT_ROOT / "configs" / "stage2" / "train16_constrained.yaml"
 TINY = {"block_out_channels": [16, 32, 32, 32], "layers_per_block": 1, "norm_num_groups": 8, "attention_head_dim": 8}
 OUT = PROJECT_ROOT / "outputs" / "stage2"
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 def calibrated_weights():
@@ -63,16 +64,34 @@ def hole_scores(pred, target, mask):
     return acc, float(np.mean(ious))
 
 
+def gradient_share(model, total, weights, step):
+    """Weighted constraint loss and its share of the parameter-gradient norm (proves the
+    constraint terms reach the optimizer)."""
+    params = [p for p in model.parameters() if p.requires_grad]
+    r = min(1.0, step / max(1, model.mcfg["constraints"].get("ramp_steps", 1)))
+    cons = sum(r * weights.get(k, 0.0) * v for k, v in model.last_parts_live.items())
+    g_tot = torch.autograd.grad(total, params, retain_graph=True, allow_unused=True)
+    g_con = torch.autograd.grad(cons, params, retain_graph=True, allow_unused=True) if torch.is_tensor(cons) \
+        and cons.requires_grad else [None] * len(params)
+    norm = lambda gs: float(torch.sqrt(sum((g ** 2).sum() for g in gs if g is not None)))
+    out = {"step": step, "rec": float(model.last_parts["rec"]), "constraint": float(cons),
+           "share": norm(g_con) / max(norm(g_tot), 1e-12)}
+    print("G3 ON", out, flush=True)
+    return out
+
+
 def run_g3(args):
     mcfg = load_mcfg()
     labels, masks, _, _ = fixed_windows(load_plans(args.zip), 64, seed=2)
     cond, target, mask = (v.to(DEV) for v in model_inputs(labels, masks))
-    rows = {}
+    rows, share_log = {}, []
     for variant in ("off", "on"):
         torch.manual_seed(0)
         m = copy.deepcopy(mcfg) | TINY | {"ddim_steps": 20}
-        m["constraints"] = {**m["constraints"], "enabled": variant == "on", "ramp_steps": 50,
-                            "weights": calibrated_weights()}
+        weights = calibrated_weights()
+        if variant == "on" and not any(weights.values()):
+            raise SystemExit("G3: no calibrated weights (all 0) - the ON run would equal OFF")
+        m["constraints"] = {**m["constraints"], "enabled": variant == "on", "ramp_steps": 50, "weights": weights}
         model = Diffusion16(m).to(DEV)
         opt = torch.optim.Adam(model.parameters(), lr=3e-3)
         t0 = time.time()
@@ -80,6 +99,8 @@ def run_g3(args):
         for step in range(args.steps):
             idx = torch.randperm(64, generator=g)[:16].to(DEV)
             loss = model.loss(cond[idx], target[idx], mask[idx], step=step)
+            if variant == "on" and (step + 1) % 50 == 0:
+                share_log.append(gradient_share(model, loss, weights, step + 1))
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -102,6 +123,11 @@ def run_g3(args):
     for k, r in rows.items():
         lines.append(f"| {k} | {r['rec loss (last)']:.4f} | {100 * r['hole pixel acc']:.1f} | "
                      f"{100 * r['hole mIoU']:.1f} | {r['minutes']:.1f} |")
+    if share_log:
+        lines += ["", "ON run: weighted constraint loss and its share of the parameter gradient "
+                  "(|| grad of sum_i w_i L_i || / || grad of the total loss ||), every 50 steps:", "",
+                  "| step | rec loss | weighted constraint loss | gradient share |", "|---|---|---|---|"]
+        lines += [f"| {r['step']} | {r['rec']:.4f} | {r['constraint']:.5f} | {r['share']:.3f} |" for r in share_log]
     lines += ["", f"Difference ON - OFF: accuracy {d_acc:+.1f} points, mIoU {d_iou:+.1f} points -> "
               f"**{'PASS' if ok else 'FAIL'}** (limit -2 points)."]
     (OUT / "gate_g3.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -115,7 +141,7 @@ def run_g4(args):
     for variant in ("off", "on"):
         torch.manual_seed(0)
         m = copy.deepcopy(mcfg)
-        m["constraints"] = {**m["constraints"], "enabled": variant == "on"}
+        m["constraints"] = {**m["constraints"], "enabled": variant == "on", "K": args.K or m["constraints"]["K"]}
         model = Diffusion16(m).to(DEV)
         opt = torch.optim.AdamW(model.parameters(), lr=1e-5)
         amp = DEV.type == "cuda"
@@ -146,8 +172,11 @@ def run_g4(args):
              f"{torch.cuda.get_device_name(0) if DEV.type == 'cuda' else 'CPU'}.", "",
              "| variant | s / step |", "|---|---|",
              f"| constraints off | {res['off']:.2f} |", f"| constraints on | {res['on']:.2f} |", "",
-             f"Ratio on / off = {ratio:.2f} -> **{'PASS' if ratio <= 1.5 else 'FAIL'}** (limit 1.5)."]
-    (OUT / "gate_g4.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+             f"Ratio on / off = {ratio:.2f} -> **{'PASS' if ratio <= 1.5 else 'FAIL'}** (limit 1.5). "
+             f"Flood-fill steps K = {args.K or mcfg['constraints']['K']}.", "",
+             f"Steps the constrained run finishes in 10 h at this speed (minus ~5% for validation): "
+             f"{int(10 * 3600 / res['on'] * 0.95)}."]
+    (OUT / f"gate_g4{'_K' + str(args.K) if args.K else ''}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 
 
@@ -157,6 +186,7 @@ def main():
     ap.add_argument("--zip", required=True)
     ap.add_argument("--steps", type=int, default=None)
     ap.add_argument("--batch", type=int, default=4)
+    ap.add_argument("--K", type=int, default=None, help="G4: flood-fill steps override")
     args = ap.parse_args()
     if args.gate == "g3":
         args.steps = args.steps or 400

@@ -7,7 +7,8 @@
   * start: Stage 1 checkpoint, class-expanded (warm_start.py); ignored when resuming;
   * one process, one GPU (K1 runs the constrained and the control model side by side,
     one per T4); fp16 autocast for the network, constraint losses in fp32;
-  * AdamW, warm-up then cosine over the TIME budget (time_limit_hours), grad clip 1.0,
+  * AdamW, warm-up then cosine over max_steps (the SAME for the constrained and control run,
+    so the ablation is fair; time_limit_hours is only a safety stop), grad clip 1.0,
     EMA 0.999 (validation and best.pt use the EMA weights);
   * last.pt every checkpoint_minutes and at the end; automatic resume from <out>/checkpoints/last.pt;
   * every val_minutes: 256 fixed val windows, 20-step stochastic DDIM -> hole pixel accuracy,
@@ -159,7 +160,8 @@ def main():
     t_log, n_log, parts_acc = time.time(), 0, {}
     for cond, target, mask in loader:
         cond, target, mask = cond.to(device), target.to(device), mask.to(device)
-        f = lr_factor(step, hours() / budget, tc["warmup_steps"])
+        progress = step / tc["max_steps"] if tc.get("max_steps") else hours() / budget
+        f = lr_factor(step, progress, tc["warmup_steps"])
         for gp in opt.param_groups:
             gp["lr"] = tc["lr"] * f
         with torch.autocast(device_type=device.type, enabled=amp):
@@ -183,7 +185,8 @@ def main():
                                                "samples_per_s": round(sps, 2), **parts})
             t_log, n_log, parts_acc = time.time(), 0, {}
         now = time.time()
-        stop = hours() >= budget or (now - t_start) / 3600 >= budget - 0.05 or (args.smoke and step >= 4)
+        stop = hours() >= budget or (now - t_start) / 3600 >= budget - 0.05 or (args.smoke and step >= 4) \
+            or (bool(tc.get("max_steps")) and step >= tc["max_steps"])
         if now - last_val >= tc["val_minutes"] * 60 or stop or (args.smoke and step % 2 == 0):
             t0 = time.time()
             res = validate(ema.model, val, device, val_steps)
