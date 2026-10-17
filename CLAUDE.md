@@ -9,7 +9,41 @@ Solo course project. Started 2026-10-06, deadline ~2026-10-20 (about 2 weeks) �
 
 ## Status
 
-**Day 8 interface merged; next: TA approval, then final test evaluation.**
+**Day 8 interface merged; next: TA approval, then final test evaluation.** (Updated 2026-10-17; deadline ~2026-10-20.)
+
+**Where things stand:**
+- **Done:**
+  - dataset + controlled corruption (Days 1–2);
+  - U-Net, diffusion and constraint fine-tune models (Days 3–6);
+  - architectural metrics + statistics (Day 6);
+  - final selection on val (Day 7): the size-adaptive hybrid;
+  - Gradio interface (Day 8).
+- **Final method:** size-adaptive hybrid.
+  - The matched U-Net drafts the hole; the draft is noised to t₀ and finished by the constraint fine-tune.
+  - t₀ = 400 / 600 / 700 for small / medium / large holes.
+  - Val: tolerant mIoU 0.842, validity 88.0%, connectivity error 0.011.
+- **Figures for the TA meeting** (made 2026-10-15/16; remake with `python -m src.interface.make_ta_figures`):
+  - `outputs/interface/hybrid_samples.png`: 2 small, 2 medium and 2 large val-gallery plans.
+  - `outputs/interface/hybrid_samples_large.png`: the first 4 large-hole plans, no selection.
+  - What they show: walls, doors and windows are put back well. On the 29.5% room hole (plan 10691), the hybrid draws a plausible but different layout (no window, no inner wall). Show this honestly.
+- **Open items, in order:**
+  1. **TA approval** of the final method. Wait for it.
+  2. **Final test evaluation, run once.**
+     - No script does this yet: `src/full_eval.py` and `src/selection.py` read only `val_benchmark.npz`.
+     - `data/benchmarks/test_benchmark.npz` exists locally.
+     - Needs a test option plus a Kaggle kernel. The Kaggle dataset `floorplan-data` holds only train/val, so the test benchmark must be uploaded first; ask before the upload and before the launch.
+     - Evaluate the final method plus the comparison methods (matched U-Net, hybrid 600, refine-600, nearest fill), with the same metrics and statistics as on val.
+  3. **Stage-wise report + final documentation.** No report file exists yet.
+     - Robustness material: per size bin and type in `outputs/selection.md` and `outputs/full_eval.md`.
+     - Ablation material: constraints vs control in `outputs/finetune_ablation.md`; post-processing in `outputs/arch_eval.md`.
+     - Interface section: `docs/interface.md`.
+- **Repository state:**
+  - `main` = GitHub `origin/main`.
+  - The branch `worktree-gradio-interface` (worktree in `.claude/worktrees/gradio-interface`) is fully merged. It may be removed, but only after asking.
+  - Untracked in the main folder, on purpose:
+    - the 8 old screenshots `outputs/interface/01_start.png` … `08_editor_drawn.png`, never to be committed;
+    - the 2 TA figures, not committed until the user says so.
+  - Pre-merge copies of the interface files are in `C:\Users\lenovo\floorplan-diffusion-backup\2026-10-15-before-day8-pull\`.
 
 ## Standing rules (always apply)
 
@@ -68,7 +102,7 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 - `src/models/`: `DiffusionInpainter` (Palette-style: UNet2DModel on 13 ch = noisy one-hot target in [−1, 1] (6) + condition (7); predicts x0; cosine schedule, 1000 steps; DDIM sampling (50 steps) that overwrites outside-mask pixels with the known plan at the matching noise level; argmax at the end; weighted MSE, mask × 5) and `UNetInpainter` (same backbone, 7 ch in → 6 logits, weighted CE, mask × 5). Common API: `model.loss(cond, target, mask)`, `model.predict(cond)` → label maps. Backbone: channels 64/128/256/256, 2 layers/block, attention at 16×16 + middle → **25.3M params** (user decided to keep this size; see decisions.md).
 - `python -m src.train --config configs/train_{diffusion,unet}.yaml --out <run dir> [--smoke]`: AdamW + warm-up + cosine, fp16 on GPU, EMA 0.999 (diffusion), grad clip 1.0, `last.pt` every 30 min, **auto-resume** from `<run dir>/checkpoints/last.pt`, graceful stop at `time_limit_hours` (8.5). Validation every 2,000 steps on 256 fixed val-benchmark cases → `val_log.csv`, `best.pt` (by tolerant mIoU), `samples/`. **Keep `max_steps` unchanged across sessions.** Training needs the val benchmark (`python -m src.data.make_benchmark`) and `data/processed/train.npz`.
 - `python -m src.evaluate --checkpoint <best.pt> --benchmark val|test` → full metric table. Compare/choose models on **val**; test only for final numbers.
-- Checks: `python -m src.overfit_check` (→ `outputs/overfit_check.png`), `--smoke` runs, `python -m pytest tests/` (14 tests). CPU is far too slow for real training (~7 s per step at batch 2) — train on Kaggle GPUs.
+- Checks: `python -m src.overfit_check` (→ `outputs/overfit_check.png`), `--smoke` runs, `python -m pytest tests/` (64 tests as of Day 8). CPU is far too slow for real training (~7 s per step at batch 2) — train on Kaggle GPUs.
 
 ## Kaggle (Day 4)
 
@@ -104,6 +138,7 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 
 - `python app/app.py` (port 7860; gallery once via `python -m src.interface.make_gallery`). UI only in `app/app.py`; logic in `src/interface/`; settings (frozen Day 7 selection) in `configs/app.yaml`. Design + tests + timing: `docs/interface.md`.
 - Checkpoints load lazily (first use, then kept; ≤ 2 models, ~0.75 GB RAM). CPU: hybrid 29–52 s per repair, U-Net 1.4 s (`outputs/interface/cpu_timing.md`).
+- Functional test (2026-10-14): 37/37 checks by calling the handlers. The full suite `python -m pytest tests/` has 64 tests.
 - Test the app by calling its handlers in Python (`setup()` then e.g. `repair(...)`), not through the browser — the laptop is short on RAM. Browser checks: at most 2–3 screenshots, at the end.
 - Committed screenshots: only `outputs/interface/01_plan_and_mask.png` and `02_repair_result.png`. The 8 older screenshots (`01_start.png` … `08_editor_drawn.png`) in the main folder were deliberately left out (user decision). They are untracked; don't commit them.
 - Git workflow used for Day 8 (user-approved, 2026-10-15): work on branch `worktree-gradio-interface` → push → fast-forward `main` (no force push). Before the pull, the main folder's 15 uncommitted interface files were moved, not deleted, to `C:\Users\lenovo\floorplan-diffusion-backup\2026-10-15-before-day8-pull\`. 9 of them were identical to the commit and 6 were older drafts with no unique work.

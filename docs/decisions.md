@@ -273,6 +273,7 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **No speed-up that changes the computation**: on the laptop CPU one forward pass takes ~1.5 s for 4, 8, 10 or 16 threads, with or without `channels_last`; lower precision (bf16) would change the outputs of frozen settings, so the app runs in fp32 and shows per-step progress instead.
 - **Checkpoints load lazily: a network is loaded on the first use of a method that needs it, then kept; start-up only checks that the files exist; at most the 2 networks are in memory** (user request, to save RAM on the 16 GB laptop). The load time (< 1 s each) is not counted in the per-repair runtime shown in the app.
 - **The app was tested by calling its event handlers directly in Python, plus one short browser check with 2 screenshots** (user request, to save memory).
+- **TA-meeting figures (`src/interface/make_ta_figures.py`) use the frozen app settings, seed 0, and val-gallery cases only, taken in file order (first 2 per size bin; first 4 large holes) — no cherry-picking** (user spec). A failure case is therefore shown as it comes: on the 29.5% room hole the hybrid leaves out a window and an inner wall.
 - **Config override via the environment variable `FLOORPLAN_APP_CONFIG`** (used to test the missing-checkpoint message without touching real files).
 
 ## Tooling

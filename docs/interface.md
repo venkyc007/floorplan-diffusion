@@ -22,6 +22,7 @@ plans; the test set stays untouched for the final numbers.
 | pictures | `src/interface/render.py` | plan ↔ screen images, mask layer, difference overlay |
 | gallery | `src/interface/make_gallery.py` | 24 val cases, saved to `data/app/val_gallery.npz` |
 | timing | `src/interface/time_methods.py` | one repair per method and hole size → `outputs/interface/cpu_timing.md` |
+| TA figures | `src/interface/make_ta_figures.py` | input / U-Net sketch / hybrid / truth grids → `outputs/interface/hybrid_samples{,_large}.png` |
 
 The app runs on the CPU and uses a GPU if one is available. If a checkpoint named in
 `configs/app.yaml` is missing, start-up stops with a message naming the missing file
