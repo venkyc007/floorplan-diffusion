@@ -39,10 +39,8 @@ if __name__ == "__main__":
     zip_ = find("completion_train.zip")[0]
     ckpt = find("runs/finetune_constraints/checkpoints/best.pt")[0]
     print("data", zip_, "| stage 1", ckpt, flush=True)
-    steps = [f"{sys.executable} -m src.stage2.complete.calibrate --zip {zip_} --stage1 {ckpt} --batches 50 --batch 8",
-             f"{sys.executable} -m src.stage2.complete.gates34 g3 --zip {zip_}",
-             f"{sys.executable} -m src.stage2.complete.gates34 g4 --zip {zip_} --batch 32 --steps 10",
-             f"{sys.executable} -m src.stage2.complete.gates34 g4 --zip {zip_} --batch 32 --steps 10 --K 48"]
+    # G3 variant re-run (user, 2026-10-17); calibration + G4 are done (outputs/stage2/constraint_weights.md, gate_g4*.md)
+    steps = [f"{sys.executable} -m src.stage2.complete.gates34 g3v --zip {zip_}"]
     failed = []
     try:
         for i, cmd in enumerate(steps):
@@ -54,7 +52,7 @@ if __name__ == "__main__":
                 if i == 0:
                     break
     finally:
-        for f in ("outputs/stage2/constraint_weights.md", "outputs/stage2/constraint_weights.yaml", "outputs/stage2/gate_g3.md", "outputs/stage2/gate_g4.md", "outputs/stage2/gate_g4_K48.md",
+        for f in ("outputs/stage2/constraint_weights.md", "outputs/stage2/constraint_weights.yaml", "outputs/stage2/gate_g3.md", "outputs/stage2/gate_g4.md", "outputs/stage2/gate_g4_K48.md", "outputs/stage2/gate_g3_variants.md", "outputs/stage2/gate_g3_choice.json",
                   "configs/stage2/train16_constrained.yaml", "configs/stage2/train16_control.yaml"):
             if os.path.exists(f"{CODE}/{f}"):
                 shutil.copy(f"{CODE}/{f}", OUT)

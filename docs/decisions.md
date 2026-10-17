@@ -341,3 +341,12 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **Parser lr: warm-up, then cosine over the session's time budget (2.75 h), not a step count** — the run is stopped by time; a step-based schedule would need a speed guess.
 - **OOM safeguard: whole-drawing validation falls back to 1024-px overlapping tiles on CUDA OOM; `expandable_segments` allocator** (no earlier record of the approved safeguard was found; this is what was implemented).
 - **Warm start (class expansion): the 16-class U-Net reproduces the Stage 1 U-Net exactly; the diffusion matches exactly up to t = 200, 96% at t = 400 and ~65% at t >= 600.** Expected and accepted (user): the 10 noisy room-type/fixture input channels carry independent noise, so the copied "room" weights cannot reproduce the single old channel at high noise; the conv_in bias absorbs the constant offset (exact at t = 0).
+
+## Gates G2-G4 and K1 settings (2026-10-17, night)
+
+- **G2 (1,000 real windows): C5, C9, C11, C12 switched to GT-hinged (14.6-23.9% of real windows violate); C4 (42.9%) and C7 (40.5%) kept, already GT-hinged** (user). `outputs/stage2/constraint_gt_violations.md`.
+- **Calibration (GPU, 50 x 8 windows, t uniform 0-400; median over batches with signal; < 10 batches -> median weight; cap 10x the median weight)** (user rules). C2, C5, C10, C13 hit the cap. `outputs/stage2/constraint_weights.md`.
+- **G3 first run failed (all 18, full rho: -6.1 accuracy / -3.8 mIoU). Re-run with variants (user): all four passed within max(2, OFF seed spread 1.3/1.4) points; by the user's order C, D, A, B the choice is C = the 14 uncapped constraints at full rho (-1.8 / -1.1).** C2, C5, C10, C13 are left out of TRAINING only; they stay on for guidance, detection and the verifier. `outputs/stage2/gate_g3_variants.md`.
+- **G4 (T4, batch 32): 1.40 s/step with constraints vs 0.90 without (1.55x, K = 96); K = 48 gave 1.38 vs 0.97 (1.43x): K barely changes the constrained step, so K stays 96.**
+- **K1 fairness: max_steps = 24,000 for BOTH runs** (user) — the constrained run at 1.40 s/step fits ~9.3 h + validation in the 10.5 h limit; the faster control stops at the same step, with the same cosine schedule over max_steps.
+- **The warm-started diffusion matches Stage 1 only ~65% at t >= 600; expected (new room-type channels start undecided), not fixed** (user).

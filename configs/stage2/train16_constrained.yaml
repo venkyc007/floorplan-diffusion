@@ -20,9 +20,9 @@ model:
     ramp_steps: 1000            # linear 0 -> 1 (spec section 2)
     gate: {t_full: 400, t_zero: 800}   # g(t) (spec section 2)
     K: 96                       # flood-fill steps for C2 / C8 on 128-px windows
-    active: [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18]
+    active: [C1, C3, C4, C6, C7, C8, C9, C11, C12, C14, C15, C16, C17, C18]   # G3 variant C_clean_rho1
     modes: {C5: gt_hinged, C9: gt_hinged, C11: gt_hinged, C12: gt_hinged}   # gate G2: > 10% of real windows violate (user accepted)
-    weights: {}                 # FILLED by the gradient calibration (spec section 3)
+    weights: {C1: 0.0003148, C3: 0.002368, C4: 0.002102, C6: 0.001669, C7: 0.0006777, C8: 0.008821, C9: 0.001776, C11: 0.02692, C12: 0.02584, C14: 0.015, C15: 0.001436, C16: 0.0003996, C17: 0.008936, C18: 0.004009}   # calibrated (constraint_weights.md), G3 variant C_clean_rho1
 
 data:
   completion_zip: completion_train.zip      # data kernel output (completion set, walls 3 px)
@@ -35,6 +35,7 @@ train:
   lr: 2.0e-5                    # warm-started: fine-tune rate as in Stage 1
   weight_decay: 0.01
   warmup_steps: 200
+  max_steps: 24000             # SAME for both runs: constrained run at 1.40 s/step (G4, T4) fits ~10 h
   grad_clip: 1.0
   ema_decay: 0.999
   fp16: true
