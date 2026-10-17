@@ -21,14 +21,14 @@ model:
     gate: {t_full: 400, t_zero: 800}   # g(t) (spec section 2)
     K: 96                       # flood-fill steps for C2 / C8 on 128-px windows
     active: [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18]
-    modes: {}                   # per-constraint mode overrides decided by gate G2
+    modes: {C5: gt_hinged, C9: gt_hinged, C11: gt_hinged, C12: gt_hinged}   # gate G2: > 10% of real windows violate (user accepted)
     weights: {}                 # FILLED by the gradient calibration (spec section 3)
 
 data:
   completion_zip: completion_train.zip      # data kernel output (completion set, walls 3 px)
   val_zip: completion_val.zip
   window: 128
-  num_workers: 4
+  num_workers: 2                # two runs share the kernel's 4 CPUs
 
 train:
   batch_size: 32                # per GPU
@@ -42,4 +42,4 @@ train:
   log_every: 50
   checkpoint_minutes: 30
   val_minutes: 30
-  time_limit_hours: 8.5
+  time_limit_hours: 10.5        # K1 session (Kaggle max 12 h)

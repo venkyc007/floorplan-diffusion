@@ -42,6 +42,8 @@ def _pool(x, kh, kw, mirror=False):
     kh, kw = int(kh), int(kw)
     if kh <= 1 and kw <= 1:
         return x
+    if kh > 1 and kw > 1:          # a square max is separable: rows, then columns (same result, much faster)
+        return _pool(_pool(x, 1, kw, mirror), kh, 1, mirror)
     t, l = (kh - 1) // 2, (kw - 1) // 2
     if mirror:
         t, l = kh - 1 - t, kw - 1 - l

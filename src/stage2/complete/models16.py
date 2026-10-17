@@ -25,6 +25,7 @@ from src.stage2.constraints.constraints import Ctx, constraint_loss, load_consta
 from src.stage2.data.classes16 import C16
 
 N = C16.n
+CONSTANTS = load_constants()     # read once (configs/stage2/constraint_constants.yaml)
 
 
 def gate(t, ccfg):
@@ -40,7 +41,7 @@ def ramp(step, ccfg):
 def constraint_terms(P, target, mask, ccfg, per_sample_weight=None):
     """{name: scalar loss} for every active constraint (fp32). per_sample_weight: (B,) e.g. g(t)."""
     ctx = Ctx(hole=mask.float(), Y=target.float(), known=target.float() * (1 - mask.float()),
-              const=load_constants(), K=ccfg.get("K", 96))
+              const=CONSTANTS, K=ccfg.get("K", 96))
     out = {}
     for name in ccfg["active"]:
         mode = ccfg.get("modes", {}).get(name)
