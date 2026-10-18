@@ -1,0 +1,30 @@
+# Stage 2 CHECK: learned missing-component detector (src/stage2/detect/train_detector.py), K2a GPU1.
+
+model:
+  encoder: resnet34          # smp U-Net, random init (the input is plan maps, not a photo)
+  K: 96                      # flood-fill steps for the C8 feature map (128-px windows)
+
+data:
+  window: 128
+  intact_p: 0.2              # 20% intact windows (spec section 6)
+  n_omit: [1, 3]             # omissions per non-intact window
+
+loss:
+  ce_weight_cap: 10
+  dice: 1.0
+
+train:
+  batch_size: 32
+  workers: 2                 # shares the kernel's 4 CPUs with the U-Net run
+  lr: 3.0e-4
+  weight_decay: 1.0e-2
+  warmup_steps: 200
+  grad_clip: 1.0
+  seed: 0
+  log_every: 50
+  checkpoint_minutes: 30
+  val_minutes: 20
+  time_limit_hours: 2.0      # user (K2a)
+
+val:
+  windows: 512

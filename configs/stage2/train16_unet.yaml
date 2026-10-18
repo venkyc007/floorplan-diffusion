@@ -1,0 +1,44 @@
+# Stage 2 FILL, K2a GPU0: 16-class one-pass U-Net (the SKETCH model of the hybrid sampler), with the
+# same 14 constraints and calibrated weights as K1 (G3 variant C). No timestep gate (no noise).
+# Warm start: Stage 1 matched U-Net best.pt, class-expanded (exact, see docs/decisions.md).
+
+model:
+  kind: unet
+  block_out_channels: [64, 128, 256, 256]   # same backbone as Stage 1 (warm start)
+  layers_per_block: 2
+  attention_from_level: 3
+  attention_head_dim: 32
+  num_train_timesteps: 1000
+  beta_schedule: squaredcos_cap_v2
+  ddim_steps: 50
+  ddim_eta: 1.0
+  mask_weight: 5.0
+  constraints:
+    enabled: true
+    temperature: 0.2            # P = softmax(x0 / 0.2) (spec section 0)
+    ramp_steps: 1000            # linear 0 -> 1 (spec section 2)
+    gate: {t_full: 400, t_zero: 800}   # g(t) (spec section 2)
+    K: 96                       # flood-fill steps for C2 / C8 on 128-px windows
+    active: [C1, C3, C4, C6, C7, C8, C9, C11, C12, C14, C15, C16, C17, C18]   # G3 variant C_clean_rho1
+    modes: {C5: gt_hinged, C9: gt_hinged, C11: gt_hinged, C12: gt_hinged}   # gate G2: > 10% of real windows violate (user accepted)
+    weights: {C1: 0.0003148, C3: 0.002368, C4: 0.002102, C6: 0.001669, C7: 0.0006777, C8: 0.008821, C9: 0.001776, C11: 0.02692, C12: 0.02584, C14: 0.015, C15: 0.001436, C16: 0.0003996, C17: 0.008936, C18: 0.004009}   # calibrated (constraint_weights.md), G3 variant C_clean_rho1
+
+data:
+  completion_zip: completion_train.zip      # data kernel output (completion set, walls 3 px)
+  val_zip: completion_val.zip
+  window: 128
+  num_workers: 2                # two runs share the kernel's 4 CPUs
+
+train:
+  batch_size: 32                # per GPU
+  lr: 1.0e-4                    # warm-started U-Net (Stage 1 trained it at 2e-4 from scratch)
+  weight_decay: 0.01
+  warmup_steps: 200
+  grad_clip: 1.0
+  ema_decay: 0.999
+  fp16: true
+  seed: 0
+  log_every: 50
+  checkpoint_minutes: 30
+  val_minutes: 30
+  time_limit_hours: 3.0         # K2a (user)
