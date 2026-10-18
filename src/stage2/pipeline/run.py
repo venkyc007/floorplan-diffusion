@@ -34,7 +34,8 @@ from src.stage2.constraints.rules import components
 from src.stage2.data.classes16 import C16
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
-from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals, proposals_per_type
+from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals
+from src.stage2.detect.gaps import gap_candidates
 from src.stage2.parse.train import Parser, predict_safe
 from src.utils import PROJECT_ROOT
 
@@ -113,14 +114,14 @@ def detect_holes(label):
     choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
     m = models()
     probs = detector_probs(m["detector"], label, m["detector_K"])
-    if "per_type" in choice:
-        props = proposals_per_type(probs, choice["per_type"], choice["min_blob"])
-    else:
-        props = proposals(probs, choice["threshold"], choice["min_blob"])
+    props = proposals(probs, choice["threshold"], choice["min_blob"])
     extra = choice.get("extra_rules", [])
-    if extra:
-        raw = [c for c in R.raw_candidates(label) if c.rules[0] in extra]
+    if "C8" in extra:
+        raw = [c for c in R.discrete_candidates(label) if c.rules[0] == "C8"]
         props += R.detect(label, R.load_thresholds(), raw=raw)
+    if "R5" in extra:                                    # doorless gap between rooms that need a door
+        g = choice.get("gap_rule", {})
+        props += gap_candidates(label, open_rate=g.get("open_rate", 0.10), skip=tuple(g.get("skip", ())))
     return R.merge(props)
 
 
@@ -171,11 +172,45 @@ def fill_hole(label, box, fc, generator, fast=None):
 # ---------------------------------------------------------------- outputs
 
 REAL = ["wall", "door", "window", "railing"] + list(C16.cfg["groups"]["F"])
+FIXTURES = list(C16.cfg["groups"]["F"])
+ROOM_ORDER = ["bedroom", "bathroom", "kitchen", "other_room", "living", "hallway"]   # "the room that had no door"
+
+
+def host_room(label, m):
+    """Most common room type under / around a mask (on the map before the addition), or None."""
+    ring = cv2.dilate(m.astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
+    v = label[ring & np.isin(label, C16.group("S"))]
+    return C16.names[int(np.bincount(v).argmax())] if len(v) else None
+
+
+def restrict(before, after, typ):
+    """Type-restricted fill (user, chunk 8): inside a detected hole keep ONLY the detected type and
+    revert every other changed pixel to the map before the fill.
+      door / window / railing / a fixture  -> its largest new component only (one door per hole)
+      wall                                 -> new wall pixels
+      room                                 -> new walls, doors and room types (its walls, type and door)
+      manual                               -> everything the model drew
+    A fixture is dropped if the room it lands in is not compatible with it (C15 table)."""
+    if typ == "manual":
+        return after
+    changed = after != before
+    if typ == "room":
+        keep = changed & np.isin(after, [I["wall"], I["door"]] + C16.group("S"))
+    elif typ == "wall":
+        keep = changed & (after == I["wall"])
+    else:
+        comps = components(changed & (after == I[typ]))
+        keep = max(comps, key=lambda m: m.sum()) if comps else np.zeros(after.shape, bool)
+        if typ in FIXTURES and keep.any():
+            room = host_room(before, keep)
+            if room not in R.CONST.get("fixture_rooms", {}).get(typ, []):
+                keep[:] = False
+    return np.where(keep, after, before)
 
 
 def describe_additions(before, after, holes):
-    """Per-hole text. Only real additions (wall, door, window, railing, fixtures) are listed, never
-    space classes; for a missing room, the room type that was created is named."""
+    """One line per real addition (wall, door, window, railing, fixture), never space classes and no
+    duplicates; for a missing room, the room type that was created is named."""
     msgs = []
     k = 5
     for h in holes:
@@ -183,33 +218,33 @@ def describe_additions(before, after, holes):
         sub = np.zeros(after.shape, bool)
         sub[y0:y1 + 1, x0:x1 + 1] = True
         changed = sub & (after != before)
-        reason = f"{h['type']} missing ({'+'.join(h['rules'])})" if h.get("rules") else "manual box"
-        near = after[sub & np.isin(after, C16.group("S"))]
-        room = C16.names[int(np.bincount(near).argmax())] if len(near) else "the plan"
-        parts = []
+        rules = set(h.get("rules") or [])
+        lines = []
         for d in components(changed & (after == I["door"])):
-            pair = door_side_pair(after, d, k)
-            names = [C16.names[p] for p in (pair or [])]
-            where = " / ".join(names) if names else "?"
-            rooms = [n for n in names if C16.index[n] in C16.group("S")]
-            if h["type"] == "door" and rooms:
-                msgs.append(f"{rooms[0]} had no door -> door added on the {where} wall")
+            names = [C16.names[p] for p in (door_side_pair(after, d, k) or [])]
+            rooms = sorted({n for n in names if n in ROOM_ORDER}, key=ROOM_ORDER.index)
+            where = " / ".join(names) if names else "the"
+            if "C8" in rules and rooms:
+                lines.append(f"{rooms[0]} had no door -> door added on the {where} wall")
+            elif "R5" in rules and len(names) == 2:
+                lines.append(f"open doorway between {names[0]} and {names[1]} had no door -> door added")
             else:
-                parts.append(f"door (between {where})")
+                lines.append(f"door added on the {where} wall")
         for c in REAL:
             if c == "door":
                 continue
-            n = len(components(changed & (after == I[c])))
-            if n:
-                parts.append(f"{n} {c}" + ("s" if n > 1 and not c.endswith("s") else ""))
+            for m in components(changed & (after == I[c])):
+                room = host_room(before, m) or "the plan"
+                where = {"wall": f"next to {room}", "window": f"on the {room} wall"}.get(c, f"in {room}")
+                lines.append(f"{c} added {where}")
         if h["type"] == "room":
             created = [C16.names[c] for c in np.unique(after[changed]) if c in C16.group("S")]
             if created:
-                parts.append(f"room drawn as {', '.join(created)}")
-        if parts:
-            msgs.append(f"{reason} -> {', '.join(parts)} added in {room}")
-        elif not any(m.startswith(room) for m in msgs):
-            msgs.append(f"{reason} -> nothing added (the model kept the drawing as it was)")
+                lines.append(f"missing room -> room drawn as {', '.join(created)}")
+        if not lines:
+            what = f"{h['type']} missing ({'+'.join(sorted(rules))})" if rules else "manual box"
+            lines.append(f"{what} -> nothing added (the model kept the drawing as it was)")
+        msgs += [m for m in lines if m not in msgs]
     return msgs
 
 
@@ -265,7 +300,8 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
     g = torch.Generator().manual_seed(c["fill"]["seed"] if seed is None else seed)
     completed = parsed.copy()
     for h in holes:
-        completed, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None)
+        new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None)
+        completed = restrict(completed, new, h["type"])
         h.update(info)
     times["fill"] = time.time() - t
     additions = {C16.names[k]: (completed != parsed) & (completed == k) for k in np.unique(completed[completed != parsed])}

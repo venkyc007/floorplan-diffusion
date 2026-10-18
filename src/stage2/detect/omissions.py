@@ -168,7 +168,11 @@ def simulate_one(label, rng, kind=None, noise=False):
         if r is None:
             continue
         plan, m, t = r
+        # door omissions come in two kinds: (a) "opening forgotten" = wall drawn across the doorway,
+        # (b) "gap left, no door" = the doorway stays open (filled by the neighbouring spaces)
+        door_kind = ("a" if (plan[m] == I["wall"]).all() else "b") if k == "door" else None
         if noise:
             plan = parser_noise(plan, rng)
-        return {"plan": plan, "mask": m, "kind": str(k), "type": MISSING[t], **describe(label, m)}
+        return {"plan": plan, "mask": m, "kind": str(k), "type": MISSING[t], "door_kind": door_kind,
+                **describe(label, m)}
     return None

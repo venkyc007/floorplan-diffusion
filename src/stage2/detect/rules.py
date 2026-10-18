@@ -107,6 +107,33 @@ def reachable(label, comp, main):
     return np.isin(comp, list(entr | {main}))
 
 
+def reachable_parts(label, min_part=200):
+    """Walkable pixels reachable from an entrance, decided per connected building part (user, chunk 8):
+    multi-floor drawings show each floor as a separate part, and upper floors have no exterior door.
+    Each part (8-connected walls/openings/rooms/fixtures, >= min_part px) is seeded from the walkable
+    components holding one of its exterior doors, or else from the component holding its largest
+    hallway / living space."""
+    comp, _ = walkable_components(label)
+    k = CONST["T_wall"] + 2
+    outside = cv2.dilate(np.isin(label, C16.group("OUT")).astype(np.uint8), np.ones((2 * k + 1,) * 2, np.uint8)) > 0
+    building = np.isin(label, C16.group("BOUNDARY") + C16.group("S") + C16.group("F")).astype(np.uint8)
+    n, parts = cv2.connectedComponents(building, connectivity=8)
+    seeds = set()
+    for p in range(1, n):
+        part = parts == p
+        if part.sum() < min_part:
+            continue
+        entr = set(np.unique(comp[part & (label == I["door"]) & outside]).tolist()) - {0}
+        if not entr:
+            inside = [(c, m) for c, m in room_instances(label) if (m & part).any()]
+            spaces = [m for c, m in inside if C16.names[c] in ("hallway", "living")] or [m for _, m in inside]
+            if spaces:                    # (own addition: a part with neither -> its largest space)
+                big = max(spaces, key=lambda m: m.sum())
+                entr = set(np.unique(comp[big]).tolist()) - {0}
+        seeds |= entr
+    return np.isin(comp, list(seeds)) & (comp > 0)
+
+
 def door_location(label, room, reach):
     """Box on the wall the room shares with a reachable neighbour (hallway > living > other)."""
     k = CONST["T_wall"] + 2
@@ -124,11 +151,10 @@ def door_location(label, room, reach):
 
 def discrete_candidates(label):
     out = []
-    comp, main = walkable_components(label)
-    reach = reachable(label, comp, main)
-    # C8: room instances with no pixel in the main walkable component -> door missing
+    reach = reachable_parts(label)
+    # C8: room instances not reachable from their building part's entrance -> door missing (one per room)
     for c, m in room_instances(label):
-        if main and not (reach & m).any():
+        if reach.any() and not (reach & m).any():
             loc = door_location(label, m, reach)
             out.append(Candidate("door", box_of(loc if loc is not None else m, label.shape), ["C8"], float(m.sum())))
     # C17: bathroom without toilet/bath, kitchen without sink/appliance (room incl. its fixtures)
