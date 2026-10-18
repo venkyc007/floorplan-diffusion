@@ -139,3 +139,36 @@ def simulate(label, rng, intact_p=0.2, n_omit=(1, 3)):
                     kinds.append(str(kind))
                     break
     return parser_noise(out, rng), target, kinds
+
+
+# ---------------------------------------------------------------- one omission with metadata
+
+SIZE_BINS = (0.005, 0.02)      # omitted area / building area: small < 0.5% <= medium < 2% <= large
+
+
+def building_area(label):
+    return int(np.isin(label, C16.group("BOUNDARY") + C16.group("S") + C16.group("F")).sum())
+
+
+def describe(label, m):
+    """Metadata of an omitted region m on the ORIGINAL plan: location (exterior if it touches the
+    outside) and size (share of the building area, binned)."""
+    touches_out = (cv2.dilate(m.astype(np.uint8), CROSS) > 0) & np.isin(label, C16.group("OUT"))
+    share = m.sum() / max(building_area(label), 1)
+    size = "small" if share < SIZE_BINS[0] else ("medium" if share < SIZE_BINS[1] else "large")
+    return {"location": "exterior" if touches_out.any() else "interior", "size_bin": size,
+            "size_pct": round(100 * float(share), 3)}
+
+
+def simulate_one(label, rng, kind=None, noise=False):
+    """Exactly one omission (of `kind`, or a random available kind) ->
+    dict(plan, mask, kind, type (MISSING name), location, size_bin, size_pct), or None."""
+    for k in ([kind] if kind else list(rng.permutation(KINDS))):
+        r = omit(label, k, rng)
+        if r is None:
+            continue
+        plan, m, t = r
+        if noise:
+            plan = parser_noise(plan, rng)
+        return {"plan": plan, "mask": m, "kind": str(k), "type": MISSING[t], **describe(label, m)}
+    return None

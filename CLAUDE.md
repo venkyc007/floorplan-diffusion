@@ -6,11 +6,13 @@ Context for Claude Code. Read at the start of every session, then `docs/decision
 
 IIT Bombay IE643 course project, solo. **Diffusion-based reconstruction of missing floor plan components.** Submission deadline **Sun 25 Oct 23:59**; everything must be finished **Tue 20 Oct night** (user away Wed 21 – Sat 24; Sun 25 = emergency only). Favour simple, working solutions.
 
-## Status (updated 2026-10-17)
+## Status (updated 2026-10-18)
 
-- **Stage 1 done**, tagged `stage1-final`. **Stage 2 started today** on branch `stage2` (worktree `.claude/worktrees/stage2`).
-- Today: CubiCasa5K data kernel `floorplan-stage2-data` (CPU) built; constraint library + gate G1 in `src/stage2/constraints/`.
-- Next (Sat 17 evening): parser v1 kernel; K1 overnight (GPU0 constrained diffusion, GPU1 control). Gates G1–G4 must pass first.
+- **Stage 1 done**, tagged `stage1-final`. Stage 2 on branch `stage2` (worktree `.claude/worktrees/stage2`).
+- Done: data v3; constraint library (G1-G4; K1 trains 14 constraints, G3 variant C); parser v1 (val mIoU 0.699, no fallback); K1 constrained vs control (24k steps each).
+- Running: K2a (GPU0 16-class U-Net, GPU1 missing-component detector), launched 2026-10-18 09:06.
+- Next: rules on full plans + omission benchmark (laptop); parser v2; guidance + verifier; pipeline; Gradio.
+- **Stage 1 test evaluation: once, Tuesday morning, as the last GPU job** (postponed by the user, 2026-10-18).
 
 ## Standing rules (always apply)
 
@@ -19,7 +21,7 @@ IIT Bombay IE643 course project, solo. **Diffusion-based reconstruction of missi
 - **Never print, copy or commit the Kaggle token** (`~/.kaggle/access_token`, anything in `.kaggle/`); don't run `kaggle config view`.
 - **UTF-8 only**: every text file; always `encoding="utf-8"` in Python.
 - **Stage 1 app settings are frozen** (`configs/app.yaml`). Never tune on what the app shows.
-- **Choose on val, report on test.** Stage 1 test set: evaluated once, Sunday 18th, frozen Day 7 configs.
+- **Choose on val, report on test.** Stage 1 test set: evaluated once, Tuesday morning (last GPU job), frozen Day 7 configs.
 - **Every self-made choice goes in `docs/decisions.md`** with its reason. This file keeps rules + status only.
 - **Stage 1 files stay untouched until the Tuesday tidy.** New code only in the Stage 2 folders below. `python -m pytest tests/` must keep passing.
 - Datasets stay off git (`data/` ignored); CubiCasa5K stays on Kaggle (only small reports come to the laptop).

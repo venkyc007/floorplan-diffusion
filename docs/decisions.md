@@ -350,3 +350,14 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **G4 (T4, batch 32): 1.40 s/step with constraints vs 0.90 without (1.55x, K = 96); K = 48 gave 1.38 vs 0.97 (1.43x): K barely changes the constrained step, so K stays 96.**
 - **K1 fairness: max_steps = 24,000 for BOTH runs** (user) — the constrained run at 1.40 s/step fits ~9.3 h + validation in the 10.5 h limit; the faster control stops at the same step, with the same cosine schedule over max_steps.
 - **The warm-started diffusion matches Stage 1 only ~65% at t >= 600; expected (new room-type channels start undecided), not fixed** (user).
+
+## Schedule change (user decision, 2026-10-18)
+
+- **The Stage 1 test evaluation is POSTPONED to the end: run once, on Tuesday morning, as the last GPU job, with the frozen Day 7 configs.** (Replaces "Sunday" in the original plan.)
+
+## Rule-based detection on full plans (2026-10-18)
+
+- **Thresholds per rule on candidate score (summed violation pixels), tuned on 200 intact typed val plans; greedy: the rule with the most false alarms is tightened until the whole detector has <= 0.5 per plan** — ends at ~0.03 per rule. C1 (dead ends, 5.8 raw per real plan) is effectively switched off.
+- **C8 and C17 use exact discrete versions on full plans** (walkable components with cv2; fixtures by room instance): the soft flood fill would need ~H+W steps on whole plans.
+- **Omission size bins: < 0.5% / < 2% / larger of the building area** (own choice; Stage 1 tertiles were for ResPlan masks). Location exterior = omitted pixels touch outdoor/background.
+- **Result: real plans break the rules often (about 57 raw candidates per intact plan), so at <= 0.5 false alarms the rules find only 7% of single omissions (rooms 17%, doors 10%, others <= 4%; `outputs/stage2/rules_check.md`).** Rules alone cannot carry CHECK; the learned detector must.
