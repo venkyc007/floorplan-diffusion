@@ -51,10 +51,61 @@ def wall_colour(img, mask, lbl, wall_px=8):
     return int(np.median(img[near])) if near.any() else 0
 
 
-def door_symbol(img, door, lbl, ink=128, inside=0.8):
-    """Dark line pieces of the door leaf + swing arc: connected dark pieces (not wall / opening /
-    fixture in the label map) with >= 80% of their pixels within one door length of the doorway.
-    Pieces reaching further out (hatching, furniture, long dimension lines) are left alone."""
+def bridge(door, lbl):
+    """The wall continued across the doorway: wall mask closed along the wall direction, inside the
+    door's box (grown 1 px), minus existing wall. -> (bridge mask, horizontal?)"""
+    ys, xs = np.nonzero(door)
+    horizontal = (xs.max() - xs.min()) >= (ys.max() - ys.min())
+    L = int((xs.max() - xs.min()) if horizontal else (ys.max() - ys.min())) + 5
+    k = np.ones((1, L) if horizontal else (L, 1), np.uint8)
+    wall = (lbl == I["wall"]).astype(np.uint8)
+    closed = cv2.morphologyEx(wall, cv2.MORPH_CLOSE, k) > 0
+    box = np.zeros(lbl.shape, bool)
+    box[max(0, ys.min() - 1):ys.max() + 2, max(0, xs.min() - 1):xs.max() + 2] = True
+    return closed & box & (wall == 0), horizontal
+
+
+def door_symbol(img, door, lbl, ink=160, band=2):
+    """Pixels of the door leaf + swing arc, found by geometry: the leaf is a line from a hinge corner of
+    the doorway, perpendicular to the wall, one door width long; the arc is the quarter circle of that
+    radius around the hinge. Of the 4 options (hinge at either end x swing to either side), the one with
+    the most dark pixels in its bands wins. Only dark pixels in those bands (not wall / opening / fixture
+    in the label map) are returned, so text and furniture nearby stay."""
+    br, _ = bridge(door, lbl)
+    ys, xs = np.nonzero(br if br.sum() >= 4 else door)  # the doorway proper (the polygon can be a box)
+    y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
+    horizontal = (x1 - x0) >= (y1 - y0)              # doorway runs along x (wall horizontal)
+    L = float((x1 - x0) if horizontal else (y1 - y0)) + 1
+    h, w = img.shape
+    yy, xx = np.mgrid[0:h, 0:w]
+    keep = grown(np.isin(lbl, C16.group("BOUNDARY") + C16.group("F")) & ~door, 1)
+    dark = (img < ink) & ~keep & ~door
+    best, best_n = None, -1
+    for hinge_end in (0, 1):
+        for side in (-1, 1):
+            if horizontal:                           # hinge on the wall face, leaf along y
+                hx = x0 if hinge_end == 0 else x1
+                hy = y0 if side < 0 else y1
+                along, across = xx - hx, (yy - hy) * side
+                toward = (along * (1 if hinge_end == 0 else -1))
+            else:
+                hy = y0 if hinge_end == 0 else y1
+                hx = x0 if side < 0 else x1
+                along, across = yy - hy, (xx - hx) * side
+                toward = (along * (1 if hinge_end == 0 else -1))
+            r = np.sqrt(along.astype(np.float32) ** 2 + across.astype(np.float32) ** 2)
+            quadrant = (across >= -band) & (toward >= -band)
+            arc = quadrant & (np.abs(r - L) <= band)
+            leaf = (np.abs(toward) <= band) & (across >= 0) & (across <= L + band)
+            m = (arc | leaf) & dark & ~np.isin(lbl, C16.group("OUT"))   # not across outdoor hatching
+            if m.sum() > best_n:
+                best, best_n = m, int(m.sum())
+    return best | symbol_pieces(img, door, lbl, ink)
+
+
+def symbol_pieces(img, door, lbl, ink=128, inside=0.8):
+    """Connected dark pieces (not wall / opening / fixture) with >= 80% of their pixels within one door
+    length of the doorway: catches thick arcs the thin geometric bands miss."""
     ys, xs = np.nonzero(door)
     length = int(max(ys.max() - ys.min(), xs.max() - xs.min())) + 1
     zone = grown(door, length)
@@ -73,9 +124,25 @@ def door_symbol(img, door, lbl, ink=128, inside=0.8):
 
 
 def draw_wall(img, door, lbl, wall_px=8):
-    """Door kind (a): leaf + arc inpainted away, doorway painted in the local wall colour."""
-    out = erase(img, door_symbol(img, door, lbl), lbl, grow=1)
-    out[door] = wall_colour(img, door, lbl, wall_px)
+    """Door kind (a): the wall drawn across the doorway in the drawing's own style. The bridge (the wall
+    continued across the gap) is painted line by line with the median grey of that line's wall pixels
+    just past the doorway's ends (so outline-style walls get their two thin lines continued, solid walls
+    their fill); the rest of the door polygon, the leaf and the arc are inpainted away. Without a bridge
+    (no wall on either side) the door polygon is filled with the median local wall colour."""
+    br, horizontal = bridge(door, lbl)
+    out = erase(img, (door & ~br) | door_symbol(img, door, lbl), lbl, grow=1)
+    if br.sum() < 4:
+        out[door] = wall_colour(img, door, lbl, wall_px)
+        return out
+    wall = lbl == I["wall"]
+    ys, xs = np.nonzero(br)
+    near = grown(br, 4) & wall
+    for v in np.unique(ys if horizontal else xs):  # one line of the bridge at a time
+        line = (ys == v) if horizontal else (xs == v)
+        src = near[v, :] if horizontal else near[:, v]
+        vals = (img[v, :] if horizontal else img[:, v])[src]
+        if len(vals):
+            out[ys[line], xs[line]] = int(np.median(vals))
     return out
 
 

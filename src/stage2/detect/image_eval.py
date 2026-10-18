@@ -145,10 +145,13 @@ def main():
     def run(pid, img, removed=None, kind=None, typ=None, scope=None):
         label, _, _ = parse(img, pc)
         parts = detect_parts(label)
-        row = {"pid": pid, "kind": kind or "intact", "type": typ, "in_scope": scope}
+        row = {"pid": pid, "kind": kind or "intact", "type": typ, "in_scope": scope, "redrawn": ""}
         rm = None
         if removed is not None:
             rm = cv2.resize(removed.astype(np.uint8), (label.shape[1], label.shape[0]), interpolation=cv2.INTER_NEAREST) > 0
+            # did the parser draw the removed component back (from context)? share of its pixels
+            cls = I["wall"] if typ == "room" else I[typ]
+            row["redrawn"] = round(float(np.mean(label[rm] == cls)), 3) if rm.any() else ""
             rm = grown(rm, 3)
         for name, srcs in methods.items():
             props = R.merge([p for s in srcs for p in parts.get(s, [])])
@@ -205,6 +208,10 @@ def report(rows, methods, path):
     b_scope = [r for r in om if r["kind"] == "door (b)" and str(r["in_scope"]) == "True"]
     L += ["", f"Scope subsets ({fin}): door (a) where the closure cuts a room off: {len(a_cut)} cases, found {rec(a_cut, fin)}; "
           f"door (b) between a bedroom/bathroom and a closed-pair neighbour: {len(b_scope)} cases, found {rec(b_scope, fin)}.",
+          "Parser redraws the removed component (mean share of its pixels the parser still labels with the removed "
+          "class, room = its walls): " + ", ".join(
+              f"{k} {100 * np.mean([float(r['redrawn']) for r in om if r['kind'] == k and r['redrawn'] != '']):.0f}%"
+              for k in KINDS if any(r['kind'] == k and r['redrawn'] != '' for r in om)) + ".",
           "Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser "
           "errors count against detection (and add false alarms)."]
     with open(OUT / "detection_eval.md", "a", encoding="utf-8") as f:
