@@ -86,10 +86,25 @@ def map_candidates(label, maps, level=0.5):
 # ---------------------------------------------------------------- discrete rules
 
 def walkable_components(label):
+    """Walkable components; the main one = the component holding the most ROOM pixels (the flat
+    itself; the largest walkable area can be a yard or garden)."""
     walk = np.isin(label, C16.group("PASS")).astype(np.uint8)
-    n, comp, st, _ = cv2.connectedComponentsWithStats(walk, connectivity=4)
-    main = 1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA])) if n > 1 else 0
-    return comp, main
+    n, comp = cv2.connectedComponents(walk, connectivity=4)
+    if n <= 1:
+        return comp, 0
+    rooms = np.bincount(comp[np.isin(label, C16.group("S"))], minlength=n)
+    rooms[0] = -1
+    return comp, int(np.argmax(rooms))
+
+
+def reachable(label, comp, main):
+    """Walkable pixels reachable from an entrance: the main component plus every component that
+    contains an exterior door (a door within T_wall + 2 px of outdoor/background). Plans with
+    several flats or floors in one image have one entrance per unit."""
+    k = CONST["T_wall"] + 2
+    outside = cv2.dilate(np.isin(label, C16.group("OUT")).astype(np.uint8), np.ones((2 * k + 1,) * 2, np.uint8)) > 0
+    entr = set(np.unique(comp[(label == I["door"]) & outside]).tolist()) - {0}
+    return np.isin(comp, list(entr | {main}))
 
 
 def door_location(label, room, reach):
@@ -110,7 +125,7 @@ def door_location(label, room, reach):
 def discrete_candidates(label):
     out = []
     comp, main = walkable_components(label)
-    reach = comp == main
+    reach = reachable(label, comp, main)
     # C8: room instances with no pixel in the main walkable component -> door missing
     for c, m in room_instances(label):
         if main and not (reach & m).any():
