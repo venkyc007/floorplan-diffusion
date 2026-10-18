@@ -121,7 +121,8 @@ def detect_holes(label):
         props += R.detect(label, R.load_thresholds(), raw=raw)
     if "R5" in extra:                                    # doorless gap between rooms that need a door
         g = choice.get("gap_rule", {})
-        props += gap_candidates(label, open_rate=g.get("open_rate", 0.10), skip=tuple(g.get("skip", ())))
+        props += gap_candidates(label, open_rate=g.get("open_rate", 0.10), need_area=g.get("need_area"),
+                                small_other=g.get("small_other"), min_len=g.get("min_len"))
     return R.merge(props)
 
 

@@ -10,3 +10,11 @@ threshold: 0.9
 final: detector + C8
 extra_rules:
 - C8
+- R5
+gap_rule:
+  open_rate: 0.1
+  need_area: 1514
+  small_other: 460
+  min_len: 11
+  source: gap_tune.py on the tuning plans; R5 alone <= 0.09 false alarms per intact
+    plan

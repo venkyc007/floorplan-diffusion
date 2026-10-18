@@ -60,10 +60,14 @@ def door_a(lbl):
     return None
 
 
-def door_b(lbl, bad):
+def door_b(lbl, bad, min_len=0):
+    """A door R5 is meant for: closed pair, one side a bedroom or bathroom, doorway >= min_len (image px)."""
     for d in components(lbl == I["door"]):
         pair = door_side_pair(lbl, d, 2 * WALL_PX)
-        if d.sum() >= 40 and pair and pair[0] != pair[1] and bad[pair[0], pair[1]]:
+        ys, xs = np.nonzero(d)
+        length = max(ys.max() - ys.min(), xs.max() - xs.min()) + 1
+        if (d.sum() >= 40 and pair and pair[0] != pair[1] and bad[pair[0], pair[1]] and length >= min_len
+                and {C16.names[p] for p in pair} & {"bedroom", "bathroom"}):
             return d
     return None
 
@@ -111,11 +115,11 @@ def room_walls(lbl):
     return None
 
 
-def make_case(kind, img, lbl, bad):
+def make_case(kind, img, lbl, bad, min_len=0):
     """(image with the omission, removed mask in image px, expected added class) or None."""
     if kind == "intact":
         return img, np.zeros(lbl.shape, bool), None
-    m = {"door (a)": lambda: door_a(lbl), "door (b)": lambda: door_b(lbl, bad),
+    m = {"door (a)": lambda: door_a(lbl), "door (b)": lambda: door_b(lbl, bad, min_len),
          "window": lambda: first_component(lbl, [I["window"]]), "fixture": lambda: first_component(lbl, C16.group("F")),
          "wall": lambda: wall_piece(lbl), "room": lambda: room_walls(lbl)}[kind]()
     if m is None or not m.any():
@@ -152,7 +156,8 @@ def main():
     import yaml
     g = yaml.safe_load((PROJECT_ROOT / "configs" / "stage2" / "detector_threshold.yaml").read_text(encoding="utf-8"))
     g = g.get("gap_rule", {})
-    bad = closed_pairs(open_rate=g.get("open_rate", 0.10), skip=tuple(g.get("skip", ())))   # pairs R5 covers
+    bad = closed_pairs(open_rate=g.get("open_rate", 0.10))                    # pairs R5 covers
+    min_len = g.get("min_len", 0) * WALL_PX / 3                                 # completion px -> image px
     z = zipfile.ZipFile(args.zip)
     names = sorted(n[:-8] for n in z.namelist() if n.endswith("_img.png"))
     used, cases = set(), []
@@ -167,7 +172,7 @@ def main():
             if (lbl == 255).any():                   # untyped plan: skip
                 continue
             img = read(z, f"{n}_img.png", cv2.IMREAD_GRAYSCALE)
-            c = make_case(kind, img, lbl, bad)
+            c = make_case(kind, img, lbl, bad, min_len)
             if c is None:
                 continue
             used.add(n)
