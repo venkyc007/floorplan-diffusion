@@ -8,11 +8,12 @@ Cases (12): 2 door (a) "opening forgotten", 2 door (b) "gap left, no door", 2 wi
 first typed val drawings not used yet that have such a component. The omission is made on the IMAGE:
   door (a)  a door whose removal cuts a room off (the TA case, caught by C8): its pixels are inked with the
             local wall grey, i.e. a line of wall thickness across the doorway
-  door (b)  a door between two spaces that need one (the R5 pair rule): its pixels are whitened
-  window / fixture / wall   the component's own pixels whitened (a wall piece = 3-6 wall thicknesses of a
-            straight run)
-  room      the walls and doors between a room and its neighbour whitened
-Whitening = the component's own label pixels grown 2 px (never a box). The pipeline runs in fast mode.
+  door (b)  a door between two spaces that need one (the R5 pair rule): doorway left open
+  window / fixture / wall   the component erased (a wall piece = 5 wall thicknesses of a straight run)
+  room      the walls and doors between a room and its neighbour erased
+Erasure (src/stage2/data/erasure.py): the component's own label pixels grown 2 px, inpainted from the
+surroundings (Telea); door (a) = doorway painted in the local wall colour; door (b) = doorway + leaf + arc
+inpainted. The orange outline is drawn on the figure axes only, never into the pipeline's input. The pipeline runs in fast mode.
 Scoring (automatic, on the completion-scale map): found = a hole box overlaps the omission; restored = an
 addition of the expected class overlaps it (door; window; wall; that fixture; wall for a room);
 extra = added components (wall/door/window/railing/fixture) away from it.
@@ -28,6 +29,7 @@ import numpy as np
 
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
+from src.stage2.data.erasure import draw_wall, erase, open_gap
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.gaps import closed_pairs
@@ -118,12 +120,12 @@ def make_case(kind, img, lbl, bad):
          "wall": lambda: wall_piece(lbl), "room": lambda: room_walls(lbl)}[kind]()
     if m is None or not m.any():
         return None
-    out = img.copy()
-    if kind == "door (a)":                               # ink a wall across the doorway
-        near = grow(m, 3 * WALL_PX) & (lbl == I["wall"])
-        out[m] = int(np.median(img[near])) if near.any() else 0
-    else:
-        out[grow(m, 2)] = 255
+    if kind == "door (a)":                               # wall drawn across the doorway, leaf + arc removed
+        out = draw_wall(img, m, lbl, WALL_PX)
+    elif kind == "door (b)":                             # doorway left open, leaf + arc removed
+        out = open_gap(img, m, lbl, WALL_PX)
+    else:                                                # inpainted from the surroundings (never white)
+        out = erase(img, m, lbl, wall_px=WALL_PX)
     expected = {"door (a)": "door", "door (b)": "door", "window": "window", "wall": "wall", "room": "wall",
                 "fixture": C16.names[int(np.bincount(lbl[m]).argmax())]}[kind]
     return out, m, expected

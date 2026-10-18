@@ -18,6 +18,7 @@ import numpy as np
 
 from src.stage2.constraints.rules import components
 from src.stage2.data.classes16 import C16
+from src.stage2.data.erasure import erase as inpaint_erase
 from src.stage2.pipeline.run import run_pipeline
 from src.utils import PROJECT_ROOT
 
@@ -30,20 +31,17 @@ def read(z, name, flag):
     return cv2.imdecode(np.frombuffer(z.read(name), np.uint8), flag)
 
 
-def erase(img, m):
-    """Whiten ONLY the component's own pixels (its rasterised SVG polygon = its label pixels), grown 2 px."""
-    grown = cv2.dilate(m.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
-    out = img.copy()
-    out[grown] = 255
+def erase(img, m, lbl):
+    """Erase ONLY the component's own pixels (its label pixels, grown 2 px), inpainted from the surroundings."""
     ys, xs = np.nonzero(m)
-    return out, (int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max()))
+    return inpaint_erase(img, m, lbl), (int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max()))
 
 
 def whiten(img, lbl, classes, kind):
     comps = [m for m in components(np.isin(lbl, classes)) if m.sum() >= 40]
     if not comps:
         return None
-    return erase(img, comps[0])
+    return erase(img, comps[0], lbl)
 
 
 def unreachable_door(lbl):
@@ -97,7 +95,7 @@ def main():
             door = unreachable_door(lbl)
             if door is None:
                 continue
-            white, box = erase(img, door)
+            white, box = erase(img, door, lbl)
             t = time.time()
             res = run_pipeline(white, fast=True)
             res["seconds"] = time.time() - t
@@ -114,7 +112,7 @@ def figure(examples, tag=""):
     from matplotlib.patches import Rectangle
     fig, axes = plt.subplots(len(examples), 3, figsize=(18, 6.5 * len(examples)))
     lines = [f"# Pipeline examples (CPU{', fast mode' if tag else ''})", "",
-             "Whitening: only the removed component's own pixels (its rasterised polygon), grown 2 px." if tag else ""]
+             "Erasure: only the removed component's own pixels (its rasterised polygon), grown 2 px, inpainted." if tag else ""]
     for row, (n, kind, img, white, box, res) in zip(np.atleast_2d(axes), examples):
         a, b, c = row
         a.imshow(white, cmap="gray", vmin=0, vmax=255)
