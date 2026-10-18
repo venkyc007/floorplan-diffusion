@@ -7,3 +7,6 @@ strong_rules:
 - C6
 - C12
 threshold: 0.9
+final: detector + C8
+extra_rules:
+- C8

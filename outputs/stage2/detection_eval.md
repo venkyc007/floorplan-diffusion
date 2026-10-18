@@ -24,3 +24,16 @@ Cells: detected (type-correct).
 | 0.8 | 1.50 / 81% | 1.22 / 79% | 0.89 / 77% | 0.66 / 68% | 0.38 / 54% |
 | 0.9 | 1.01 / 78% | 0.82 / 77% | 0.65 / 74% | 0.50 / 67% | 0.25 / 50% |
 | 0.95 | 0.76 / 77% | 0.63 / 76% | 0.53 / 73% | 0.38 / 62% | 0.21 / 48% |
+
+## Held-out re-score (honest numbers; user, chunk 6)
+
+Setting fixed at threshold 0.9 / blobs >= 40 px. Val has only 371 typed plans; 159 were NOT used to choose the detector setting: 59 stay intact, each of the other 100 gets two independent omissions of different kinds (200 cases). Caveat: the rule thresholds were tuned on intact val plans 0-199, which include most of these plans, so the rule columns are slightly optimistic.
+
+| method | false alarms / intact plan | mean recall | door | window | wall | railing | fixture | room |
+|---|---|---|---|---|---|---|---|---|
+| rules only (all rules) | 0.27 | 8% | 0% (0%) | 0% (0%) | 6% (0%) | 9% (0%) | 15% (5%) | 18% (6%) |
+| detector only | 0.29 | 61% | 28% (28%) | 73% (73%) | 83% (74%) | 48% (48%) | 38% (33%) | 97% (97%) |
+| detector + C8 | 0.31 | 62% | 28% (28%) | 73% (73%) | 83% (74%) | 52% (48%) | 38% (33%) | 97% (97%) |
+| detector + C8/C17/C6/C12 | 0.47 | 64% | 28% (28%) | 73% (73%) | 83% (74%) | 57% (48%) | 46% (33%) | 100% (88%) |
+
+**Final CHECK setting: detector + C8** (rule: detector + C8 if <= 0.6 false alarms per plan, else detector only). The detector already takes the rule violation maps as input, so it is itself the rules + learned combination.

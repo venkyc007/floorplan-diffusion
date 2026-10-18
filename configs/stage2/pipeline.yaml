@@ -1,0 +1,27 @@
+# Stage 2 end-to-end pipeline (src/stage2/pipeline/run.py): PARSE -> CHECK -> FILL -> VERIFY.
+# Checkpoints are local copies of Kaggle outputs (git-ignored).
+
+checkpoints:
+  parser: outputs/kaggle/parser_v1/runs/parser_v1/checkpoints/best.pt
+  detector: outputs/kaggle/k2a/runs/k2a_detector/checkpoints/best.pt
+  unet: outputs/kaggle/k2a/runs/k2a_unet/checkpoints/best.pt
+  diffusion: outputs/kaggle/k1/runs/k1_constrained/checkpoints/best.pt
+
+parse:
+  scales: [0.5, 0.7, 1.0, 1.4, 2.0]   # tried on the input drawing; keep the one with walls closest to 8 px
+  wall_px: 8
+  max_side: 2048
+  completion_wall_px: 3                # label map rescaled so walls = 3 px
+
+detect:
+  settings: configs/stage2/detector_threshold.yaml   # threshold, min blob, final rule set
+
+fill:
+  window: 128
+  n_samples: 4                         # best-of-N for the demo (8 for evaluation)
+  eta_guidance: 0.3                    # PLACEHOLDER until tuned on the GPU
+  ddim_steps: 50
+  size_bins: [0.027, 0.077]            # hole area / building area: small / medium / large (Stage 1 bins)
+  t0: [400, 600, 700]                  # per size bin (Stage 1 size-adaptive hybrid)
+  max_hole: 100                        # holes larger than this (px, either side) are cut to it
+  seed: 0

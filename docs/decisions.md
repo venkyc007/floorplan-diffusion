@@ -373,3 +373,10 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **Detector proposals: blobs of (1 - p(none)) >= 0.9 with >= 40 px; type = missing class with the highest mean probability in the blob; box + 3 px** — the best mean recall (67%) at <= 0.5 false alarms per intact plan over a threshold x blob-size sweep on 300 whole val plans (chosen and reported on the same plans). `configs/stage2/detector_threshold.yaml`.
 - **"Both" = detector + strong rules (C8, C17, C6, C12), merged**: same mean recall (67%), +3 points on doors and fixtures, but 0.85 false alarms per plan (rules add ~0.35). Rules alone: 7%.
 - **Rule ceiling: 59% of single omissions are visible to some rule before thresholds, but only 11% of those survive the thresholds; windows (8%) and fixtures (12%) are almost invisible to rules.**
+
+## CHECK final setting and pipeline (2026-10-18)
+
+- **Final CHECK = detector (0.9 / 40 px) + C8** (user rule: + C8 if <= 0.6 false alarms per plan). Held-out val (159 plans not used for the setting; 59 intact, 100 x 2 omissions): 0.31 false alarms per intact plan, mean recall 62% (door 28%, window 73%, wall 83%, railing 52%, fixture 38%, room 97%). The detector already takes the rule violation maps as input, so it is itself the rules + learned combination.
+- **Pipeline parse: parse once at scale 1, measure the predicted wall thickness (2 x median distance transform on the wall ridge), re-parse at the configured scale closest to 8 / t only if |t - 8| > 1.5 px** — the same choice as trying every scale, with 1-2 parser passes instead of 5.
+- **Holes are cut to at most 100 px per side so they fit a 128 window; t0 by hole share of the building (Stage 1 bins 2.7% / 7.7%); eta = 0.3 placeholder; N = 4.**
+- **CPU: ~3 min per hole (4 samples x up to 35 DDIM steps x guidance); parse 4-7 s, detect 2-8 s; 8-9 min per drawing with 3 holes.**

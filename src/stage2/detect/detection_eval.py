@@ -193,5 +193,71 @@ def figure(cases, th, both):
     print("saved", OUT / "detection_examples.png")
 
 
+def build_heldout_cases(zip_path, n_intact=59):
+    """Cases on val plans NOT used to choose the detector setting: the first n_intact free plans stay
+    intact, every other free plan gets TWO independent omissions of different kinds (seed 5)."""
+    plans = ordered_plans(zip_path)
+    used = {c["pid"] for c in build_cases(zip_path)}
+    free = [(p, lab) for p, lab in plans if p not in used]
+    cases = [{"pid": p, "plan": lab, "mask": None, "kind": None, "type": None} for p, lab in free[:n_intact]]
+    rng = np.random.default_rng(5)
+    for j, (p, lab) in enumerate(free[n_intact:]):
+        for kind in (KINDS[(2 * j) % len(KINDS)], KINDS[(2 * j + 1) % len(KINDS)]):
+            s = simulate_one(lab, rng, kind) or simulate_one(lab, rng)
+            if s is not None:
+                cases.append({"pid": p, "plan": s["plan"], "mask": s["mask"], "kind": s["kind"], "type": s["type"]})
+    return cases, len(free)
+
+
+def heldout(args):
+    """Honest re-score at the chosen detector setting on held-out val plans (user, chunk 6)."""
+    model, cfg = load_detector(args.ckpt)
+    choice = yaml.safe_load(CHOICE.read_text(encoding="utf-8"))
+    th, mb = choice["threshold"], choice["min_blob"]
+    th_rules = R.load_thresholds()
+    cases, n_free = build_heldout_cases(args.zip)
+    for i, c in enumerate(cases):
+        c["probs"] = detector_probs(model, c["plan"], cfg["model"]["K"])
+        c["raw"] = R.raw_candidates(c["plan"])
+        if (i + 1) % 25 == 0:
+            print(f"cached {i + 1}/{len(cases)}", flush=True)
+    det = lambda c: proposals(c["probs"], th, mb)
+    rules_of = lambda c, keep: R.detect(c["plan"], th_rules, raw=[r for r in c["raw"] if r.rules[0] in keep])
+    methods = {"rules only (all rules)": lambda c: R.detect(c["plan"], th_rules, raw=c["raw"]),
+               "detector only": det,
+               "detector + C8": lambda c: R.merge(det(c) + rules_of(c, ("C8",))),
+               "detector + C8/C17/C6/C12": lambda c: R.merge(det(c) + rules_of(c, STRONG_RULES))}
+    res = {k: evaluate(cases, f) for k, f in methods.items()}
+    final = "detector + C8" if res["detector + C8"][0] <= 0.6 else "detector only"
+    n_int = sum(c["mask"] is None for c in cases)
+    L = ["", "## Held-out re-score (honest numbers; user, chunk 6)", "",
+         f"Setting fixed at threshold {th} / blobs >= {mb} px. Val has only 371 typed plans; {n_free} were NOT used to "
+         f"choose the detector setting: {n_int} stay intact, each of the other {n_free - n_int} gets two independent "
+         f"omissions of different kinds ({len(cases) - n_int} cases). Caveat: the rule thresholds were tuned on intact "
+         "val plans 0-199, which include most of these plans, so the rule columns are slightly optimistic.", "",
+         "| method | false alarms / intact plan | mean recall | " + " | ".join(KINDS) + " |",
+         "|---|---|---|" + "---|" * len(KINDS)]
+    for name, (fa, rec, mean) in res.items():
+        cells = [f"{100 * rec[k][0]:.0f}% ({100 * rec[k][1]:.0f}%)" for k in KINDS]
+        L.append(f"| {name} | {fa:.2f} | {100 * mean:.0f}% | " + " | ".join(cells) + " |")
+    L += ["", f"**Final CHECK setting: {final}** (rule: detector + C8 if <= 0.6 false alarms per plan, else "
+          "detector only). The detector already takes the rule violation maps as input, so it is itself the "
+          "rules + learned combination."]
+    with open(OUT / "detection_eval.md", "a", encoding="utf-8") as f:
+        f.write("\n".join(L) + "\n")
+    choice["final"] = final
+    choice["extra_rules"] = ["C8"] if final == "detector + C8" else []
+    CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
+    print("\n".join(L))
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--heldout" in sys.argv:
+        sys.argv.remove("--heldout")
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--zip", required=True)
+        ap.add_argument("--ckpt", required=True)
+        heldout(ap.parse_args())
+    else:
+        main()
