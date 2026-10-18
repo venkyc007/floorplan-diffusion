@@ -50,9 +50,16 @@ def guide_x0(x0, mask, known, weights, eta, temperature=0.2, K=96):
 
 @torch.no_grad()
 def hybrid_sample(model, cond, sketch=None, t0=600, steps=50, eta=1.0, eta_guidance=0.0, t_guide=600,
-                  weights=None, generator=None):
-    """-> label maps (B, H, W). cond (B, 17, H, W); sketch (B, H, W) labels or None."""
+                  weights=None, generator=None, steps_from_t0=None, guide_last=None):
+    """-> label maps (B, H, W). cond (B, 17, H, W); sketch (B, H, W) labels or None.
+
+    steps_from_t0: run exactly this many DDIM steps from t0 down to 0 (fast mode; the schedule is
+    spaced accordingly); otherwise the steps <= t0 of a `steps`-step schedule.
+    guide_last: apply guidance only on the last k steps (fast mode); otherwise at every t <= t_guide.
+    """
     sched = model.sample_scheduler
+    if sketch is not None and steps_from_t0:
+        steps = int(np.ceil(steps_from_t0 * sched.config.num_train_timesteps / max(t0, 1)))
     sched.set_timesteps(steps, device=cond.device)
     mask, known01 = cond[:, -1:], cond[:, :N]
     known = known01 * 2 - 1
@@ -65,13 +72,16 @@ def hybrid_sample(model, cond, sketch=None, t0=600, steps=50, eta=1.0, eta_guida
     ts = sched.timesteps
     if sketch is not None:
         ts = ts[ts <= t0]
+        if steps_from_t0:
+            ts = ts[-steps_from_t0:]
         start = one_hot(sketch.to(cond.device)) * 2 - 1
         x = noised(torch.where(mask.bool(), start, known), ts[0])
     else:
         x = torch.where(mask.bool(), torch.randn(known.shape, generator=generator, device=cond.device), noised(known, ts[0]))
     for i, t in enumerate(ts):
         x0 = model(x, cond, t.expand(len(x))).float()
-        if eta_guidance > 0 and int(t) <= t_guide:
+        guide_now = (len(ts) - i <= guide_last) if guide_last else int(t) <= t_guide
+        if eta_guidance > 0 and guide_now:
             x0 = guide_x0(x0, mask, known01, weights, eta_guidance)
         x = sched.step(x0, t, x, eta=eta, generator=generator).prev_sample
         x = torch.where(mask.bool(), x, noised(known, ts[i + 1]) if i + 1 < len(ts) else known)
@@ -79,28 +89,34 @@ def hybrid_sample(model, cond, sketch=None, t0=600, steps=50, eta=1.0, eta_guida
 
 
 @torch.no_grad()
-def violation_count(labels, mask, known01, const=CONST):
-    """Thresholded violations per sample: connected blobs of V > 0.5 inside M, summed over the
-    window-usable constraints, + R1 (rooms not cut by the window border) + R3. -> (B,) ints."""
+def violation_breakdown(labels, mask, known01, const=CONST):
+    """Thresholded violations per sample and per check: connected blobs of V > 0.5 inside M for every
+    window-usable constraint, + R1 (rooms not cut by the window border) + R3. -> {name: (B,) ints}."""
     P = one_hot(labels)
     M = ops.dil(mask, 7) > 0
     ctx = Ctx(hole=mask, known=known01, const=const, K=96)
-    counts = np.zeros(len(labels), int)
+    out = {}
     for name in GUIDE:
-        v = (violation_map(name, P, ctx) > 0.5) & M
-        for b in range(len(labels)):
-            counts[b] += len(components(v[b, 0].cpu().numpy()))
+        v = ((violation_map(name, P, ctx) > 0.5) & M).cpu().numpy()
+        out[name] = np.array([len(components(v[b, 0])) for b in range(len(labels))])
     lab = labels.cpu().numpy()
     m = M[:, 0].cpu().numpy()
     ranges = const.get("room_area", {})
+    out["R1"], out["R3"] = np.zeros(len(lab), int), np.zeros(len(lab), int)
     for b in range(len(lab)):
         for c, inst in room_instances(lab[b]):
             if inst[0].any() or inst[-1].any() or inst[:, 0].any() or inst[:, -1].any() or not (inst & m[b]).any():
                 continue
             r = ranges.get(C16.names[c])
-            counts[b] += bool(r and not (r[0] <= inst.sum() <= r[1]))
-        counts[b] += len(components(r3_adjacency(lab[b], const)[1] & m[b]))
-    return counts
+            out["R1"][b] += bool(r and not (r[0] <= inst.sum() <= r[1]))
+        out["R3"][b] = len(components(r3_adjacency(lab[b], const)[1] & m[b]))
+    return out
+
+
+@torch.no_grad()
+def violation_count(labels, mask, known01, const=CONST):
+    """Total thresholded violations per sample (sum of violation_breakdown). -> (B,) ints."""
+    return sum(violation_breakdown(labels, mask, known01, const).values())
 
 
 @torch.no_grad()
@@ -117,14 +133,16 @@ def best_of_n(samples, mask, known01, sketch=None):
 
 
 @torch.no_grad()
-def fill(model, cond, sketch=None, n=8, t0=600, eta_guidance=0.0, steps=50, generator=None, weights=None):
+def fill(model, cond, sketch=None, n=8, t0=600, eta_guidance=0.0, steps=50, generator=None, weights=None,
+         steps_from_t0=None, guide_last=None):
     """Hybrid sampling + guidance + best-of-N for a batch of holes -> (labels (B, H, W), info list)."""
     out, info = [], []
     for b in range(len(cond)):
         c = cond[b:b + 1].expand(n, -1, -1, -1)
         sk = sketch[b:b + 1].expand(n, -1, -1) if sketch is not None else None
         samples = hybrid_sample(model, c, sk, t0=t0, steps=steps, eta_guidance=eta_guidance,
-                                weights=weights, generator=generator)
+                                weights=weights, generator=generator, steps_from_t0=steps_from_t0,
+                                guide_last=guide_last)
         i, counts, agree = best_of_n(samples, cond[b:b + 1, -1:], cond[b:b + 1, :N],
                                      sketch[b] if sketch is not None else None)
         out.append(samples[i])

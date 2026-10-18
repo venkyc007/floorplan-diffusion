@@ -193,6 +193,134 @@ def figure(cases, th, both):
     print("saved", OUT / "detection_examples.png")
 
 
+# ---------------------------------------------------------------- per-type thresholds (user, chunk 7)
+
+TYPE_GRID = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.98, 0.995]
+MIN_BLOB_TYPE = {t: (15 if t in ("toilet", "sink", "bath_shower", "appliance") else 40) for t in MISSING[1:]}
+KIND_WEIGHT = {"door": 2.0, "railing": 0.5, "fixture": 0.5}          # user: more budget on doors
+
+
+def proposals_per_type(probs, th, min_blob=None):
+    """Blobs of each missing type's OWN probability >= its threshold (and >= its min blob size)."""
+    out = []
+    for t in range(1, len(MISSING)):
+        name = MISSING[t]
+        p = probs[t].astype(np.float32)
+        for m in components(p >= th[name]):
+            if m.sum() >= MIN_BLOB_TYPE[name]:
+                out.append(R.Candidate(name, R.box_of(m, m.shape), ["detector"], float(p[m].max())))
+    return out
+
+
+def blob_table(cases):
+    """Per case / type / grid threshold: list of (overlaps the omission?, type-correct?) per blob."""
+    for c in cases:
+        c["blobs"] = {}
+        for t in range(1, len(MISSING)):
+            name = MISSING[t]
+            p = c["probs"][t].astype(np.float32)
+            for tau in TYPE_GRID:
+                hits = []
+                for m in components(p >= tau):
+                    if m.sum() < MIN_BLOB_TYPE[name]:
+                        continue
+                    y0, x0, y1, x1 = R.box_of(m, m.shape)
+                    ov = c["mask"] is not None and bool(c["mask"][y0:y1 + 1, x0:x1 + 1].any())
+                    hits.append((ov, ov and name == c["type"]))
+                c["blobs"][(name, tau)] = hits
+
+
+def score_table(cases, th, c8):
+    """(false alarms per intact plan incl. C8, {kind: (recall, type-correct)}) from the blob table."""
+    fa, n_int = 0, 0
+    per = defaultdict(lambda: [0, 0, 0])
+    for c in cases:
+        blobs = [b for name in th for b in c["blobs"][(name, th[name])]]
+        extra = c8[c["idx"]]
+        if c["mask"] is None:
+            fa += len(blobs) + len(extra)
+            n_int += 1
+        else:
+            per[c["kind"]][0] += 1
+            per[c["kind"]][1] += any(b[0] for b in blobs) or any(e[0] for e in extra)
+            per[c["kind"]][2] += any(b[1] for b in blobs) or any(e[1] for e in extra)
+    return fa / max(n_int, 1), {k: (v[1] / v[0], v[2] / v[0]) for k, v in per.items()}
+
+
+def c8_hits(cases):
+    th_rules = R.load_thresholds()
+    out = {}
+    for c in cases:
+        props = R.detect(c["plan"], th_rules, raw=[r for r in c["raw"] if r.rules[0] == "C8"])
+        out[c["idx"]] = [(c["mask"] is not None and bool(c["mask"][p.box[0]:p.box[2] + 1, p.box[1]:p.box[3] + 1].any()),
+                          False) for p in props]
+    return out
+
+
+def tune_per_type(cases, c8, budget):
+    th = {t: TYPE_GRID[-1] for t in MISSING[1:]}
+
+    def objective(th):
+        fa, rec = score_table(cases, th, c8)
+        return fa, sum(KIND_WEIGHT.get(k, 1.0) * r[0] for k, r in rec.items())
+    fa, obj = objective(th)
+    while True:
+        best = None
+        for t in th:
+            i = TYPE_GRID.index(th[t])
+            if i == 0:
+                continue
+            trial = dict(th, **{t: TYPE_GRID[i - 1]})
+            f2, o2 = objective(trial)
+            if f2 > budget:
+                continue
+            gain = (o2 - obj) / max(f2 - fa, 1e-3)
+            if o2 > obj and (best is None or gain > best[0]):
+                best = (gain, trial, f2, o2)
+        if best is None:
+            return th, fa
+        _, th, fa, obj = best
+
+
+def per_type(args):
+    model, cfg = load_detector(args.ckpt)
+    tune_cases = build_cases(args.zip)
+    held, _ = build_heldout_cases(args.zip)
+    for i, c in enumerate(tune_cases + held):
+        c["idx"] = i
+        c["probs"] = detector_probs(model, c["plan"], cfg["model"]["K"])
+        c["raw"] = R.discrete_candidates(c["plan"])              # C8 is the only rule kept with the detector
+        blob_table([c])
+        c.pop("probs")                                            # keep only the small blob table (RAM)
+        if (i + 1) % 50 == 0:
+            print(f"cached {i + 1}/{len(tune_cases) + len(held)}", flush=True)
+    c8 = c8_hits(tune_cases + held)
+    th, fa_tune = tune_per_type(tune_cases, c8, args.budget)
+    single = {t: 0.9 for t in MISSING[1:]}
+    fa_old, rec_old = score_table(held, single, c8)
+    fa_new, rec_new = score_table(held, th, c8)
+    choice = yaml.safe_load(CHOICE.read_text(encoding="utf-8"))
+    choice["per_type"] = th
+    choice["per_type_min_blob"] = MIN_BLOB_TYPE
+    choice["per_type_source"] = (f"greedy on the tuning split (300 plans), budget {args.budget} false alarms per intact plan "
+                                 f"incl. C8; weights door 2, railing/fixture 0.5")
+    CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
+    L = ["", "## Per-type detector thresholds (user, chunk 7)", "",
+         f"Tuned greedily on the tuning split within {args.budget} false alarms per intact plan (incl. C8), doors weighted "
+         "x2, railing and fixtures x0.5 (blobs of each type's own probability; min blob 40 px, fixtures 15 px). "
+         f"Tuning-split false alarms: {fa_tune:.2f}. Thresholds: " + ", ".join(f"{k} {v}" for k, v in th.items()) + ".", "",
+         "Held-out (the same 159 plans as above), both with C8:", "",
+         "| setting | false alarms / intact plan | mean recall | " + " | ".join(KINDS) + " |",
+         "|---|---|---|" + "---|" * len(KINDS)]
+    for name, fa, rec in (("single threshold 0.9 (per-type blobs)", fa_old, rec_old), ("per-type thresholds", fa_new, rec_new)):
+        mean = np.mean([rec[k][0] for k in KINDS])
+        L.append(f"| {name} | {fa:.2f} | {100 * mean:.0f}% | " +
+                 " | ".join(f"{100 * rec[k][0]:.0f}% ({100 * rec[k][1]:.0f}%)" for k in KINDS) + " |")
+    with open(OUT / "detection_eval.md", "a", encoding="utf-8") as f:
+        f.write("\n".join(L) + "\n")
+    print("\n".join(L))
+
+
 def build_heldout_cases(zip_path, n_intact=59):
     """Cases on val plans NOT used to choose the detector setting: the first n_intact free plans stay
     intact, every other free plan gets TWO independent omissions of different kinds (seed 5)."""
@@ -253,7 +381,14 @@ def heldout(args):
 
 if __name__ == "__main__":
     import sys
-    if "--heldout" in sys.argv:
+    if "--per-type" in sys.argv:
+        sys.argv.remove("--per-type")
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--zip", required=True)
+        ap.add_argument("--ckpt", required=True)
+        ap.add_argument("--budget", type=float, default=0.4)
+        per_type(ap.parse_args())
+    elif "--heldout" in sys.argv:
         sys.argv.remove("--heldout")
         ap = argparse.ArgumentParser()
         ap.add_argument("--zip", required=True)

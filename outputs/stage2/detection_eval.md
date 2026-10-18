@@ -37,3 +37,16 @@ Setting fixed at threshold 0.9 / blobs >= 40 px. Val has only 371 typed plans; 1
 | detector + C8/C17/C6/C12 | 0.47 | 64% | 28% (28%) | 73% (73%) | 83% (74%) | 57% (48%) | 46% (33%) | 100% (88%) |
 
 **Final CHECK setting: detector + C8** (rule: detector + C8 if <= 0.6 false alarms per plan, else detector only). The detector already takes the rule violation maps as input, so it is itself the rules + learned combination.
+
+## Per-type detector thresholds (user, chunk 7)
+
+Tuned greedily on the tuning split within 0.4 false alarms per intact plan (incl. C8), doors weighted x2, railing and fixtures x0.5 (blobs of each type's own probability; min blob 40 px, fixtures 15 px). Tuning-split false alarms: 0.35. Thresholds: wall 0.7, door 0.95, window 0.98, railing 0.9, room 0.98, toilet 0.98, sink 0.85, bath_shower 0.995, appliance 0.995.
+
+Held-out (the same 159 plans as above), both with C8:
+
+| setting | false alarms / intact plan | mean recall | door | window | wall | railing | fixture | room |
+|---|---|---|---|---|---|---|---|---|
+| single threshold 0.9 (per-type blobs) | 0.31 | 61% | 22% (22%) | 73% (73%) | 80% (74%) | 52% (48%) | 41% (36%) | 97% (97%) |
+| per-type thresholds | 0.20 | 58% | 17% (17%) | 67% (67%) | 77% (74%) | 52% (48%) | 38% (36%) | 94% (94%) |
+
+**Per-type thresholds: tried and REJECTED (user, chunk 7 follow-up).** Held-out mean recall fell 61% -> 58% and doors 22% -> 17%; the greedy search started every type at 0.995 and stopped early with budget left (0.35 of 0.4 on tuning, 0.20 held-out), leaving doors stricter, not looser. The pipeline keeps the single threshold 0.9 / 40 px + C8.

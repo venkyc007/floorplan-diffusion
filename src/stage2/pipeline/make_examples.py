@@ -30,22 +30,40 @@ def read(z, name, flag):
     return cv2.imdecode(np.frombuffer(z.read(name), np.uint8), flag)
 
 
+def erase(img, m):
+    """Whiten ONLY the component's own pixels (its rasterised SVG polygon = its label pixels), grown 2 px."""
+    grown = cv2.dilate(m.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
+    out = img.copy()
+    out[grown] = 255
+    ys, xs = np.nonzero(m)
+    return out, (int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max()))
+
+
 def whiten(img, lbl, classes, kind):
     comps = [m for m in components(np.isin(lbl, classes)) if m.sum() >= 40]
     if not comps:
         return None
-    m = comps[0]
-    ys, xs = np.nonzero(m)
-    y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
-    g = max(y1 - y0, x1 - x0) if kind == "door" else 3
-    out = img.copy()
-    out[max(0, y0 - g):y1 + g + 1, max(0, x0 - g):x1 + g + 1] = 255
-    return out, (int(y0), int(x0), int(y1), int(x1))
+    return erase(img, comps[0])
+
+
+def unreachable_door(lbl):
+    """A door whose removal cuts a room off (C8 flags that room once the door is wall), or None."""
+    from src.stage2.detect import rules as R
+    from src.stage2.detect.rules_diag import single_door_rooms
+    for room, door in single_door_rooms(lbl):
+        plan = lbl.copy()
+        plan[door] = I["wall"]
+        comp, main = R.walkable_components(plan)
+        reach = R.reachable(plan, comp, main)
+        if main and not (reach & room).any() and room.sum() >= 200:
+            return door
+    return None
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--zip", required=True)
+    ap.add_argument("--v2", action="store_true", help="fast mode + 2 unreachable-room door cases -> *_v2.png")
     args = ap.parse_args()
     z = zipfile.ZipFile(args.zip)
     names = sorted(n[:-8] for n in z.namelist() if n.endswith("_img.png"))
@@ -62,21 +80,41 @@ def main():
             if w is None:
                 continue
             t = time.time()
-            res = run_pipeline(w[0])
+            res = run_pipeline(w[0], fast=args.v2)
             res["seconds"] = time.time() - t
             examples.append((n, kind, img, w[0], w[1], res))
             print(n, kind, res["timings"], f"{res['seconds']:.0f} s", res["messages"], flush=True)
             break
-    figure(examples)
+    if args.v2:                                   # 2 more drawings: a removed door cuts a room off
+        found = 0
+        while i < len(names) and found < 2:
+            n = names[i]
+            i += 1
+            img = read(z, f"{n}_img.png", cv2.IMREAD_GRAYSCALE)
+            lbl = read(z, f"{n}_lbl.png", cv2.IMREAD_UNCHANGED)
+            if (lbl == 255).any():
+                continue
+            door = unreachable_door(lbl)
+            if door is None:
+                continue
+            white, box = erase(img, door)
+            t = time.time()
+            res = run_pipeline(white, fast=True)
+            res["seconds"] = time.time() - t
+            examples.append((n, "door (room cut off)", img, white, box, res))
+            print(n, "unreachable door", res["timings"], f"{res['seconds']:.0f} s", res["messages"], flush=True)
+            found += 1
+    figure(examples, "_v2" if args.v2 else "")
 
 
-def figure(examples):
+def figure(examples, tag=""):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
     fig, axes = plt.subplots(len(examples), 3, figsize=(18, 6.5 * len(examples)))
-    lines = ["# Pipeline examples (CPU)", ""]
+    lines = [f"# Pipeline examples (CPU{', fast mode' if tag else ''})", "",
+             "Whitening: only the removed component's own pixels (its rasterised polygon), grown 2 px." if tag else ""]
     for row, (n, kind, img, white, box, res) in zip(np.atleast_2d(axes), examples):
         a, b, c = row
         a.imshow(white, cmap="gray", vmin=0, vmax=255)
@@ -98,9 +136,9 @@ def figure(examples):
     for ax in np.atleast_2d(axes).ravel():
         ax.axis("off")
     fig.tight_layout()
-    fig.savefig(OUT / "pipeline_examples.png", dpi=80)
-    (OUT / "pipeline_examples.md").write_text("\n".join(lines), encoding="utf-8")
-    print("saved", OUT / "pipeline_examples.png")
+    fig.savefig(OUT / f"pipeline_examples{tag}.png", dpi=80)
+    (OUT / f"pipeline_examples{tag}.md").write_text("\n".join(lines), encoding="utf-8")
+    print("saved", OUT / f"pipeline_examples{tag}.png")
 
 
 if __name__ == "__main__":

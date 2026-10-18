@@ -23,5 +23,11 @@ fill:
   ddim_steps: 50
   size_bins: [0.027, 0.077]            # hole area / building area: small / medium / large (Stage 1 bins)
   t0: [400, 600, 700]                  # per size bin (Stage 1 size-adaptive hybrid)
+  t0_fixed: 300                        # overrides the bins: chosen by the t0 diagnostic (outputs/stage2/t0_sweep.md)
   max_hole: 100                        # holes larger than this (px, either side) are cut to it
   seed: 0
+
+fast:                                  # live-app settings on the CPU (evaluation numbers use `fill`)
+  n_samples: 2
+  steps_from_t0: 15                    # DDIM steps from t0 down to 0
+  guide_last: 5                        # guidance only on the last 5 steps

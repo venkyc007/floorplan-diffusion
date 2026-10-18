@@ -34,7 +34,7 @@ from src.stage2.constraints.rules import components
 from src.stage2.data.classes16 import C16
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
-from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals
+from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals, proposals_per_type
 from src.stage2.parse.train import Parser, predict_safe
 from src.utils import PROJECT_ROOT
 
@@ -113,7 +113,10 @@ def detect_holes(label):
     choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
     m = models()
     probs = detector_probs(m["detector"], label, m["detector_K"])
-    props = proposals(probs, choice["threshold"], choice["min_blob"])
+    if "per_type" in choice:
+        props = proposals_per_type(probs, choice["per_type"], choice["min_blob"])
+    else:
+        props = proposals(probs, choice["threshold"], choice["min_blob"])
     extra = choice.get("extra_rules", [])
     if extra:
         raw = [c for c in R.raw_candidates(label) if c.rules[0] in extra]
@@ -137,7 +140,7 @@ def window_around(label, box, win):
     return out, (oy, ox), hole
 
 
-def fill_hole(label, box, fc, generator):
+def fill_hole(label, box, fc, generator, fast=None):
     m = models()
     win, origin, hole = window_around(label, box, fc["window"])
     t = torch.from_numpy(win.astype(np.int64))[None]
@@ -147,10 +150,13 @@ def fill_hole(label, box, fc, generator):
     building = max(1, int(np.isin(label, C16.group("BOUNDARY") + C16.group("S") + C16.group("F")).sum()))
     share = hole.sum() / building
     t0 = fc["t0"][0] if share < fc["size_bins"][0] else (fc["t0"][1] if share < fc["size_bins"][1] else fc["t0"][2])
+    t0 = fc.get("t0_fixed") or t0
     with torch.no_grad():
         sketch = m["unet"].predict(cond)
-    out, info = sampler.fill(m["diffusion"], cond, sketch=sketch, n=fc["n_samples"], t0=t0,
-                             eta_guidance=fc["eta_guidance"], steps=fc["ddim_steps"], generator=generator)
+    kw = {"n": fc["n_samples"]} if fast is None else {"n": fast["n_samples"], "steps_from_t0": fast["steps_from_t0"],
+                                                         "guide_last": fast["guide_last"]}
+    out, info = sampler.fill(m["diffusion"], cond, sketch=sketch, t0=t0, eta_guidance=fc["eta_guidance"],
+                             steps=fc["ddim_steps"], generator=generator, **kw)
     new = label.copy()
     oy, ox = origin
     h, w = label.shape
@@ -164,30 +170,45 @@ def fill_hole(label, box, fc, generator):
 
 # ---------------------------------------------------------------- outputs
 
+REAL = ["wall", "door", "window", "railing"] + list(C16.cfg["groups"]["F"])
+
+
 def describe_additions(before, after, holes):
-    """Per-hole text: what was missing (detector/rule) and what was added where."""
+    """Per-hole text. Only real additions (wall, door, window, railing, fixtures) are listed, never
+    space classes; for a missing room, the room type that was created is named."""
     msgs = []
     k = 5
     for h in holes:
         y0, x0, y1, x1 = h["box"]
         sub = np.zeros(after.shape, bool)
         sub[y0:y1 + 1, x0:x1 + 1] = True
-        added = sub & (after != before)
-        cls_added = [C16.names[c] for c in np.unique(after[added])] if added.any() else []
+        changed = sub & (after != before)
         reason = f"{h['type']} missing ({'+'.join(h['rules'])})" if h.get("rules") else "manual box"
-        doors = components(added & (after == I["door"]))
-        if doors:
-            for d in doors:
-                pair = door_side_pair(after, d, k)
-                where = " / ".join(C16.names[p] for p in pair) if pair else "?"
-                lonely = [C16.names[p] for p in (pair or []) if p in C16.group("S")]
-                lead = f"{lonely[0]} had no door" if h["type"] == "door" and lonely else reason
-                msgs.append(f"{lead} -> door added on the {where} wall")
-        elif cls_added:
-            near = after[sub & np.isin(after, C16.group("S"))]
-            room = C16.names[int(np.bincount(near).argmax())] if len(near) else "the plan"
-            msgs.append(f"{reason} -> {', '.join(cls_added)} added in {room}")
-        else:
+        near = after[sub & np.isin(after, C16.group("S"))]
+        room = C16.names[int(np.bincount(near).argmax())] if len(near) else "the plan"
+        parts = []
+        for d in components(changed & (after == I["door"])):
+            pair = door_side_pair(after, d, k)
+            names = [C16.names[p] for p in (pair or [])]
+            where = " / ".join(names) if names else "?"
+            rooms = [n for n in names if C16.index[n] in C16.group("S")]
+            if h["type"] == "door" and rooms:
+                msgs.append(f"{rooms[0]} had no door -> door added on the {where} wall")
+            else:
+                parts.append(f"door (between {where})")
+        for c in REAL:
+            if c == "door":
+                continue
+            n = len(components(changed & (after == I[c])))
+            if n:
+                parts.append(f"{n} {c}" + ("s" if n > 1 and not c.endswith("s") else ""))
+        if h["type"] == "room":
+            created = [C16.names[c] for c in np.unique(after[changed]) if c in C16.group("S")]
+            if created:
+                parts.append(f"room drawn as {', '.join(created)}")
+        if parts:
+            msgs.append(f"{reason} -> {', '.join(parts)} added in {room}")
+        elif not any(m.startswith(room) for m in msgs):
             msgs.append(f"{reason} -> nothing added (the model kept the drawing as it was)")
     return msgs
 
@@ -222,7 +243,8 @@ def overlay(image, before, after, scale):
 
 # ---------------------------------------------------------------- entry point
 
-def run_pipeline(image, boxes=None, seed=None):
+def run_pipeline(image, boxes=None, seed=None, fast=False):
+    """fast=True: the live-app settings (configs/stage2/pipeline.yaml `fast`)."""
     c = cfg()
     times = {}
     t = time.time()
@@ -243,7 +265,7 @@ def run_pipeline(image, boxes=None, seed=None):
     g = torch.Generator().manual_seed(c["fill"]["seed"] if seed is None else seed)
     completed = parsed.copy()
     for h in holes:
-        completed, info = fill_hole(completed, h["box"], c["fill"], g)
+        completed, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None)
         h.update(info)
     times["fill"] = time.time() - t
     additions = {C16.names[k]: (completed != parsed) & (completed == k) for k in np.unique(completed[completed != parsed])}
