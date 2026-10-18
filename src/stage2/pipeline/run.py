@@ -110,20 +110,25 @@ def parse(image, pc):
 
 # ---------------------------------------------------------------- CHECK
 
-def detect_holes(label):
+def detect_parts(label):
+    """CHECK proposals by source: {"detector": [...], "C8": [...], "R5": [...]} (rules only if configured)."""
     choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
     m = models()
     probs = detector_probs(m["detector"], label, m["detector_K"])
-    props = proposals(probs, choice["threshold"], choice["min_blob"])
+    parts = {"detector": proposals(probs, choice["threshold"], choice["min_blob"])}
     extra = choice.get("extra_rules", [])
-    if "C8" in extra:
+    if "C8" in extra:                                    # room cut off: per building part
         raw = [c for c in R.discrete_candidates(label) if c.rules[0] == "C8"]
-        props += R.detect(label, R.load_thresholds(), raw=raw)
+        parts["C8"] = R.detect(label, R.load_thresholds(), raw=raw)
     if "R5" in extra:                                    # doorless gap between rooms that need a door
         g = choice.get("gap_rule", {})
-        props += gap_candidates(label, open_rate=g.get("open_rate", 0.10), need_area=g.get("need_area"),
-                                small_other=g.get("small_other"), min_len=g.get("min_len"))
-    return R.merge(props)
+        parts["R5"] = gap_candidates(label, open_rate=g.get("open_rate", 0.10), need_area=g.get("need_area"),
+                                     small_other=g.get("small_other"), min_len=g.get("min_len"))
+    return parts
+
+
+def detect_holes(label):
+    return R.merge([p for v in detect_parts(label).values() for p in v])
 
 
 # ---------------------------------------------------------------- FILL

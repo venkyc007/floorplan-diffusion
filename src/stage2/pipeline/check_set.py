@@ -152,6 +152,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--zip", required=True)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--limit", type=int, default=None, help="smoke test: only the first N cases")
     args = ap.parse_args()
     import yaml
     g = yaml.safe_load((PROJECT_ROOT / "configs" / "stage2" / "detector_threshold.yaml").read_text(encoding="utf-8"))
@@ -162,6 +163,8 @@ def main():
     names = sorted(n[:-8] for n in z.namelist() if n.endswith("_img.png"))
     used, cases = set(), []
     for kind, count in PLAN:
+        if args.limit and len(cases) >= args.limit:
+            break
         got = 0
         for n in names:
             if got >= count:
@@ -219,8 +222,12 @@ def figure(cases, tag):
         c.text(0, res["overlay"].shape[0] * 1.02, "\n".join(res["messages"][:6]), fontsize=8, va="top")
     L.append("")
     for i, (n, kind, _, res, v) in enumerate(cases):
-        L += [f"## {i + 1}. {n} ({kind}): {'correct' if v['correct'] else 'wrong'}", ""]
-        L += [f"- {m}" for m in res["messages"]] or ["- (no messages)"]
+        L += [f"## {i + 1}. {n} ({kind}): automatic verdict {'correct' if v['correct'] else 'wrong'}", "",
+              f"Removed: {kind}. Detected: " + (", ".join(f"{h['type']} ({'+'.join(h['rules'])})" for h in res["holes"])
+                                                 or "nothing") +
+              f". Found {'yes' if v['found'] else 'no'}, restored {'yes' if v['restored'] else 'no'}, extra {v['extra']}.",
+              "", "Added (messages):", ""]
+        L += [f"- {m}" for m in res["messages"]] or ["- (nothing)"]
         L.append("")
     for ax in axes.ravel():
         ax.axis("off")
