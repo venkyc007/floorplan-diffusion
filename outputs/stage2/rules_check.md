@@ -80,6 +80,18 @@ The tables at the top use these thresholds. Before the re-split (equal ~0.03 per
 
 100 val plans. C8 recall: **raw 85%**, with the re-split thresholds 13% (with the old thresholds 1%). All 15 raw misses are rooms that stay reachable through an open passage (no door), so C8 is right not to fire; among rooms that really become cut off, raw C8 finds 100%. Fix applied: C8 now walks from the main flat AND from every walkable area with an exterior door (plans with several flats/floors); raw C8 false alarms on intact plans fell from 1.96 to 0.45 per plan.
 
+
+
 ## Diagnostic 1: rule-visibility ceiling
 
-Not run: the job was stopped by Claude Code (laptop low on memory). Re-run with `python -m src.stage2.detect.rules_diag --zip <completion_val.zip> --part ceiling`.
+Rule-visible = some rule's raw evidence (before thresholds) inside the omitted region (+3 px) is higher after the omission than before. Recall among visible = thresholded detector finds it.
+
+| kind | n | rule-visible | recall among visible | most frequent visible rules |
+|---|---|---|---|---|
+| door | 50 | 68% | 9% | C1 20, C6 19, C8 11, C7 10 |
+| window | 50 | 8% | 50% | C4 4 |
+| wall | 50 | 100% | 4% | C6 43, C7 39, C1 38, C9 17 |
+| railing | 42 | 69% | 3% | C7 28, C6 1 |
+| fixture | 49 | 12% | 50% | C7 3, C17 3 |
+| room | 46 | 98% | 16% | C1 40, C7 31, C6 28, C9 23 |
+| all | 287 | 59% | 11% | |

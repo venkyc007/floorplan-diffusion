@@ -367,3 +367,9 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **C8 walks from the main flat (most room pixels) and from every walkable area containing an exterior door** — multi-flat/multi-floor images made every room of the other unit "unreachable" (raw false alarms 1.96 -> 0.45 per intact plan). TA case: 100% of truly cut-off rooms found raw; the 15% "misses" stay reachable through open passages.
 - **False-alarm budget re-split (user): C8, C17, C6, C12 0.1 per plan each, the rest share 0.1.** Recall on single omissions 7% -> 8%; false alarms 0.52 per plan on held-out intact plans.
 - **Sampler (spec section 5): guidance on x0 in absolute mode over the 17 window-usable constraints (incl. the 4 left out of training) with the calibrated weights; only hole pixels change; x0 clipped to [-1, 1]. Verifier: blobs of V > 0.5 in M per constraint + R1 (rooms inside the window) + R3; C17 and R4 not usable on windows. Ties -> pixel agreement with the U-Net sketch.**
+
+## Detection on whole plans (2026-10-18)
+
+- **Detector proposals: blobs of (1 - p(none)) >= 0.9 with >= 40 px; type = missing class with the highest mean probability in the blob; box + 3 px** — the best mean recall (67%) at <= 0.5 false alarms per intact plan over a threshold x blob-size sweep on 300 whole val plans (chosen and reported on the same plans). `configs/stage2/detector_threshold.yaml`.
+- **"Both" = detector + strong rules (C8, C17, C6, C12), merged**: same mean recall (67%), +3 points on doors and fixtures, but 0.85 false alarms per plan (rules add ~0.35). Rules alone: 7%.
+- **Rule ceiling: 59% of single omissions are visible to some rule before thresholds, but only 11% of those survive the thresholds; windows (8%) and fixtures (12%) are almost invisible to rules.**

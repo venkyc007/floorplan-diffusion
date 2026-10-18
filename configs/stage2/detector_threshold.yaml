@@ -1,0 +1,9 @@
+min_blob: 40
+source: 'detection_eval.py: best mean recall with <= 0.5 false alarms per intact val
+  plan (300 val plans)'
+strong_rules:
+- C8
+- C17
+- C6
+- C12
+threshold: 0.9
