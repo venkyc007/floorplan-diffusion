@@ -3,10 +3,11 @@
     python -m src.stage2.parse.text_dependence --zip parser_val.zip [--n 100]
         -> outputs/stage2/text_dependence.md, outputs/stage2/text_erasure_examples.png
 
-Drawings: the first n typed val drawings in file order. Text erasure: dark connected pieces (ink < 128,
+Drawings: the first n typed val drawings in file order. Text erasure: dark connected pieces (ink < 170,
 8-connected) of character size (bounding box <= 4 wall thicknesses = 32 px each side, <= 400 px, at least
-3 px on one side) that do not touch walls, openings, railings or fixtures in the label map (grown 2 px),
-inpainted away with src/stage2/data/erasure.py. Room labels ("MH", "KPH 3,3 m2", ...) are such pieces;
+3 px on one side) lying inside rooms (>= 95% on room-type labels) and not touching walls, openings, railings
+or fixtures in the label map (grown 2 px), inpainted away with src/stage2/data/erasure.py. Control: wall /
+door / window IoU, original vs erased (should not move if only text was removed). Room labels ("MH", "KPH 3,3 m2", ...) are such pieces;
 furniture outlines and hatching are mostly larger or touch walls and stay.
 Parser v1 at scale 1 (the parser set already has ~8 px walls), same as its validation. Scores pooled over
 all drawings: IoU of the 6 room types and their mean, and the room-type confusion matrix (rows = true
@@ -33,14 +34,18 @@ def read(z, name, flag):
     return cv2.imdecode(np.frombuffer(z.read(name), np.uint8), flag)
 
 
-def text_mask(img, lbl, ink=128, max_side=4 * WALL_PX, max_area=400):
+def text_mask(img, lbl, ink=170, max_side=4 * WALL_PX, max_area=400, inside=0.95):
+    """Character-sized dark pieces lying inside rooms (>= 95% of their pixels on room-type labels; room names
+    sit inside rooms), not touching walls / openings / railings / fixtures. ink 170 also takes the light
+    anti-aliased letter edges (a first version at 128 left letter ghosts)."""
     n, comp, stats, _ = cv2.connectedComponentsWithStats((img < ink).astype(np.uint8), connectivity=8)
     w, h, a = stats[:, cv2.CC_STAT_WIDTH], stats[:, cv2.CC_STAT_HEIGHT], stats[:, cv2.CC_STAT_AREA]
     ok = (w <= max_side) & (h <= max_side) & (a <= max_area) & (np.maximum(w, h) >= 3)
     ok[0] = False
     solid = grown(np.isin(lbl, C16.group("BOUNDARY") + C16.group("F")), 2)
-    touching = np.unique(comp[solid])
-    ok[touching] = False
+    ok[np.unique(comp[solid])] = False
+    in_room = np.bincount(comp[np.isin(lbl, C16.group("S"))].ravel(), minlength=n)
+    ok &= in_room >= inside * a
     return ok[comp]
 
 
@@ -82,6 +87,8 @@ def main():
     z = zipfile.ZipFile(args.zip)
     names = sorted(n[:-8] for n in z.namelist() if n.endswith("_img.png"))
     conf = {"original": 0, "text erased": 0}
+    STRUCT = [C16.index[c] for c in ("wall", "door", "window")]
+    sio = {k: np.zeros((len(STRUCT), 2), np.int64) for k in conf}       # (inter, union) per class
     pcount = {"original": np.zeros(len(ROOMS), np.int64), "text erased": np.zeros(len(ROOMS), np.int64)}
     examples, done, erased_px = [], 0, []
     for n in names:
@@ -100,6 +107,8 @@ def main():
                 if pred.shape != lbl.shape else lbl
             conf[name] = conf[name] + confusion(pred, gt)
             pcount[name] += np.array([(pred == c).sum() for c in ROOMS])
+            for i, c in enumerate(STRUCT):
+                sio[name][i] += [((pred == c) & (gt == c)).sum(), ((pred == c) | (gt == c)).sum()]
         if len(examples) < 4 and tm.sum() > 200:
             ys, xs = np.nonzero(tm)
             cy, cx = int(np.median(ys)), int(np.median(xs))
@@ -117,6 +126,8 @@ def main():
          "| room type IoU | " + " | ".join(names_r) + " | mean |", "|---|" + "---|" * (len(names_r) + 1)]
     for k in res:
         L.append(f"| {k} | " + " | ".join(f"{100 * v:.1f}" for v in res[k]) + f" | {100 * np.nanmean(res[k]):.1f} |")
+    L += ["", "Control (did the erasure damage structure?): " + "; ".join(
+        f"{k}: wall / door / window IoU " + " / ".join(f"{100 * a / max(b, 1):.1f}" for a, b in sio[k]) for k in sio) + "."]
     L += ["", f"**Room-type mIoU drop when text is erased: {drop:.1f} points.**", "",
           "## Confusion, original (% of each true type's pixels)", ""] + table(conf["original"]) + \
          ["", "## Confusion, text erased", ""] + table(conf["text erased"])
