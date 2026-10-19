@@ -6,13 +6,12 @@ floorplan-stage1-test-score (python -m src.selection --benchmark test). No train
   2. GPU 0: hybrid_refine700, hybrid_refine400      GPU 1: hybrid_refine600, ft_constraints_refine600
 The size-adaptive hybrid (t0 = 400 / 600 / 700 per size bin) is assembled from the three hybrids at scoring time.
 
-Inputs: datasets venkatesh007c/floorplan-code + venkatesh007c/floorplan-test-benchmark (checksum checked against
+Inputs: datasets venkatesh007c/floorplan-code + venkatesh007c/floorplan-test-benchmark (array checksum checked against
 configs/benchmark_checksums.json); outputs of kernels floorplan-unet-matched and floorplan-finetune-constraints.
 Output: /kaggle/working/preds/<setting>.npz, timing json, gpu_usage.csv.
 """
 
 import glob
-import hashlib
 import json
 import os
 import shutil
@@ -45,9 +44,12 @@ if __name__ == "__main__":
     os.makedirs(bdir, exist_ok=True)
     for f in ("test_benchmark.npz", "test_benchmark.csv"):
         shutil.copy(find(f)[0], f"{bdir}/{f}")
+    import numpy as np
+    from src.data.make_benchmark import checksum          # over the arrays, as stored by make_benchmark
     want = json.load(open(f"{CODE}/configs/benchmark_checksums.json"))["test"]
-    got = hashlib.sha256(open(f"{bdir}/test_benchmark.npz", "rb").read()).hexdigest()
-    print("test benchmark sha256", got, "MATCHES" if got == want else "DIFFERS (stop)", flush=True)
+    z = np.load(f"{bdir}/test_benchmark.npz")
+    got = checksum({k: z[k] for k in z.files})
+    print("test benchmark checksum", got, "MATCHES" if got == want else "DIFFERS (stop)", flush=True)
     if got != want:
         raise SystemExit("test benchmark differs from the local one")
     unet = find("runs/unet_matched/checkpoints/best.pt")[0]
