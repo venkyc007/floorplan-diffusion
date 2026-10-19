@@ -1,0 +1,25 @@
+# Stage 2 CHECK: detector v3 "direct" (src/stage2/detect/train_detector_v3.py): drawing + parse -> missing type.
+# Data: src/stage2/detect/make_crop_set.py (384 px crops at parser scale; user, 2026-10-19).
+
+model:
+  encoder: resnet34          # ImageNet init; smp adapts the first conv to 17 input channels
+
+loss:
+  ce_weight_cap: 10
+  dice: 1.0
+
+train:
+  batch_size: 16
+  workers: 4
+  lr: 3.0e-4
+  weight_decay: 1.0e-2
+  warmup_steps: 200
+  grad_clip: 1.0
+  seed: 0
+  log_every: 50
+  checkpoint_minutes: 30
+  val_minutes: 20
+  time_limit_hours: 1.9      # user: ~2 h (the same kernel also makes the crops first)
+
+val:
+  crops: 512                 # validation crops of the parsed TUNING drawings
