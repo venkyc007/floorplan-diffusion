@@ -441,3 +441,18 @@ Own choices:
   the detector): v2A by mIoU on text-erased drawings, v2B by the mean of normal and text-erased mIoU. The 159
   held-out drawings are used only for the final table (src/stage2/parse/eval_v2.py -> parser_v2.md).
 - Step 0 of each run validates v1 on the same tuning set (baseline row in val_log.csv).
+
+## Erasure v2 tweak (2026-10-19, user)
+
+- User: fixtures and textured zones get a colour fill instead of cv2.inpaint (X smears); the faint dashed arc must go
+  (lower ink threshold in door zones).
+- Own choices:
+  - Door zones use ink >= 10 grey levels (others 20).
+  - Fill colour = LOCAL mean of the zone's non-ink pixels (17 px window, else 33, else the zone median) + Gaussian
+    noise (sd = 1.48 x MAD of those pixels, <= 6). A single zone median painted white blocks, because a door zone
+    spans both sides of the wall.
+  - Textured zone (std of its remaining pixels > 12): after the colour fill, the stripes are continued by copying
+    the pixel one zone-length away along the stripe direction. The source must be outside the filled / kept pixels,
+    not a short ink stroke (no text or symbols copied) and in the same space label (never across a wall).
+  - Flat zones keep inpainting.
+- Remaining (erasure_check.png): a small mark in the hatching of row 4; a slightly paler patch in row 6.

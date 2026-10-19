@@ -9,8 +9,9 @@ A symbol's ink reaches well beyond its CubiCasa polygon (a door's swing arc lies
 shower hoses, sink outlines), so the WHOLE area the symbol can occupy is cleared, not just the polygon:
   door zone     the opening + a square of side = door length on BOTH sides of the wall (leaf and arc);
   symbol zone   fixture / window: the polygon's bounding box grown by 40% (20% of its size on each side).
-Inside a zone, the component's pixels and every ink STROKE (>= 20 grey levels darker than the local paper /
-room fill) are inpainted (cv2.inpaint, Telea, radius 3); straight runs longer than 60% (door zone) /
+Inside a zone, the component's pixels and every ink STROKE (>= 20, in door zones >= 10, grey levels darker than
+the local paper / room fill) are removed: inpainted (cv2.inpaint, Telea, radius 3) on flat areas, filled with the
+local non-ink grey + matching noise for fixtures and on textured zones (inpaint smears there); straight runs longer than 60% (door zone) /
 90% (symbol box) of the zone (hatching) stay. Other labelled components (walls, other doors / windows / railings / fixtures) and the swing-arc zones
 of other doors are protected and put back unchanged. Text outside the zone is never touched (text inside it goes).
 All functions return a single-channel uint8 image of the same size; figures draw their outlines on the axes
@@ -28,6 +29,9 @@ RADIUS = 3               # cv2.inpaint radius
 MARGIN = 3               # px added around a door zone (line width of the arc)
 BOX_GROW = 0.2           # symbol box grown by 20% of its size on each side (40% in all)
 INK = 20                 # a stroke is >= 20 grey levels darker than its local background
+INK_DOOR = 10            # door zones: lower, so faint dashed swing arcs go too
+TEXTURE_STD = 12         # zone pixels (strokes removed) with grey std above this = textured: median fill
+NOISE_MAX = 6            # std of the noise added to a median fill (matched to the zone, at most this)
 LONG = {"door": 0.6, "symbol": 0.9}   # straight runs longer than this share of the zone = background texture
 
 
@@ -110,12 +114,79 @@ def strokes(img, zone, long_frac, ink=INK, bg_px=15):
     return grown((dark > 0) & ~long_, 1) & zone
 
 
-def clear_zone(img, comp, zone, lbl, long_frac, wall_px=8):
-    """Inpaint the component's own pixels and every ink stroke in its zone (symbol lines, arc, leaf, text in
+def clear_zone(img, comp, zone, lbl, long_frac, ink=INK, median=False, wall_px=8, seed=0):
+    """Remove the component's own pixels and every ink stroke in its zone (symbol lines, arc, leaf, text in
     the zone), keeping other components, other doors' arcs and background texture. Only strokes are filled,
-    not the whole zone, so grey fills and hatching are not smeared."""
+    not the whole zone. Filling: inpainting on flat areas; on textured / striped / shaded zones (and always
+    with `median`, used for fixtures) the local mean grey of the zone's non-ink pixels (within ~2 wall
+    thicknesses, else 4, else the zone median) plus matching noise; on
+    textured zones the stripes are then continued (stripe_copy), because inpainting there leaves X-shaped smears and smudges."""
     keep = (solid(lbl) | other_door_zones(lbl, comp)) & ~comp     # the zone covers walls too: keep them
-    return erase(img, comp | strokes(img, zone, long_frac), lbl, grow=1, wall_px=wall_px, keep=keep)
+    m = comp | strokes(img, zone, long_frac, ink)
+    fill = grown(m, 1) & ~keep
+    src = zone & ~fill & ~keep & ~dark_ink(img, ink)
+    if not (median or textured(img, zone & ~fill & ~keep)) or src.sum() < 20:
+        return erase(img, m, lbl, grow=1, wall_px=wall_px, keep=keep)
+    vals = img[src].astype(np.float32)
+    med = float(np.median(vals))
+    sd = min(1.4826 * float(np.median(np.abs(vals - med))), NOISE_MAX)
+    colour = np.full(img.shape, med, np.float32)        # fallback: the zone's median non-ink grey
+    todo = fill.copy()
+    for k in (2 * wall_px + 1, 4 * wall_px + 1):         # LOCAL mean of non-ink pixels (a door zone spans both
+        num = cv2.boxFilter(np.where(src, img, 0).astype(np.float32), -1, (k, k), normalize=False)   # wall sides)
+        den = cv2.boxFilter(src.astype(np.float32), -1, (k, k), normalize=False)
+        ok = todo & (den >= 5)
+        colour[ok] = num[ok] / den[ok]
+        todo &= ~ok
+    out = img.copy()
+    rng = np.random.default_rng(seed)
+    out[fill] = np.clip(colour[fill] + rng.normal(0, sd, int(fill.sum())), 0, 255).astype(np.uint8)
+    if textured(img, zone & ~fill & ~keep):
+        stripe_copy(out, img, fill, zone, keep, lbl)
+    return out
+
+
+def stripe_copy(out, img, fill, zone, keep, lbl):
+    """Textured zones: continue the stripes. Each filled pixel takes the pixel one zone-length away along
+    the stripe direction (the axis along which the zone's grey changes least), from whichever side lies
+    outside the filled / kept pixels and in the SAME space (label; never across a wall); pixels with no such
+    source keep the local-mean fill."""
+    y0, y1, x0, x1 = _box(zone)
+    my, mx = (y1 - y0) // 2 + 1, (x1 - x0) // 2 + 1        # stripe direction from the background in and around
+    a0, a1, b0, b1 = max(0, y0 - my), y1 + my + 1, max(0, x0 - mx), x1 + mx + 1    # the zone (half a zone around)
+    z = img[a0:a1, b0:b1].astype(np.int16)
+    free = ~(fill | keep)[a0:a1, b0:b1]
+    dx = np.abs(np.diff(z, axis=1))[free[:, 1:] & free[:, :-1]]
+    dy = np.abs(np.diff(z, axis=0))[free[1:] & free[:-1]]
+    along_x = (dx.mean() if dx.size else 1e9) < (dy.mean() if dy.size else 1e9)
+    ys, xs = np.nonzero(fill)
+    d = (x1 - x0 + 2) if along_x else (y1 - y0 + 2)
+    h, w = img.shape
+    dark = dark_ink(img).astype(np.uint8)                 # never copy text / symbols: short dark strokes
+    k = np.ones((1, d) if along_x else (d, 1), np.uint8)
+    short = (dark > 0) & ~(cv2.morphologyEx(dark, cv2.MORPH_OPEN, k) > 0)
+    bad = fill | keep | grown(short, 1)
+    host = lbl.copy()                                     # the space each filled pixel belongs to
+    spaces = lbl[zone & ~fill & ~keep]
+    if spaces.size:
+        host[fill & solid(lbl)] = np.bincount(spaces).argmax()   # the removed component's own pixels
+    for sgn in (1, -1):
+        sy, sx = (ys, xs + sgn * d) if along_x else (ys + sgn * d, xs)
+        inside = (sy >= 0) & (sy < h) & (sx >= 0) & (sx < w)
+        ok = np.zeros_like(inside)
+        ok[inside] = ~bad[sy[inside], sx[inside]] & (lbl[sy[inside], sx[inside]] == host[ys[inside], xs[inside]])
+        out[ys[ok], xs[ok]] = img[sy[ok], sx[ok]]
+        ys, xs = ys[~ok], xs[~ok]
+
+
+def dark_ink(img, ink=INK, bg_px=15):
+    bg = cv2.morphologyEx(img, cv2.MORPH_CLOSE, np.ones((bg_px, bg_px), np.uint8))
+    return bg.astype(np.int16) - img > ink
+
+
+def textured(img, region, std=TEXTURE_STD):
+    """Hatched / striped / shaded: the zone's remaining pixels vary more than paper or a flat fill does."""
+    return region.sum() >= 20 and float(img[region].std()) > std
 
 
 def wall_colour(img, mask, lbl, wall_px=8):
@@ -159,7 +230,7 @@ def paint_wall(out, img, opening, lbl, wall_px=8):
 
 def open_gap(img, door, lbl, wall_px=8):
     """Door kind (b): opening, leaf and arc cleared (the door zone); the wall ends stay."""
-    return clear_zone(img, door, door_zone(door, img.shape), lbl, LONG["door"], wall_px)
+    return clear_zone(img, door, door_zone(door, img.shape), lbl, LONG["door"], ink=INK_DOOR, wall_px=wall_px)
 
 
 def draw_wall(img, door, lbl, wall_px=8):
@@ -170,7 +241,9 @@ def draw_wall(img, door, lbl, wall_px=8):
 def erase_symbol(img, m, lbl, wall_px=8):
     """Fixture: its symbol box (grown 40%) cleared. Window: the same, then the wall drawn across it
     (an omitted window = a plain wall in the drawing)."""
-    out = clear_zone(img, m, symbol_zone(m, img.shape), lbl, LONG["symbol"], wall_px)
-    if np.bincount(lbl[m], minlength=C16.n).argmax() == I["window"]:
+    is_window = np.bincount(lbl[m], minlength=C16.n).argmax() == I["window"]
+    out = clear_zone(img, m, symbol_zone(m, img.shape), lbl, LONG["symbol"], median=not is_window,
+                     wall_px=wall_px)
+    if is_window:
         out = paint_wall(out, img, m, lbl, wall_px)
     return out
