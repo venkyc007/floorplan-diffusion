@@ -117,10 +117,10 @@ def parse(image, pc):
 
 # ---------------------------------------------------------------- CHECK
 
-def detect_parts(label, image=None):
+def detect_parts(label, image=None, choice=None):
     """CHECK proposals by source: {"detector", "C8", "R5", "INK", "R6", "R7": [...]} (rules only if configured;
-    the door-ink check needs the drawing)."""
-    choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
+    the door-ink check needs the drawing). `choice`: settings dict (default: the configured file)."""
+    choice = choice or yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
     m = models()
     which = choice.get("detector_model", "v2")          # v2, v3 or both (tuned, user 2026-10-19)
     parts = {"detector": []}
@@ -157,6 +157,10 @@ def detect_parts(label, image=None):
 
 
 def detect_holes(label, image=None):
+    choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
+    if choice.get("use_judge") and image is not None:     # generous flagger + U-Net judge (judge.py)
+        from src.stage2.detect.judge import judged_flags
+        return judged_flags(label, image, choice)
     return R.merge([p for v in detect_parts(label, image).values() for p in v])
 
 

@@ -149,6 +149,27 @@ def fit_logistic(X, y, steps=3000, lr=0.5, l2=1e-3):
     return w.tolist()
 
 
+def judged_flags(label, image, choice):
+    """Pipeline use (detector_threshold.yaml use_judge: true): the generous setting's flags, kept when the judge's
+    logistic score >= tau (configs/stage2/judge.yaml), merged into holes."""
+    from src.stage2.pipeline.run import detect_parts
+    J = yaml.safe_load(JUDGE.read_text(encoding="utf-8"))
+    G = J["generous"]
+    gen = dict(choice, threshold=G["det"][0], min_blob=G["det"][1], threshold_v3=G["det3"][0], min_blob_v3=G["det3"][1],
+               c8_min_area=G["c8"], ink_threshold=G["ink"], ink_threshold_interior=0.0, r6_scale=G["r6"],
+               detector_model="both", extra_rules=["C8", "R5", "INK", "R6"])
+    flags = [p for v in detect_parts(label, image, gen).values() for p in v]
+    if not flags:
+        return []
+    g = choice.get("gap_rule", {})
+    bad, area = closed_pairs(open_rate=g.get("open_rate", 0.10)), instance_areas(label)
+    ink = [(R.box_of(d, label.shape), s, category(label, d, g, bad, area)) for d, s in door_ink_scores(image, label)]
+    js = judge_scores(label, [(tuple(p.box), p.type) for p in flags])
+    rec = {"judge": {(tuple(p.box), p.type): j for p, j in zip(flags, js)}, "ink": ink}
+    kept = [p for p in flags if prob(J["coef"], features(rec, (tuple(p.box), p.type))[None])[0] >= J["tau"]]
+    return R.merge(kept)
+
+
 # ------------------------------------------------------------------ scoring
 
 def hit(flags, rm):
