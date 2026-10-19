@@ -588,3 +588,30 @@ Own choices:
   - "> 2 points" flag = |test - val| > 2 percentage points on shares / IoU / F1 (x100) and on validity %; counts
     (conn_err, room_count_err, dead ends) are shown raw and not flagged.
 - Local copies of data/benchmarks/{val,test}_benchmark.* were placed in the worktree's (git-ignored) data/ folder.
+
+## Overnight 2026-10-19/20: generous flagger + judge (task 2)
+
+- Ink tier 2 (other interior doors) switched off (user): it fires on drawings whose doors have no arcs
+  (check-set case 7).
+- Generous flagger + U-Net judge (src/stage2/detect/judge.py; kernel floorplan-stage2-judge).
+  - Generous setting (tuning drawings, best recall within 1.2-2.0 false alarms): detectors v2 + v3 at 0.3 / 10 px,
+    C8 >= 0 px, R5, ink 1.5 (R5 pairs), R6 x1.0.
+  - Judge: k2a 16-class U-Net, unforced, no sketch prior. Score = mean P(type) in the masked box - parse share.
+  - Logistic on [judge, ink / 10 (doors), is_door] fitted on 588 tuning flags; threshold 0.5 for <= 0.4.
+- Own choices:
+  - the generous grid (detector 0.3-0.5, C8 0 / 200 / 700, ink 1.5 / 3.0, R6 1.0 / 1.2);
+  - one logistic for all types;
+  - room flags judged on the wall class;
+  - winning rule = higher held-out mean recall at no more than +0.1 false alarms.
+- Held-out (159 drawings):
+
+  | CHECK | false alarms | mean recall |
+  |---|---|---|
+  | current final (ink tier 2 off) | 0.32 | 58% |
+  | generous, no judge | 1.46 | 70% |
+  | generous + judge | 0.42 | 34% |
+
+  The judge's score hardly separates true omissions from false flags (judge_scores.png: everything near 0.5 except
+  doors, where it mostly repeats the ink check).
+- Decision (user rule): the current final stays; generous + judge is logged as a tried ablation (use_judge off).
+- Note: the generous flagger alone reaches 70% at 1.46 false alarms, a possible "high-recall mode" for the app.
