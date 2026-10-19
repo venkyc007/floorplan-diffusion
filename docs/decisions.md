@@ -561,3 +561,10 @@ Own choices:
 - Railings: right-type recall still 0% (6% only via other-type boxes), so they stay manual-only.
 - Not yet checked: how much of v3's gain comes from erasure traces. Proposed control: fake erasures of empty room
   areas on intact held-out drawings; v3's firing rate there.
+- Erasure-trace control (outputs/stage2/fake_erasure.md; 40 intact held-out drawings, fake erasures of
+  non-components). v3 fired on:
+  - 0% of erased words;
+  - 2% of blank floor patches (baseline 2%);
+  - 23% of erased furniture drawings (3 of 13; baseline 0%).
+  v2 never fired. Real omissions: 58%. So v3 reacts somewhat to cleaned-patch traces (furniture), but most of its
+  recall is not explained by traces. Kept as is (user: stick with the final CHECK); caveat noted for the report.
