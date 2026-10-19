@@ -30,6 +30,7 @@ import yaml
 
 from src.stage2.complete import sampler
 from src.stage2.complete.models16 import build16
+from src.stage2.complete.sketch_prior import apply_prior
 from src.stage2.constraints.rules import components
 from src.stage2.data.classes16 import C16
 from src.stage2.data.plan_stats import door_side_pair
@@ -147,7 +148,7 @@ def window_around(label, box, win):
     return out, (oy, ox), hole
 
 
-def fill_hole(label, box, fc, generator, fast=None):
+def fill_hole(label, box, fc, generator, fast=None, typ=None, rules=()):
     m = models()
     win, origin, hole = window_around(label, box, fc["window"])
     t = torch.from_numpy(win.astype(np.int64))[None]
@@ -160,6 +161,9 @@ def fill_hole(label, box, fc, generator, fast=None):
     t0 = fc.get("t0_fixed") or t0
     with torch.no_grad():
         sketch = m["unet"].predict(cond)
+    if fc.get("sketch_prior") and typ:                   # type-guided fill: the missing component painted
+        sk = apply_prior(sketch[0].numpy().astype(np.uint8), hole > 0, typ, rules)   # into the sketch
+        sketch = torch.from_numpy(sk.astype(np.int64))[None]
     kw = {"n": fc["n_samples"]} if fast is None else {"n": fast["n_samples"], "steps_from_t0": fast["steps_from_t0"],
                                                          "guide_last": fast["guide_last"]}
     out, info = sampler.fill(m["diffusion"], cond, sketch=sketch, t0=t0, eta_guidance=fc["eta_guidance"],
@@ -306,7 +310,7 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
     g = torch.Generator().manual_seed(c["fill"]["seed"] if seed is None else seed)
     completed = parsed.copy()
     for h in holes:
-        new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None)
+        new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None, h["type"], h["rules"])
         kept = restrict(completed, new, h["type"])
         y0, x0, y1, x1 = h["box"]                                # debug record: map before, raw hybrid output and
         sl = (slice(max(0, y0 - 16), y1 + 17), slice(max(0, x0 - 16), x1 + 17))   # what the restriction kept

@@ -24,6 +24,7 @@ fill:
   size_bins: [0.027, 0.077]            # hole area / building area: small / medium / large (Stage 1 bins)
   t0: [400, 600, 700]                  # per size bin (Stage 1 size-adaptive hybrid)
   t0_fixed: 300                        # overrides the bins: chosen by the t0 diagnostic (outputs/stage2/t0_sweep.md)
+  sketch_prior: true                   # type-guided fill: missing component painted into the U-Net sketch (user, 2026-10-19)
   max_hole: 100                        # holes larger than this (px, either side) are cut to it
   seed: 0
 

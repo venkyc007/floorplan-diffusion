@@ -110,14 +110,15 @@ def reachable(label, comp, main):
 def reachable_parts(label, min_part=200):
     """Walkable pixels reachable from an entrance, decided per connected building part (user, chunk 8):
     multi-floor drawings show each floor as a separate part, and upper floors have no exterior door.
-    Each part (8-connected walls/openings/rooms/fixtures, >= min_part px) is seeded from the walkable
+    Each part (the building FOOTPRINT: 8-connected non-background pixels, i.e. walls, openings, rooms, fixtures
+    and outdoor spaces, separated only by background; >= min_part px) is seeded from the walkable
     components holding one of its exterior doors, or else from the component holding its largest
     hallway / living space."""
     comp, _ = walkable_components(label)
     k = CONST["T_wall"] + 2
     outside = cv2.dilate(np.isin(label, C16.group("OUT")).astype(np.uint8), np.ones((2 * k + 1,) * 2, np.uint8)) > 0
-    building = np.isin(label, C16.group("BOUNDARY") + C16.group("S") + C16.group("F")).astype(np.uint8)
-    n, parts = cv2.connectedComponents(building, connectivity=8)
+    building = (label != I["background"]).astype(np.uint8)    # footprint: everything but background (user,
+    n, parts = cv2.connectedComponents(building, connectivity=8)  # 2026-10-19; balconies / yards join their part)
     seeds = set()
     for p in range(1, n):
         part = parts == p

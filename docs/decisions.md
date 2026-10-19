@@ -463,3 +463,23 @@ Own choices:
   76.3 normal / 64.3 text erased, v1 78.1 / 54.9; outputs/stage2/parser_v2.md).
 - Caveat (user): the text eraser is inconsistent. It misses some labels (tiled floors, labels touching fixtures)
   and sometimes erases hatching / dashed strokes. Text-erased numbers are therefore approximate.
+
+## C8 parts by footprint; sketch prior (user, 2026-10-19)
+
+- C8: building parts = 8-connected non-background pixels (walls, openings, rooms, fixtures AND outdoor; separated
+  only by background).
+- Diagnostic (src/stage2/detect/c8_diag.py; local, 2 held-out cases + colorful-1261) found two other causes:
+  - C8's score threshold: rooms < 2756 px (completion scale; tuned on label maps) are never reported. A cut-off
+    room of 938 px was dropped.
+  - Cut-off rooms reached through another door the parser drew (or a wall gap).
+  The 2756 px threshold is re-tuned in step 5 (whole-CHECK budget on parsed tuning drawings).
+- Sketch prior (src/stage2/complete/sketch_prior.py, configs/stage2/pipeline.yaml fill.sketch_prior):
+  - Median sizes from the 212 tuning plans (configs/stage2/sketch_prior.yaml): door 13 px, window 20 px,
+    toilet 5x9, sink 7x9, bath/shower 3x6, appliance 9x11.
+  - Own choices: the wall line = the sketch's wall runs (>= 4 px) in the hole closed along their direction over
+    24 px.
+  - A door goes into an existing gap of that line if there is one (R5 / ink holes), else median length centred
+    on the line. A window goes only on line pixels within 4 px of outdoor / background.
+  - A fixture is a median box against the wall pixel nearest the hole centre, long side along the wall.
+  - Example figure: outputs/stage2/sketch_prior_examples.png. Holes there sit at the true omission with its true
+    type (the fill only).
