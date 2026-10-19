@@ -120,3 +120,18 @@ Note: label-level numbers above are on ground-truth label maps; these are on par
 Scope subsets (detector + C8 + R5 + ink (final)): door (a) where the closure cuts a room off: 15 cases, found 33% (33%); door (b) between a bedroom/bathroom and a closed-pair neighbour: 14 cases, found 36% (36%).
 Parser redraws the removed component (mean share of its pixels the parser still labels with the removed class, room = its walls): door (a) 30%, door (b) 80%, window 42%, wall 27%, railing 16%, fixture 4%, room 24%.
 Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser errors count against detection (and add false alarms).
+
+## Held-out on DRAWINGS: detector v2 + CHECK re-tuned with it (detector 0.98 / 160 px, C8 >= 700 px, R5, door ink + guard; 2026-10-19)
+
+59 intact drawings + 200 omissions on 100 other held-out drawings (kinds: door (a) 29, door (b) 29, window 29, wall 29, railing 18, fixture 38, room 28). Erasure: src/stage2/data/erasure.py; then the pipeline's PARSE + CHECK (no fill). Found = a proposal overlaps the omission (in brackets: right type).
+
+| method | false alarms / intact drawing | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
+|---|---|---|---|---|---|---|---|---|---|
+| detector | 0.00 | 0% | 0% (0%) | 0% (0%) | 0% (0%) | 0% (0%) | 0% (0%) | 0% (0%) | 0% (0%) |
+| detector + C8 | 0.05 | 2% | 14% (14%) | 0% (0%) | 0% (0%) | 0% (0%) | 0% (0%) | 0% (0%) | 0% (0%) |
+| detector + C8 + R5 | 0.07 | 5% | 14% (14%) | 0% (0%) | 0% (0%) | 3% (0%) | 0% (0%) | 0% (0%) | 14% (0%) |
+| detector + C8 + R5 + ink (final) | 0.29 | 12% | 24% (24%) | 21% (21%) | 0% (0%) | 3% (0%) | 0% (0%) | 3% (0%) | 32% (0%) |
+
+Scope subsets (detector + C8 + R5 + ink (final)): door (a) where the closure cuts a room off: 15 cases, found 33% (33%); door (b) between a bedroom/bathroom and a closed-pair neighbour: 14 cases, found 36% (36%).
+Parser redraws the removed component (mean share of its pixels the parser still labels with the removed class, room = its walls): door (a) 30%, door (b) 80%, window 42%, wall 27%, railing 16%, fixture 4%, room 24%.
+Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser errors count against detection (and add false alarms).
