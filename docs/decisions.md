@@ -615,3 +615,13 @@ Own choices:
   doors, where it mostly repeats the ink check).
 - Decision (user rule): the current final stays; generous + judge is logged as a tried ablation (use_judge off).
 - Note: the generous flagger alone reaches 70% at 1.46 false alarms, a possible "high-recall mode" for the app.
+- Stage 1 test run result (outputs/stage1_test.md).
+  - Test, size-adaptive hybrid: tolerant mIoU 0.846, validity 88.0%, connectivity error 0.011.
+  - Test, matched U-Net: 0.850, 81.0%, 0.085.
+  - No metric of any method differs from val by more than 2 points.
+  - Paired bootstrap conclusions as on val: size-adaptive vs matched U-Net better on connectivity and validity,
+    worse on tolerant mIoU; vs refine-600 better on all three.
+  - First launch stopped at its own safety check: the kernel compared the npz FILE hash, but
+    configs/benchmark_checksums.json holds make_benchmark's ARRAY checksum. Fixed and relaunched; no GPU work was
+    done by the first attempt.
+  - GPU session ~1.5 h (sampling) + CPU scoring kernel.

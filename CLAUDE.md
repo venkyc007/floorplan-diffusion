@@ -12,7 +12,7 @@ IIT Bombay IE643 course project, solo. **Diffusion-based reconstruction of missi
 - Done: data v3; constraint library (G1-G4; K1 trains 14 constraints, G3 variant C); parser v1 (val mIoU 0.699, no fallback); K1 constrained vs control (24k steps each).
 - Running: K2a (GPU0 16-class U-Net, GPU1 missing-component detector), launched 2026-10-18 09:06.
 - Next: rules on full plans + omission benchmark (laptop); parser v2; guidance + verifier; pipeline; Gradio.
-- **Stage 1 test evaluation: once, Tuesday morning, as the last GPU job** (postponed by the user, 2026-10-18).
+- **Stage 1 test evaluation DONE** (once, 2026-10-20 overnight, frozen Day 7 configs): `outputs/stage1_test.md`. Size-adaptive hybrid on test: tolerant mIoU 0.846, validity 88.0%, connectivity error 0.011; every metric of every method within 2 points of val.
 
 ## Standing rules (always apply)
 
@@ -21,7 +21,7 @@ IIT Bombay IE643 course project, solo. **Diffusion-based reconstruction of missi
 - **Never print, copy or commit the Kaggle token** (`~/.kaggle/access_token`, anything in `.kaggle/`); don't run `kaggle config view`.
 - **UTF-8 only**: every text file; always `encoding="utf-8"` in Python.
 - **Stage 1 app settings are frozen** (`configs/app.yaml`). Never tune on what the app shows.
-- **Choose on val, report on test.** Stage 1 test set: evaluated once, Tuesday morning (last GPU job), frozen Day 7 configs.
+- **Choose on val, report on test.** Stage 1 test set: evaluated once (done 2026-10-20, `outputs/stage1_test.md`); never again.
 - **Every self-made choice goes in `docs/decisions.md`** with its reason. This file keeps rules + status only.
 - **Stage 1 files stay untouched until the Tuesday tidy.** New code only in the Stage 2 folders below. `python -m pytest tests/` must keep passing.
 - Datasets stay off git (`data/` ignored); CubiCasa5K stays on Kaggle (only small reports come to the laptop).
@@ -38,7 +38,7 @@ I'm a mechanical engineering student, new to ML tooling. Explain simply; for eve
 
 ## Stage 1 (done): mask-given inpainting on ResPlan
 
-128×128 ResPlan label maps, 6 classes (wall, door, window, room, outdoor, background); the model gets the plan + a mask and redraws the masked area. **Final method: size-adaptive hybrid** — matched U-Net sketch → noised to t₀ = 400/600/700 (small/medium/large holes) → constraint fine-tuned diffusion, stochastic DDIM 50. Val: tolerant mIoU 0.842 (U-Net 0.846), validity 88.0% (80.4%), connectivity error 0.011 (0.092). Gradio app `python app/app.py`. **Key lesson: constraint weights set by loss value were ~100× too strong; calibrate by gradient size.** This becomes the report's "before prep review" chapter.
+128×128 ResPlan label maps, 6 classes (wall, door, window, room, outdoor, background); the model gets the plan + a mask and redraws the masked area. **Final method: size-adaptive hybrid** — matched U-Net sketch → noised to t₀ = 400/600/700 (small/medium/large holes) → constraint fine-tuned diffusion, stochastic DDIM 50. Val: tolerant mIoU 0.842 (U-Net 0.846), validity 88.0% (80.4%), connectivity error 0.011 (0.092). **Test (run once): 0.846 (0.850), 88.0% (81.0%), 0.011 (0.085)** — `outputs/stage1_test.md`. Gradio app `python app/app.py`. **Key lesson: constraint weights set by loss value were ~100× too strong; calibrate by gradient size.** This becomes the report's "before prep review" chapter.
 **Details, numbers, file map and commands: `docs/stage1_summary.md`.**
 
 ## Stage 2 (TA's clarified scope)
