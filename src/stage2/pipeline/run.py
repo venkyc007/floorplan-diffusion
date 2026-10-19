@@ -38,6 +38,8 @@ from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals
 from src.stage2.detect.door_ink import ink_candidates
 from src.stage2.detect.gaps import gap_candidates
+from src.stage2.detect.narrow_gaps import gap_candidates_narrow
+from src.stage2.detect.window_runs import window_candidates
 from src.stage2.parse.train import Parser, predict_safe
 from src.utils import PROJECT_ROOT
 
@@ -113,8 +115,8 @@ def parse(image, pc):
 # ---------------------------------------------------------------- CHECK
 
 def detect_parts(label, image=None):
-    """CHECK proposals by source: {"detector": [...], "C8": [...], "R5": [...], "INK": [...]} (rules only if
-    configured; the door-ink check needs the drawing)."""
+    """CHECK proposals by source: {"detector", "C8", "R5", "INK", "R6", "R7": [...]} (rules only if configured;
+    the door-ink check needs the drawing)."""
     choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
     m = models()
     probs = detector_probs(m["detector"], label, m["detector_K"])
@@ -132,7 +134,14 @@ def detect_parts(label, image=None):
                                      small_other=g.get("small_other"), min_len=g.get("min_len"))
     if "INK" in extra and image is not None:             # door drawn as an opening only (no leaf / arc)
         parts["INK"] = ink_candidates(image, label, choice["ink_threshold"],
-                                      gap=choice.get("gap_rule", {}) if choice.get("ink_relevant_only") else None)
+                                      gap=choice.get("gap_rule", {}) if choice.get("ink_relevant_only") else None,
+                                      threshold_interior=choice.get("ink_threshold_interior", 0.0))
+    if "R6" in extra:                                    # windowless exterior span -> window missing
+        wr = yaml.safe_load((PROJECT_ROOT / "configs" / "stage2" / "window_rule.yaml").read_text(encoding="utf-8"))
+        parts["R6"] = window_candidates(label, wr["thresholds"], wr["need_area"], SIZES["window"][1],
+                                        choice.get("r6_scale", 1.0))
+    if "R7" in extra:                                    # wall break narrower than any door -> wall missing
+        parts["R7"] = gap_candidates_narrow(label, min_width=choice.get("r7_min_width", 1))
     return parts
 
 

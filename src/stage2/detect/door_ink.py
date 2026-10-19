@@ -43,10 +43,30 @@ def relevant(label, d, gap, bad=None, area=None):
         fy = np.clip(ys + sgn * k, 0, h - 1) if horizontal else ys
         fx = xs if horizontal else np.clip(xs + sgn * k, 0, w - 1)
         faces.append((fy, fx))
+    return category(label, d, gap, bad, area, faces) == "relevant"
+
+
+def category(label, d, gap, bad=None, area=None, faces=None):
+    """"relevant" (R5's pairs, see relevant), "interior" (both faces rooms, otherwise) or "exterior" (a face is
+    outdoor / background / not a room) -- the two ink-check tiers (user, 2026-10-19); exterior doors never count."""
+    if faces is None:
+        ys, xs = np.nonzero(d)
+        h, w = label.shape
+        k = CONST["T_wall"] + 2
+        horizontal = (xs.max() - xs.min()) >= (ys.max() - ys.min())
+        faces = []
+        for sgn in (-1, 1):
+            fy = np.clip(ys + sgn * k, 0, h - 1) if horizontal else ys
+            fx = xs if horizontal else np.clip(xs + sgn * k, 0, w - 1)
+            faces.append((fy, fx))
     sides = [int(np.bincount(label[fy, fx]).argmax()) for fy, fx in faces]
-    if not all(c in C16.group("S") for c in sides) or sides[0] == sides[1] or not bad[sides[0], sides[1]]:
-        return False
-    return needs_door(label, area, *faces[0], *faces[1], gap.get("need_area", 0), gap.get("small_other", 0))
+    if not all(c in C16.group("S") for c in sides):
+        return "exterior"
+    bad = closed_pairs(open_rate=gap.get("open_rate", 0.10)) if bad is None else bad
+    area = instance_areas(label) if area is None else area
+    if sides[0] != sides[1] and bad[sides[0], sides[1]] and             needs_door(label, area, *faces[0], *faces[1], gap.get("need_area", 0), gap.get("small_other", 0)):
+        return "relevant"
+    return "interior"
 
 
 def door_ink_scores(image, label, ink=INK, min_px=6, gap=None):
@@ -99,12 +119,19 @@ def guarded(scores, threshold, guard=GUARD):
     return bool(low) and float(np.mean(low)) > guard
 
 
-def ink_candidates(image, label, threshold, guard=GUARD, gap=None):
-    """Guard on ALL parsed doors (a drawing style without arcs); candidates only among the relevant doors."""
+def ink_candidates(image, label, threshold, guard=GUARD, gap=None, threshold_interior=0.0):
+    """Guard on ALL parsed doors (a drawing style without arcs). With `gap` (R5 settings): tier 1 = R5's pairs at
+    `threshold`, tier 2 = other interior doors at `threshold_interior` (0 = off), exterior doors never.
+    Without `gap`: every door at `threshold`."""
     scores = door_ink_scores(image, label)
     if guarded([s for _, s in scores], threshold, guard):
         return []
-    if gap is not None:
-        bad, area = closed_pairs(open_rate=gap.get("open_rate", 0.10)), instance_areas(label)
-        scores = [(d, s) for d, s in scores if relevant(label, d, gap, bad, area)]
-    return [R.Candidate("door", R.box_of(d, label.shape), ["INK"], s) for d, s in scores if s < threshold]
+    if gap is None:
+        return [R.Candidate("door", R.box_of(d, label.shape), ["INK"], s) for d, s in scores if s < threshold]
+    bad, area = closed_pairs(open_rate=gap.get("open_rate", 0.10)), instance_areas(label)
+    out = []
+    for d, s in scores:
+        cat = category(label, d, gap, bad, area)
+        if (cat == "relevant" and s < threshold) or (cat == "interior" and s < threshold_interior):
+            out.append(R.Candidate("door", R.box_of(d, label.shape), ["INK"], s))
+    return out
