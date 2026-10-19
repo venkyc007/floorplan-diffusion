@@ -1,4 +1,4 @@
-min_blob: 160
+min_blob: 20
 source: 'detection_eval.py: best mean recall with <= 0.5 false alarms per intact val
   plan (300 val plans)'
 strong_rules:
@@ -6,9 +6,9 @@ strong_rules:
 - C17
 - C6
 - C12
-threshold: 0.98
-final: detector v2 (0.98 / 160 px) + C8 + R5 + INK with guard; re-tune with detector
-  v2, 2026-10-19
+threshold: 0.9
+final: detector v2 + C8 + R5 + ink check; budget 0.6 (rules + ink first, detector
+  after)
 extra_rules:
 - C8
 - R5
@@ -20,7 +20,8 @@ gap_rule:
   min_len: 11
   source: gap_tune.py on the tuning plans; R5 alone <= 0.09 false alarms per intact
     plan
-c8_min_area: 700.0
-ink_threshold: 1.5
-check_tuning: outputs/stage2/check_tune.md (parsed tuning drawings, parser v2B, erasure
-  v2, budget 0.4 for the whole CHECK; user 2026-10-19)
+c8_min_area: 200.0
+ink_threshold: 3.0
+check_tuning: outputs/stage2/check_tune.md (parsed tuning drawings; budget 0.6, detector
+  >= 0.25; user 2026-10-19)
+ink_relevant_only: true
