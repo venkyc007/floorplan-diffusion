@@ -1,4 +1,4 @@
-min_blob: 20
+min_blob: 160
 source: 'detection_eval.py: best mean recall with <= 0.5 false alarms per intact val
   plan (300 val plans)'
 strong_rules:
@@ -6,9 +6,9 @@ strong_rules:
 - C17
 - C6
 - C12
-threshold: 1.01
-final: C8 + R5 + INK; detector off (threshold 1.01 is above any probability); re-tune
-  2026-10-19
+threshold: 0.98
+final: detector v2 (0.98 / 160 px) + C8 + R5 + INK with guard; re-tune with detector
+  v2, 2026-10-19
 extra_rules:
 - C8
 - R5
