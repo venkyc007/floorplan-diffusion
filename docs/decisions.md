@@ -545,3 +545,11 @@ Own choices:
   - In CHECK (src/stage2/detect/detector_v3.py): parser-scale grid rebuilt from the completion map (x 8/3);
     probabilities shrunk back, so the same proposal thresholds apply.
   - The final tuning chooses v2, v3 or both (own thresholds each).
+- Detector v3 result (512 validation crops of parsed TUNING drawings, outputs/stage2/detector_compare.md):
+  - mean F1 v1 0.05 / v2 0.07 / v3 0.56;
+  - intact crops with a false alarm 88% / 48% / 11%.
+  v2 is shown on completion-scale maps rebuilt from the crop, so this setting disadvantages it slightly; on its own
+  128-px windows it reached mean F1 0.36.
+  Caveat (own): v3 sees the erased drawing, so it may partly learn the erasure's traces (smoothed / inpainted
+  patches) rather than missing components. Its 97% on erased walls is suspicious. Real omissions leave no such
+  traces; a check with fake erasures of empty areas would tell.
