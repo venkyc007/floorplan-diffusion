@@ -495,3 +495,26 @@ Own choices:
 - Whole-CHECK re-tune (src/stage2/detect/check_tune.py): 40 intact + 80 x 2 omissions on parsed TUNING drawings.
   Grid: detector threshold x min blob, C8 min area, R5 on/off, ink threshold. Choice = best mean recall within
   0.4 false alarms per intact drawing. Written to configs/stage2/detector_threshold.yaml.
+
+## Detector v2 and the 0.6 budget (user, 2026-10-19)
+
+- Detector v2: data kernel floorplan-stage2-detv2-data (14:24) parsed the train drawings with parser v2B
+  (intact + 2 image-level omissions each, erasure v2), plus the 212 tuning drawings for validation.
+  Training kernel floorplan-stage2-detv2 (14:36, 2 h) warm-started from v1, 70% parsed / 30% label-level windows.
+  Parsed tuning windows: mean F1 0.03 -> 0.36, intact windows with a false alarm 0.70 -> 0.19.
+- Own choices:
+  - parsing at scale 1 only (the parser set's walls are already ~8 px);
+  - validation and checkpoint choice on the parsed TUNING drawings;
+  - lr 1e-4, 100 warm-up steps.
+- Ink check restricted to R5's pairs (door_ink.relevant): both faces rooms, closed pair, bedroom / bathroom /
+  other_room >= 1514 px on one side, no closet on the other. The per-drawing guard still looks at all doors.
+  Ink check alone at 1.5 on tuning drawings: 0.33 -> 0.05 false alarms, recall 12% -> 6%.
+- Two-stage tuning: rules + ink first within 0.35, then the detector inside what is left of 0.6.
+  - The first run let the tuning choose all doors for the ink check; re-run with the restriction enforced (user).
+  - Chosen: detector v2 0.9 / 20 px, C8 >= 200 px, R5, ink < 3.0 on R5 pairs. Tuning: 0.57 false alarms, 19%.
+    The detector uses 0.22, not 0.25: the next looser detector setting went over 0.6.
+- Held-out (159 drawings): 0.64 false alarms, 15% mean recall. Cut-off rooms found 53%. Curve in
+  outputs/stage2/check_curve.png / .md.
+- Check set 3 / 12.
+- Own housekeeping: the local smoke outputs of check_tune / check_curve (check_tune.md overwritten,
+  check_curve.md / .png, made by me minutes before) were reverted / removed before the Kaggle runs.
