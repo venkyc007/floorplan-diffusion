@@ -7,12 +7,13 @@ strong_rules:
 - C6
 - C12
 threshold: 0.9
-final: detector v2 + C8 + R5 + ink check; budget 0.6 (rules + ink first, detector
+final: detector + C8 + R5 + ink tiers + R6 + R7; budget 0.6 (rules first, detector
   after)
 extra_rules:
 - C8
 - R5
 - INK
+- R6
 gap_rule:
   open_rate: 0.1
   need_area: 1514
@@ -20,8 +21,11 @@ gap_rule:
   min_len: 11
   source: gap_tune.py on the tuning plans; R5 alone <= 0.09 false alarms per intact
     plan
-c8_min_area: 200.0
-ink_threshold: 3.0
+c8_min_area: 700.0
+ink_threshold: 1.5
 check_tuning: outputs/stage2/check_tune.md (parsed tuning drawings; budget 0.6, detector
   >= 0.25; user 2026-10-19)
 ink_relevant_only: true
+ink_threshold_interior: 1.0
+r6_scale: 1.2
+r7_min_width: null
