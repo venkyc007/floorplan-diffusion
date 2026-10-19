@@ -420,3 +420,24 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
   - Railings, wall pieces and rooms keep the plain polygon erasure (not in the user's list).
 - Known leftovers (erasure_check.png): a faint dashed arc and a dark blob on the hatched balcony of row 1; small grey
   smudges where strokes crossed hatching (rows 4-6).
+
+## Parser v2 (launched 2026-10-19 10:08, kernel floorplan-stage2-parser-v2, T4 x2, one variant per GPU)
+
+User: v2A "no text" (text erased on 100% of crops, text always erased at inference) and v2B "mixed" (50%), both
+fine-tuned from v1 with C3, C6, C9, C10, C11, C12, C15, C16 at gradient-calibrated weights; no omission augmentation.
+Own choices:
+- Text eraser (src/stage2/parse/text_erase.py): character-sized pieces joined into words / lines (10 px gap); a group
+  counts as text if >= 80% of its pieces lie on room labels and it has <= 6000 px of ink. All dark pixels in an
+  accepted group's box go, except labelled components.
+  Leftovers seen in text_erasure_examples.png: labels on tiled floors and labels touching a fixture stay. Short
+  hatch / dashed strokes inside small closets can go too.
+- v2A at inference: parse, find the text with that parse's labels, erase it, parse again (no ground truth at inference).
+- Constraints at completion scale: each sample's softmax is shrunk by 3 / (8 x crop scale) (area), labels by nearest;
+  samples with ignore pixels get no constraint loss.
+  Weights: w_i = rho x median G_0 / median G_i over 20 batches, rho = min(0.05, 0.4 / 8), cap 10 x median (the
+  Stage 2 rule), measured per variant at the start; saved in each run's constraint_weights.yaml.
+- Fine-tune: lr 1e-4 (encoder 3e-5), 200 warm-up steps, batch 8, 1.85 h of training per variant.
+- Checkpoint selection on 60 TUNING val drawings (configs/stage2/val_split/, same tuning / held-out definition as
+  the detector): v2A by mIoU on text-erased drawings, v2B by the mean of normal and text-erased mIoU. The 159
+  held-out drawings are used only for the final table (src/stage2/parse/eval_v2.py -> parser_v2.md).
+- Step 0 of each run validates v1 on the same tuning set (baseline row in val_log.csv).
