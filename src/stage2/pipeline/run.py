@@ -36,6 +36,7 @@ from src.stage2.data.classes16 import C16
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals
+from src.stage2.detect.door_ink import ink_candidates
 from src.stage2.detect.gaps import gap_candidates
 from src.stage2.parse.train import Parser, predict_safe
 from src.utils import PROJECT_ROOT
@@ -111,8 +112,9 @@ def parse(image, pc):
 
 # ---------------------------------------------------------------- CHECK
 
-def detect_parts(label):
-    """CHECK proposals by source: {"detector": [...], "C8": [...], "R5": [...]} (rules only if configured)."""
+def detect_parts(label, image=None):
+    """CHECK proposals by source: {"detector": [...], "C8": [...], "R5": [...], "INK": [...]} (rules only if
+    configured; the door-ink check needs the drawing)."""
     choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
     m = models()
     probs = detector_probs(m["detector"], label, m["detector_K"])
@@ -120,16 +122,21 @@ def detect_parts(label):
     extra = choice.get("extra_rules", [])
     if "C8" in extra:                                    # room cut off: per building part
         raw = [c for c in R.discrete_candidates(label) if c.rules[0] == "C8"]
-        parts["C8"] = R.detect(label, R.load_thresholds(), raw=raw)
+        th = R.load_thresholds()
+        if choice.get("c8_min_area") is not None:        # re-tuned on parsed drawings (user, 2026-10-19)
+            th = dict(th, C8=choice["c8_min_area"])
+        parts["C8"] = R.detect(label, th, raw=raw)
     if "R5" in extra:                                    # doorless gap between rooms that need a door
         g = choice.get("gap_rule", {})
         parts["R5"] = gap_candidates(label, open_rate=g.get("open_rate", 0.10), need_area=g.get("need_area"),
                                      small_other=g.get("small_other"), min_len=g.get("min_len"))
+    if "INK" in extra and image is not None:             # door drawn as an opening only (no leaf / arc)
+        parts["INK"] = ink_candidates(image, label, choice["ink_threshold"])
     return parts
 
 
-def detect_holes(label):
-    return R.merge([p for v in detect_parts(label).values() for p in v])
+def detect_holes(label, image=None):
+    return R.merge([p for v in detect_parts(label, image).values() for p in v])
 
 
 # ---------------------------------------------------------------- FILL
@@ -297,7 +304,7 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
     times["parse"] = time.time() - t
     t = time.time()
     if boxes is None:
-        holes = [{"type": p.type, "rules": p.rules, "box": p.box, "score": p.score} for p in detect_holes(parsed)]
+        holes = [{"type": p.type, "rules": p.rules, "box": p.box, "score": p.score} for p in detect_holes(parsed, image)]
     else:
         holes = [{"type": "manual", "rules": [], "box": tuple(int(round(v * scale)) for v in b)} for b in boxes]
     mh = c["fill"]["max_hole"]

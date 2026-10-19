@@ -140,12 +140,13 @@ def main():
     rng = np.random.default_rng(5)
     pc = cfg()["parse"]
     methods = {"detector": ("detector",), "detector + C8": ("detector", "C8"),
-               "detector + C8 + R5 (final)": ("detector", "C8", "R5")}
+               "detector + C8 + R5": ("detector", "C8", "R5"),
+               "detector + C8 + R5 + ink (final)": ("detector", "C8", "R5", "INK")}
     rows, t0 = [], time.time()
 
-    def run(pid, img, removed=None, kind=None, typ=None, scope=None):
+    def run(pid, img, removed=None, kind=None, typ=None, scope=None):  # img: the drawing given to PARSE
         label, _, _ = parse(img, pc)
-        parts = detect_parts(label)
+        parts = detect_parts(label, img)
         row = {"pid": pid, "kind": kind or "intact", "type": typ, "in_scope": scope, "redrawn": ""}
         rm = None
         if removed is not None:

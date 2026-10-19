@@ -483,3 +483,15 @@ Own choices:
   - A fixture is a median box against the wall pixel nearest the hole centre, long side along the wall.
   - Example figure: outputs/stage2/sketch_prior_examples.png. Holes there sit at the true omission with its true
     type (the fill only).
+- C8 diagnostic result (Kaggle CPU, 15 held-out cut-off cases + colorful-1261; outputs/stage2/c8_diag.md):
+  - 8 below the 2756 px area threshold (rooms 259-1479 px);
+  - 3 reached through another door the parser drew;
+  - 2 with the erased door redrawn;
+  - 2 flagged; colorful-1261 (multi-floor) flagged.
+  None was caused by the per-part seeding. The footprint definition is kept as the user asked (no case changed by it).
+- Door-ink check (src/stage2/detect/door_ink.py, rule "INK"): score = stroke pixels in the door zone (both sides)
+  per px of door length, parsed walls / windows / railings / fixtures and the opening excluded. Example
+  colorful-1148: erased door 0.05; intact doors 0.0 (2 of 17), 4.6-22.8 otherwise. Threshold tuned in step 5.
+- Whole-CHECK re-tune (src/stage2/detect/check_tune.py): 40 intact + 80 x 2 omissions on parsed TUNING drawings.
+  Grid: detector threshold x min blob, C8 min area, R5 on/off, ink threshold. Choice = best mean recall within
+  0.4 false alarms per intact drawing. Written to configs/stage2/detector_threshold.yaml.
