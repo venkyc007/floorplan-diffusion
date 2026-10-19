@@ -131,7 +131,8 @@ def detect_parts(label, image=None):
         parts["R5"] = gap_candidates(label, open_rate=g.get("open_rate", 0.10), need_area=g.get("need_area"),
                                      small_other=g.get("small_other"), min_len=g.get("min_len"))
     if "INK" in extra and image is not None:             # door drawn as an opening only (no leaf / arc)
-        parts["INK"] = ink_candidates(image, label, choice["ink_threshold"])
+        parts["INK"] = ink_candidates(image, label, choice["ink_threshold"],
+                                      gap=choice.get("gap_rule", {}) if choice.get("ink_relevant_only") else None)
     return parts
 
 

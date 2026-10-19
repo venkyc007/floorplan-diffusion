@@ -1,18 +1,22 @@
-"""Re-tune the whole CHECK on PARSED TUNING drawings (user, 2026-10-19): parser from configs/stage2/pipeline.yaml
-(v2B), erasure v2, budget ~0.4 false alarms per intact drawing for detector + C8 + R5 + door-ink together.
+"""Tune the whole CHECK on PARSED TUNING drawings (parser from configs/stage2/pipeline.yaml, erasure v2).
 
-    python -m src.stage2.detect.check_tune --zip parser_val.zip --tuning tuning_ids.txt [--intact 40] [--omitted 80] [--write]
+    python -m src.stage2.detect.check_tune --zip parser_val.zip --tuning tuning_ids.txt [--intact 40] [--omitted 80]
+        [--budget 0.6] [--det-min 0.25] [--write]
         -> outputs/stage2/check_tune.md (+ --write: configs/stage2/detector_threshold.yaml)
 
 Drawings: typed TUNING val drawings (file order): the first `intact` stay intact (false alarms), the next
-`omitted` get two separate omissions each, kinds in turn over image_eval.KINDS (seed 11), made as in image_eval
-(erasure v2). Every drawing is parsed once; then all settings are scored from stored proposals:
-  detector  threshold x min blob (THS x BLOBS; threshold 1.01 = off)
+`omitted` get two separate omissions each, kinds in turn over image_eval.KINDS (seed 11), made as in image_eval.
+Every drawing is parsed once; all settings are then scored from stored proposals (collect / boxes / score, also
+used by check_curve.py):
+  detector  threshold x min blob (THS x BLOBS; off = no proposals)
   C8        minimum room area (C8_AREAS px; inf = off)
   R5        the configured gap rule, on / off
-  door ink  threshold on the ink score (INK_THS; 0 = off), with the per-drawing guard (door_ink.guarded)
-Found = a proposal box overlaps the omission (resized to the parse, grown 3 px). Choice = the highest mean recall
-over the omission kinds with <= budget false alarms per intact drawing (ties: fewer false alarms).
+  door ink  threshold (INK_THS; 0 = off) + per-drawing guard on all doors; candidates at ALL doors or only at the
+            relevant ones (R5's pairs: door_ink.relevant; user, 2026-10-19)
+Found = a proposal box overlaps the omission (resized to the parse, grown 3 px).
+Choice (user, 2026-10-19): budget 0.6 false alarms per intact drawing in total. Stage 1: rules + ink (detector off)
+with the best mean recall within budget - det_min (so >= det_min stays for the detector). Stage 2: with those rules
+fixed, the detector threshold / blob with the best mean recall of the whole within the budget.
 """
 
 import argparse
@@ -28,18 +32,19 @@ import yaml
 from src.stage2.data.erasure import grown
 from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import detector_probs, proposals
-from src.stage2.detect.door_ink import door_ink_scores, guarded
-from src.stage2.detect.gaps import gap_candidates
+from src.stage2.detect.door_ink import door_ink_scores, guarded, relevant
+from src.stage2.detect.gaps import closed_pairs, gap_candidates, instance_areas
 from src.stage2.detect.image_eval import KINDS, omit
 from src.stage2.pipeline.run import cfg, models, parse
 from src.utils import PROJECT_ROOT
 
 OUT = PROJECT_ROOT / "outputs" / "stage2"
 CHOICE = PROJECT_ROOT / "configs" / "stage2" / "detector_threshold.yaml"
-THS = [0.5, 0.7, 0.8, 0.9, 0.95, 0.98, 1.01]
+THS = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98]
 BLOBS = [20, 40, 80, 160]
 C8_AREAS = [0, 200, 400, 700, 1000, 1500, 2756, np.inf]
 INK_THS = [0, 0.25, 0.5, 1.0, 1.5, 2.0, 3.0]
+OFF = None                                     # detector off
 
 
 def read(z, name, flag):
@@ -51,22 +56,24 @@ def collect(img, choice):
     label, _, _ = parse(img, cfg()["parse"])
     m = models()
     probs = detector_probs(m["detector"], label, m["detector_K"])
-    det = {(t, b): [p.box for p in proposals(probs, t, b)] for t in THS[:-1] for b in BLOBS}
+    det = {(t, b): [p.box for p in proposals(probs, t, b)] for t in THS for b in BLOBS}
     c8 = [(c.box, c.score) for c in R.discrete_candidates(label) if c.rules[0] == "C8"]
     g = choice.get("gap_rule", {})
     r5 = [c.box for c in gap_candidates(label, open_rate=g.get("open_rate", 0.10), need_area=g.get("need_area"),
                                         small_other=g.get("small_other"), min_len=g.get("min_len"))]
-    ink = [(R.box_of(d, label.shape), s) for d, s in door_ink_scores(img, label)]
+    bad, area = closed_pairs(open_rate=g.get("open_rate", 0.10)), instance_areas(label)
+    ink = [(R.box_of(d, label.shape), s, relevant(label, d, g, bad, area)) for d, s in door_ink_scores(img, label)]
     return label.shape, det, c8, r5, ink
 
 
-def boxes(rec, t, b, a, r5_on, k):
+def boxes(rec, S):
+    """Proposal boxes of one drawing under setting S = {det: (t, b) or None, c8, r5, ink, rel}."""
     _, det, c8, r5, ink = rec
-    out = list(det.get((t, b), []))
-    out += [bx for bx, s in c8 if s >= a]
-    out += r5 if r5_on else []
-    if not guarded([s for _, s in ink], k):              # per-drawing ink guard (user, 2026-10-19)
-        out += [bx for bx, s in ink if s < k]
+    out = list(det.get(S["det"], [])) if S["det"] is not OFF else []
+    out += [bx for bx, s in c8 if s >= S["c8"]]
+    out += r5 if S["r5"] else []
+    if S["ink"] > 0 and not guarded([s for _, s, _ in ink], S["ink"]):      # guard on all doors of the drawing
+        out += [bx for bx, s, rel in ink if s < S["ink"] and (rel or not S["rel"])]
     return out
 
 
@@ -74,29 +81,42 @@ def hit(bxs, rm):
     return any(rm[y0:y1 + 1, x0:x1 + 1].any() for y0, x0, y1, x1 in bxs)
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--zip", required=True)
-    ap.add_argument("--tuning", required=True)
-    ap.add_argument("--intact", type=int, default=40)
-    ap.add_argument("--omitted", type=int, default=80)
-    ap.add_argument("--budget", type=float, default=0.4)
-    ap.add_argument("--write", action="store_true")
-    args = ap.parse_args()
-    choice = yaml.safe_load(CHOICE.read_text(encoding="utf-8"))
-    keep = set(Path(args.tuning).read_text(encoding="utf-8").split())
-    z = zipfile.ZipFile(args.zip)
+def score(intact, omitted, S):
+    """-> dict(S, fa=false alarms per intact drawing, mean=mean recall over kinds, <kind>=recall)."""
+    fa = float(np.mean([len(R.merge([R.Candidate("x", bx) for bx in boxes(r, S)])) for r in intact]))
+    per = {kd: [] for kd in KINDS}
+    for kd, rm, r in omitted:
+        per[kd].append(hit(boxes(r, S), rm))
+    rec = {kd: float(np.mean(v)) for kd, v in per.items() if v}
+    return {**S, "fa": fa, "mean": float(np.mean(list(rec.values()))), **rec}
+
+
+def fmt(r):
+    det = "off" if r["det"] is OFF else f"{r['det'][0]} / {r['det'][1]} px"
+    c8 = "off" if r["c8"] == np.inf else str(int(r["c8"]))
+    ink = "off" if r["ink"] == 0 else f"{r['ink']} ({'relevant doors' if r['rel'] else 'all doors'})"
+    return (f"| {det} | {c8} | {'on' if r['r5'] else 'off'} | {ink} | {r['fa']:.2f} | {100 * r['mean']:.0f}% | " +
+            " | ".join(f"{100 * r[kd]:.0f}%" if kd in r else "-" for kd in KINDS) + " |")
+
+
+HDR = ["| detector (threshold / min blob) | C8 min area | R5 | ink check | false alarms / intact | mean recall | " +
+       " | ".join(KINDS) + " |", "|---|---|---|---|---|---|" + "---|" * len(KINDS)]
+
+
+def build(zip_path, ids, n_intact, n_omitted, seed, choice):
+    keep = set(Path(ids).read_text(encoding="utf-8").split())
+    z = zipfile.ZipFile(zip_path)
     names = sorted(n[:-8] for n in z.namelist() if n.endswith("_img.png") and n[:-8] in keep)
-    rng = np.random.default_rng(11)
+    rng = np.random.default_rng(seed)
     intact, omitted, t0 = [], [], time.time()
     for n in names:
-        if len(intact) >= args.intact and len(omitted) >= 2 * args.omitted:
+        if len(intact) >= n_intact and len(omitted) >= 2 * n_omitted:
             break
         lbl = read(z, f"{n}_lbl.png", cv2.IMREAD_UNCHANGED)
         if (lbl == 255).any():
             continue
         img = read(z, f"{n}_img.png", cv2.IMREAD_GRAYSCALE)
-        if len(intact) < args.intact:
+        if len(intact) < n_intact:
             intact.append(collect(img, choice))
         else:
             j = len(omitted) // 2
@@ -110,54 +130,64 @@ def main():
                         omitted.append((kind, grown(rm, 3), rec))
                         break
         print(f"intact {len(intact)}, omissions {len(omitted)} ({time.time() - t0:.0f} s)", flush=True)
-    results = []
-    for (t, b), a, r5_on, k in itertools.product([(t, b) for t in THS for b in BLOBS], C8_AREAS, (True, False), INK_THS):
-        if t == 1.01 and b != BLOBS[0]:
-            continue
-        fa = np.mean([len(R.merge([R.Candidate("x", bx) for bx in boxes(r, t, b, a, r5_on, k)])) for r in intact])
-        per = {kd: [] for kd in KINDS}
-        for kd, rm, r in omitted:
-            per[kd].append(hit(boxes(r, t, b, a, r5_on, k), rm))
-        rec = {kd: float(np.mean(v)) for kd, v in per.items() if v}
-        results.append({"det": (t, b), "c8": a, "r5": r5_on, "ink": k, "fa": float(fa), "mean": float(np.mean(list(rec.values()))),
-                        **rec})
-    ok = [r for r in results if r["fa"] <= args.budget]
-    best = max(ok, key=lambda r: (r["mean"], -r["fa"])) if ok else min(results, key=lambda r: r["fa"])
-    def fmt(r):
-        t, b = r["det"]
-        det = "off" if t > 1 else f"{t} / {b} px"
-        c8 = "off" if r["c8"] == np.inf else str(int(r["c8"]))
-        ink = "off" if r["ink"] == 0 else str(r["ink"])
-        return (f"| {det} | {c8} | {'on' if r['r5'] else 'off'} | {ink} | {r['fa']:.2f} | {100 * r['mean']:.0f}% | " +
-                " | ".join(f"{100 * r[kd]:.0f}%" if kd in r else "-" for kd in KINDS) + " |")
-    hdr = ["| detector (threshold / min blob) | C8 min area | R5 | ink threshold | false alarms / intact | mean recall | " +
-           " | ".join(KINDS) + " |", "|---|---|---|---|---|---|" + "---|" * len(KINDS)]
-    old = next((r for r in results if r["det"] == (choice["threshold"], choice["min_blob"]) and r["c8"] == 2756
-                and r["r5"] and r["ink"] == 0), None)
-    single = lambda **kw: max([r for r in ok if all(r[k_] == v for k_, v in kw.items())] or [{"mean": 0, "fa": 0}],
-                              key=lambda r: (r["mean"], -r["fa"]))
-    L = ["# CHECK re-tuned on parsed TUNING drawings (parser v2B, erasure v2)", "",
-         f"{len(intact)} intact + {len(omitted)} omissions on tuning drawings; budget {args.budget} false alarms per intact "
-         "drawing for the whole CHECK. Found = a proposal overlaps the omission.", "", "## Chosen", ""] + hdr + [fmt(best)]
-    if old:
-        L += ["", "Previous setting (0.9 / 40 px, C8 >= 2756 px, R5, no ink check) on the same drawings:", ""] + hdr + [fmt(old)]
-    L += ["", "## Best within budget, top 10", ""] + hdr + [fmt(r) for r in sorted(ok, key=lambda r: (-r["mean"], r["fa"]))[:10]]
-    L += ["", "## What each source adds (best within budget with only that source on)", ""] + hdr
-    for name, kw in (("detector only", {"c8": np.inf, "r5": False, "ink": 0}),
-                     ("C8 only", {"det": (1.01, BLOBS[0]), "r5": False, "ink": 0}),
-                     ("ink only", {"det": (1.01, BLOBS[0]), "c8": np.inf, "r5": False})):
-        r = single(**kw)
-        if "det" in r:
-            L.append(fmt(r).replace("| ", f"| ({name}) ", 1))
+    return intact, omitted
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--zip", required=True)
+    ap.add_argument("--tuning", required=True)
+    ap.add_argument("--intact", type=int, default=40)
+    ap.add_argument("--omitted", type=int, default=80)
+    ap.add_argument("--budget", type=float, default=0.6)
+    ap.add_argument("--det-min", type=float, default=0.25)
+    ap.add_argument("--write", action="store_true")
+    args = ap.parse_args()
+    choice = yaml.safe_load(CHOICE.read_text(encoding="utf-8"))
+    intact, omitted = build(args.zip, args.tuning, args.intact, args.omitted, 11, choice)
+    # stage 1: rules + ink, detector off, within budget - det_min
+    rules = [score(intact, omitted, {"det": OFF, "c8": a, "r5": r5, "ink": k, "rel": rel})
+             for a, r5, k, rel in itertools.product(C8_AREAS, (True, False), INK_THS, (True, False))
+             if not (k == 0 and rel)]
+    ok1 = [r for r in rules if r["fa"] <= args.budget - args.det_min]
+    best1 = max(ok1, key=lambda r: (r["mean"], -r["fa"]))
+    # stage 2: detector inside what is left
+    base = {k: best1[k] for k in ("c8", "r5", "ink", "rel")}
+    full = [score(intact, omitted, {**base, "det": (t, b)}) for t in THS for b in BLOBS]
+    ok2 = [r for r in full if r["fa"] <= args.budget]
+    best = max(ok2 + [best1], key=lambda r: (r["mean"], -r["fa"]))
+    # ink check false alarms before / after the restriction (ink alone, at the chosen threshold, guard on)
+    k = best1["ink"] or 1.5
+    ink_all = score(intact, omitted, {"det": OFF, "c8": np.inf, "r5": False, "ink": k, "rel": False})
+    ink_rel = score(intact, omitted, {"det": OFF, "c8": np.inf, "r5": False, "ink": k, "rel": True})
+    det_only = [score(intact, omitted, {"det": (t, b), "c8": np.inf, "r5": False, "ink": 0, "rel": False})
+                for t in THS for b in BLOBS]
+    L = ["# CHECK tuned on parsed TUNING drawings (parser v2B, detector v2, erasure v2)", "",
+         f"{len(intact)} intact + {len(omitted)} omissions on tuning drawings. Budget {args.budget} false alarms per intact "
+         f"drawing in total; rules + ink chosen first within {args.budget - args.det_min:.2f}, then the detector inside "
+         "what is left (user, 2026-10-19). Found = a proposal overlaps the omission.", "", "## Chosen", ""] + HDR + [fmt(best)]
+    L += ["", f"Stage 1 (rules + ink, detector off; budget {args.budget - args.det_min:.2f}), top 8:", ""] + HDR + \
+         [fmt(r) for r in sorted(ok1, key=lambda r: (-r["mean"], r["fa"]))[:8]]
+    L += ["", "Stage 2 (detector added to the chosen rules; budget "
+          f"{args.budget}), top 8:", ""] + HDR + [fmt(r) for r in sorted(ok2, key=lambda r: (-r["mean"], r["fa"]))[:8]]
+    L += ["", f"## Door-ink check before / after the restriction (ink alone, threshold {k}, guard on)", ""] + HDR + \
+         [fmt(ink_all), fmt(ink_rel)]
+    L += ["", "## Detector v2 alone (best within 0.15 / 0.25 / 0.35 false alarms)", ""] + HDR
+    for cap in (0.15, 0.25, 0.35):
+        c = [r for r in det_only if r["fa"] <= cap]
+        if c:
+            L.append(fmt(max(c, key=lambda r: (r["mean"], -r["fa"]))))
     (OUT / "check_tune.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     print("\n".join(L))
     if args.write:
-        choice.update(threshold=float(best["det"][0]), min_blob=int(best["det"][1]),
+        choice.update(threshold=float(best["det"][0]) if best["det"] is not OFF else 1.01,
+                      min_blob=int(best["det"][1]) if best["det"] is not OFF else 20,
                       c8_min_area=None if best["c8"] == np.inf else float(best["c8"]),
-                      ink_threshold=float(best["ink"]),
+                      ink_threshold=float(best["ink"]), ink_relevant_only=bool(best["rel"]),
                       extra_rules=[s for s, on in (("C8", best["c8"] != np.inf), ("R5", best["r5"]), ("INK", best["ink"] > 0)) if on],
-                      check_tuning="outputs/stage2/check_tune.md (parsed tuning drawings, parser v2B, erasure v2, "
-                                   f"budget {args.budget} for the whole CHECK; user 2026-10-19)")
+                      final=f"detector v2 + C8 + R5 + ink check; budget {args.budget} (rules + ink first, detector after)",
+                      check_tuning=f"outputs/stage2/check_tune.md (parsed tuning drawings; budget {args.budget}, "
+                                   f"detector >= {args.det_min}; user 2026-10-19)")
         CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
         print("written", CHOICE)
 

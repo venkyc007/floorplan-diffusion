@@ -11,6 +11,7 @@ background, straight runs longer than 60% of the zone are texture), minus the pa
 fixtures (grown 1 px) and the opening itself. Score = ink pixels / door length (px): an arc + leaf drawn with
 ~1-2 px lines gives ~2.5-5; a bare opening ~0. Computed in a local window (fast on big drawings).
 Guard: no candidates in a drawing where more than half of the parsed doors score below the threshold.
+Restriction (user, 2026-10-19): candidates only at doors where a missing door matters = R5's pairs (relevant()).
 """
 
 import cv2
@@ -19,19 +20,47 @@ import numpy as np
 from src.stage2.constraints.rules import components
 from src.stage2.data.classes16 import C16
 from src.stage2.data.erasure import INK, LONG, door_zone
+from src.stage2.constraints.constraints import CONST
 from src.stage2.detect import rules as R
+from src.stage2.detect.gaps import closed_pairs, instance_areas, needs_door
 
 I = C16.index
 SOLID = [I["wall"], I["window"], I["railing"]] + C16.group("F")
 
 
-def door_ink_scores(image, label, ink=INK, min_px=6):
+def relevant(label, d, gap, bad=None, area=None):
+    """Is this a door where a missing door matters (user, 2026-10-19)? The same pairs R5 uses: both faces are
+    rooms (exterior doors skipped), the pair is a closed pair (direct-contact rate < open_rate; open-plan pairs
+    skipped), and one side is a bedroom / bathroom / other_room >= need_area while the other is not a closet."""
+    bad = closed_pairs(open_rate=gap.get("open_rate", 0.10)) if bad is None else bad
+    area = instance_areas(label) if area is None else area
+    ys, xs = np.nonzero(d)
+    h, w = label.shape
+    k = CONST["T_wall"] + 2
+    horizontal = (xs.max() - xs.min()) >= (ys.max() - ys.min())
+    faces = []
+    for sgn in (-1, 1):
+        fy = np.clip(ys + sgn * k, 0, h - 1) if horizontal else ys
+        fx = xs if horizontal else np.clip(xs + sgn * k, 0, w - 1)
+        faces.append((fy, fx))
+    sides = [int(np.bincount(label[fy, fx]).argmax()) for fy, fx in faces]
+    if not all(c in C16.group("S") for c in sides) or sides[0] == sides[1] or not bad[sides[0], sides[1]]:
+        return False
+    return needs_door(label, area, *faces[0], *faces[1], gap.get("need_area", 0), gap.get("small_other", 0))
+
+
+def door_ink_scores(image, label, ink=INK, min_px=6, gap=None):
+    """[(door mask, score)]; with `gap` (the R5 gap_rule settings) only the relevant doors (see relevant)."""
     H, W = image.shape
     h, w = label.shape
     fy, fx = H / h, W / w
     out = []
+    bad = closed_pairs(open_rate=gap.get("open_rate", 0.10)) if gap is not None else None
+    area = instance_areas(label) if gap is not None else None
     for d in components(label == I["door"]):
         if d.sum() < min_px:
+            continue
+        if gap is not None and not relevant(label, d, gap, bad, area):
             continue
         ys, xs = np.nonzero(d)
         y0, y1 = int(ys.min() * fy), int((ys.max() + 1) * fy)
@@ -70,8 +99,12 @@ def guarded(scores, threshold, guard=GUARD):
     return bool(low) and float(np.mean(low)) > guard
 
 
-def ink_candidates(image, label, threshold, guard=GUARD):
+def ink_candidates(image, label, threshold, guard=GUARD, gap=None):
+    """Guard on ALL parsed doors (a drawing style without arcs); candidates only among the relevant doors."""
     scores = door_ink_scores(image, label)
     if guarded([s for _, s in scores], threshold, guard):
         return []
+    if gap is not None:
+        bad, area = closed_pairs(open_rate=gap.get("open_rate", 0.10)), instance_areas(label)
+        scores = [(d, s) for d, s in scores if relevant(label, d, gap, bad, area)]
     return [R.Candidate("door", R.box_of(d, label.shape), ["INK"], s) for d, s in scores if s < threshold]
