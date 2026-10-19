@@ -29,3 +29,5 @@ ink_relevant_only: true
 ink_threshold_interior: 1.0
 r6_scale: 1.2
 r7_min_width: null
+manual_only_types:
+- railing

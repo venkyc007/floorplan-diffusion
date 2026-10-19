@@ -35,6 +35,7 @@ from src.stage2.complete.sketch_prior import SIZES
 from src.stage2.data.erasure import grown
 from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import detector_probs, proposals
+from src.stage2.detect.detector_v3 import v3_probs
 from src.stage2.detect.door_ink import category, door_ink_scores, guarded
 from src.stage2.detect.gaps import closed_pairs, gap_candidates, instance_areas
 from src.stage2.detect.image_eval import KINDS, omit
@@ -65,7 +66,12 @@ def collect(img, choice):
     label, _, _ = parse(img, cfg()["parse"])
     m = models()
     probs = detector_probs(m["detector"], label, m["detector_K"])
-    det = {(t, b): [p.box for p in proposals(probs, t, b)] for t in THS for b in BLOBS}
+    skip = set(choice.get("manual_only_types", []))       # railings: manual mode only (user, 2026-10-19)
+    det = {(t, b): [p.box for p in proposals(probs, t, b) if p.type not in skip] for t in THS for b in BLOBS}
+    det3 = {}
+    if "detector_v3" in m:
+        p3 = v3_probs(m["detector_v3"], img, label)
+        det3 = {(t, b): [p.box for p in proposals(p3, t, b) if p.type not in skip] for t in THS for b in BLOBS}
     c8 = [(c.box, c.score) for c in R.discrete_candidates(label) if c.rules[0] == "C8"]
     g = choice.get("gap_rule", {})
     r5 = [c.box for c in gap_candidates(label, open_rate=g.get("open_rate", 0.10), need_area=g.get("need_area"),
@@ -75,13 +81,15 @@ def collect(img, choice):
     r6 = [(c.box, c.score) for c in window_candidates(label, WR["thresholds"], WR["need_area"], SIZES["window"][1],
                                                       min(R6_SCALES))]
     r7 = [(c.box, c.score) for c in gap_candidates_narrow(label, min_width=1)]
-    return label.shape, det, c8, r5, ink, r6, r7
+    return label.shape, det, c8, r5, ink, r6, r7, det3
 
 
 def boxes(rec, S):
-    """Proposal boxes of one drawing under setting S = {det: (t, b) or None, c8, r5, ink, ink2, r6, r7}."""
-    _, det, c8, r5, ink, r6, r7 = rec
+    """Proposal boxes of one drawing under setting S = {det: v2 (t, b) or None, det3: v3 (t, b) or None, c8, r5,
+    ink, ink2, r6, r7}."""
+    _, det, c8, r5, ink, r6, r7, det3 = rec
     out = list(det.get(S["det"], [])) if S["det"] is not OFF else []
+    out += list(det3.get(S.get("det3"), [])) if S.get("det3") is not OFF else []
     out += [bx for bx, s in c8 if s >= S["c8"]]
     out += r5 if S["r5"] else []
     if S["ink"] > 0 and not guarded([s for _, s, _ in ink], S["ink"]):      # guard on all doors of the drawing
@@ -106,7 +114,9 @@ def score(intact, omitted, S):
 
 
 def fmt(r):
-    det = "off" if r["det"] is OFF else f"{r['det'][0]} / {r['det'][1]} px"
+    det = "off" if r["det"] is OFF else f"v2 {r['det'][0]} / {r['det'][1]} px"
+    if r.get("det3") is not OFF:
+        det = ("" if r["det"] is OFF else det + " + ") + f"v3 {r['det3'][0]} / {r['det3'][1]} px"
     c8 = "off" if r["c8"] == np.inf else str(int(r["c8"]))
     ink = "off" if r["ink"] == 0 else f"{r['ink']} / {r['ink2'] or 'off'}"
     r6 = "off" if r["r6"] == np.inf else f"x{r['r6']}"
@@ -164,7 +174,7 @@ def main():
     intact, omitted = build(args.zip, args.tuning, args.intact, args.omitted, 11, choice)
     t0 = time.time()
     # stage 1: rules + ink, detector off, within budget - det_min
-    rules = [score(intact, omitted, {"det": OFF, "c8": a, "r5": r5, "ink": k, "ink2": k2, "r6": r6, "r7": r7})
+    rules = [score(intact, omitted, {"det": OFF, "det3": OFF, "c8": a, "r5": r5, "ink": k, "ink2": k2, "r6": r6, "r7": r7})
              for a, r5, k, k2, r6, r7 in itertools.product(C8_AREAS, (True, False), INK_THS, INK2_THS,
                                                            R6_SCALES + [np.inf], R7_WIDTHS + [np.inf])
              if not (k == 0 and k2 > 0) and k2 <= k]
@@ -173,20 +183,26 @@ def main():
     best1 = max(ok1, key=lambda r: (r["mean"], -r["fa"]))
     # stage 2: detector inside what is left
     base = {k: best1[k] for k in ("c8", "r5", "ink", "ink2", "r6", "r7")}
-    full = [score(intact, omitted, {**base, "det": (t, b)}) for t in THS for b in BLOBS]
-    ok2 = [r for r in full if r["fa"] <= args.budget]
-    best = max(ok2 + [best1], key=lambda r: (r["mean"], -r["fa"]))
+    grid = [(t, b) for t in THS for b in BLOBS]
+    full = {"v2": [score(intact, omitted, {**base, "det": tb}) for tb in grid]}
+    if any(r[-1] for r in intact):                       # detector v3 proposals collected
+        full["v3"] = [score(intact, omitted, {**base, "det": OFF, "det3": tb}) for tb in grid]
+        full["both"] = [score(intact, omitted, {**base, "det": a, "det3": b}) for a in grid for b in grid]
+    bests = {k: max([r for r in v if r["fa"] <= args.budget] or [best1], key=lambda r: (r["mean"], -r["fa"]))
+             for k, v in full.items()}
+    ok2 = [r for v in full.values() for r in v if r["fa"] <= args.budget]
+    best = max(list(bests.values()) + [best1], key=lambda r: (r["mean"], -r["fa"]))
     adds = []                                          # what each new part adds: the choice with that part off
     for name, off in (("R6 (windowless exterior span)", {"r6": np.inf}), ("R7 (gap too narrow)", {"r7": np.inf}),
                       ("ink tier 2 (other interior doors)", {"ink2": 0})):
         r = score(intact, omitted, {**best, **off})
         adds.append((name, best["mean"] - r["mean"], best["fa"] - r["fa"], r))
-    det_only = [score(intact, omitted, {"det": (t, b), "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf,
+    det_only = [score(intact, omitted, {"det": (t, b), "det3": OFF, "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf,
                                         "r7": np.inf}) for t in THS for b in BLOBS]
     # each new rule on its own (best within the stage-1 budget with only that rule on)
     alone = []
     for name, grid in (("R6 alone", [{"r6": s} for s in R6_SCALES]), ("R7 alone", [{"r7": w} for w in R7_WIDTHS])):
-        rs = [score(intact, omitted, {"det": OFF, "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf,
+        rs = [score(intact, omitted, {"det": OFF, "det3": OFF, "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf,
                                       "r7": np.inf, **g}) for g in grid]
         alone += [(name, r) for r in rs]
     L = ["# CHECK tuned on parsed TUNING drawings (parser v2B, detector v2, erasure v2; + R6, R7, ink tiers)", "",
@@ -194,6 +210,8 @@ def main():
          f"drawing in total; rules + ink chosen first within {args.budget - args.det_min:.2f}, then the detector inside "
          "what is left (user, 2026-10-19). Found = a proposal overlaps the omission. Ink column: tier-1 threshold "
          "(R5's door pairs) / tier-2 threshold (other interior doors).", "", "## Chosen", ""] + HDR + [fmt(best)]
+    L += ["", "## Which detector (best within the budget with the chosen rules)", ""] + HDR + \
+         [fmt(r).replace("| ", f"| ({k}) ", 1) for k, r in bests.items()]
     L += ["", "## What R6, R7 and the second ink tier add (the choice vs the choice with that part off)", "",
           "| part | recall gained (points) | false alarms cost | the choice without it |", "|---|---|---|---|"]
     L += [f"| {n} | {100 * dr:+.1f} | {dfa:+.2f} | {r['fa']:.2f} false alarms, {100 * r['mean']:.0f}% recall |"
@@ -211,8 +229,11 @@ def main():
     (OUT / "check_tune.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     print("\n".join(L))
     if args.write:
-        choice.update(threshold=float(best["det"][0]) if best["det"] is not OFF else 1.01,
-                      min_blob=int(best["det"][1]) if best["det"] is not OFF else 20,
+        d2, d3 = best["det"], best.get("det3")
+        choice.update(detector_model="both" if d2 is not OFF and d3 is not OFF else ("v3" if d3 is not OFF else "v2"),
+                      threshold=float(d2[0]) if d2 is not OFF else 1.01, min_blob=int(d2[1]) if d2 is not OFF else 20,
+                      threshold_v3=float(d3[0]) if d3 is not OFF else 1.01,
+                      min_blob_v3=int(d3[1]) if d3 is not OFF else 20,
                       c8_min_area=None if best["c8"] == np.inf else float(best["c8"]),
                       ink_threshold=float(best["ink"]), ink_relevant_only=True,
                       ink_threshold_interior=float(best["ink2"]),

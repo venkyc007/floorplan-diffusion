@@ -19,7 +19,7 @@ import yaml
 from src.kaggle_kernel import CODE, WORK, find, run
 
 DATA = "/tmp/s2data"
-CKPTS = {"parser": "runs/parser_v2B/checkpoints/best.pt", "detector": "runs/detector_v2/checkpoints/best.pt",
+CKPTS = {"parser": "runs/parser_v2B/checkpoints/best.pt", "detector": "runs/detector_v2/checkpoints/best.pt", "detector_v3": "runs/detector_v3/checkpoints/best.pt",
          "unet": "runs/k2a_unet/checkpoints/best.pt", "diffusion": "runs/k1_constrained/checkpoints/best.pt"}
 START = time.time()
 

@@ -518,3 +518,30 @@ Own choices:
 - Check set 3 / 12.
 - Own housekeeping: the local smoke outputs of check_tune / check_curve (check_tune.md overwritten,
   check_curve.md / .png, made by me minutes before) were reverted / removed before the Kaggle runs.
+
+## R6, R7, ink tiers, detector v3 (user, 2026-10-19)
+
+- R6 "windowless exterior span" (src/stage2/detect/window_runs.py):
+  - Exterior run = the room's boundary pixels that look straight through 1..T_wall + 3 px of wall only to outdoor /
+    background; windows and doors break the runs.
+  - Thresholds = 95th percentile of each type's longest run over 14,207 TRAINING rooms (configs/stage2/
+    window_rule.yaml): living 104, bedroom 81, kitchen 51, other_room (>= 1514 px) 107 px.
+  - Box: a median window (20 px) centred on the run.
+- R7 "gap too narrow" (src/stage2/detect/narrow_gaps.py): wall runs >= 5 px, closed over Lmin_door; the gap spans
+  >= 2 px across the wall.
+- Ink tiers: tier 1 = R5's door pairs, tier 2 = other interior doors (threshold <= tier 1); exterior doors never;
+  the guard still uses all doors.
+- Tuning (0.6 budget, tuning drawings): detector v2 0.9 / 20, C8 >= 700, R5, ink 1.5 / 1.0, R6 x1.2, R7 off.
+  0.55 false alarms, 20%.
+  - R6 +0.6 points for +0.03 false alarms.
+  - R7 nothing (off).
+  - Tier 2 +3.0 points for +0.18.
+- Held-out: 0.56 false alarms, 13%; R6 adds nothing there. Check set 3 / 12; tier 2 brings back case 7's false doors.
+- Railings: 0% recall in every held-out run, so railing proposals are dropped from automatic CHECK
+  (detector_threshold.yaml manual_only_types); railings only via manual mode (user rule). Evaluation tables still
+  list the railing omissions (recall 0) for honesty.
+- Detector v3 (drawing + parse): kernel floorplan-stage2-detv3, launched 20:01. 384 px crops at parser scale, 4 per
+  version; ImageNet ResNet-34, 17 input channels; 1.9 h.
+  - In CHECK (src/stage2/detect/detector_v3.py): parser-scale grid rebuilt from the completion map (x 8/3);
+    probabilities shrunk back, so the same proposal thresholds apply.
+  - The final tuning chooses v2, v3 or both (own thresholds each).

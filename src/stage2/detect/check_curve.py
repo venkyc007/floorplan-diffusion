@@ -63,22 +63,26 @@ def main():
     k2 = choice.get("ink_threshold_interior", 0) if "INK" in on else 0
     r6 = (choice.get("r6_scale") or np.inf) if "R6" in on else np.inf
     r7 = (choice.get("r7_min_width") or np.inf) if "R7" in on else np.inf
-    blob = choice.get("min_blob", 40)
-    det = (choice["threshold"], blob) if choice.get("threshold", 1.01) <= 1 else OFF
+    which = choice.get("detector_model", "v2")
+    det = (choice["threshold"], choice["min_blob"]) if which in ("v2", "both") else OFF
+    det3 = (choice["threshold_v3"], choice["min_blob_v3"]) if which in ("v3", "both") else OFF
     chosen_rules = {"c8": c8, "r5": "R5" in on, "ink": k, "ink2": k2, "r6": r6, "r7": r7}
-    none = {"det": OFF, "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf, "r7": np.inf}
+    none = {"det": OFF, "det3": OFF, "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf, "r7": np.inf}
+
+    def dets(t):                                      # the chosen detector(s) at threshold t, their own min blobs
+        return {"det": (t, det[1]) if det is not OFF else OFF, "det3": (t, det3[1]) if det3 is not OFF else OFF}
     ths = [0.98, 0.95, 0.9, 0.8, 0.7, 0.5]
     fam = {        # (i): the rules switched on one after another, ending at the chosen rule set
         "(i) rules + ink": [{**none, "c8": 2756}, {**none, "c8": c8}, {**none, "c8": c8, "r5": True},
                             {**none, "c8": c8, "r5": True, "ink": k or 1.5},
                             {**none, "c8": c8, "r5": True, "ink": k or 1.5, "ink2": k2},
-                            {**chosen_rules, "det": OFF}],
-        "(ii) detector v2 only": [{**none, "det": (t, blob)} for t in ths],
-        "(iii) everything": [{**chosen_rules, "det": (t, blob)} for t in ths],
+                            {**chosen_rules, "det": OFF, "det3": OFF}],
+        f"(ii) detector {which} only": [{**none, **dets(t)} for t in ths],
+        "(iii) everything": [{**chosen_rules, **dets(t)} for t in ths],
     }
     res = {f: [score(intact, omitted, S) for S in Ss] for f, Ss in fam.items()}
-    chosen = score(intact, omitted, {**chosen_rules, "det": det})
-    L = ["# Held-out trade-off: recall vs false alarms (parser v2B, detector v2, erasure v2)", "",
+    chosen = score(intact, omitted, {**chosen_rules, "det": det, "det3": det3})
+    L = ["# Held-out trade-off: recall vs false alarms (parser v2B, erasure v2)", "",
          f"{len(intact)} intact + {len(omitted)} omissions (image_eval's held-out cases). Chosen setting: see "
          "'Chosen point' at the end. Figure: outputs/stage2/check_curve.png.", ""]
     for f, rs in res.items():

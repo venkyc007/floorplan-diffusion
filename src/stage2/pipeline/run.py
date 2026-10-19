@@ -36,6 +36,7 @@ from src.stage2.data.classes16 import C16
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals
+from src.stage2.detect.detector_v3 import load_v3, v3_probs
 from src.stage2.detect.door_ink import ink_candidates
 from src.stage2.detect.gaps import gap_candidates
 from src.stage2.detect.narrow_gaps import gap_candidates_narrow
@@ -68,6 +69,8 @@ def models():
         m = build16(ck["config"]["model"])
         m.load_state_dict(ck["model"])
         out[name] = m.eval()
+    if c.get("detector_v3") and (PROJECT_ROOT / c["detector_v3"]).exists():
+        out["detector_v3"] = load_v3(PROJECT_ROOT / c["detector_v3"])
     return out
 
 
@@ -119,8 +122,16 @@ def detect_parts(label, image=None):
     the door-ink check needs the drawing)."""
     choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
     m = models()
-    probs = detector_probs(m["detector"], label, m["detector_K"])
-    parts = {"detector": proposals(probs, choice["threshold"], choice["min_blob"])}
+    which = choice.get("detector_model", "v2")          # v2, v3 or both (tuned, user 2026-10-19)
+    parts = {"detector": []}
+    if which in ("v2", "both"):
+        probs = detector_probs(m["detector"], label, m["detector_K"])
+        parts["detector"] += proposals(probs, choice["threshold"], choice["min_blob"])
+    if which in ("v3", "both") and image is not None and "detector_v3" in m:
+        probs = v3_probs(m["detector_v3"], image, label)
+        parts["detector"] += proposals(probs, choice["threshold_v3"], choice["min_blob_v3"])
+    # railings: 0% recall in every held-out run -> manual mode only (user, 2026-10-19)
+    parts["detector"] = [p for p in parts["detector"] if p.type not in choice.get("manual_only_types", [])]
     extra = choice.get("extra_rules", [])
     if "C8" in extra:                                    # room cut off: per building part
         raw = [c for c in R.discrete_candidates(label) if c.rules[0] == "C8"]

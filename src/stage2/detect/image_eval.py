@@ -141,7 +141,8 @@ def main():
     pc = cfg()["parse"]
     methods = {"detector": ("detector",), "detector + C8": ("detector", "C8"),
                "detector + C8 + R5": ("detector", "C8", "R5"),
-               "detector + C8 + R5 + ink (final)": ("detector", "C8", "R5", "INK")}
+               "detector + C8 + R5 + ink": ("detector", "C8", "R5", "INK"),
+               "full CHECK (+ R6 + R7, final)": ("detector", "C8", "R5", "INK", "R6", "R7")}
     rows, t0 = [], time.time()
 
     def run(pid, img, removed=None, kind=None, typ=None, scope=None):  # img: the drawing given to PARSE
