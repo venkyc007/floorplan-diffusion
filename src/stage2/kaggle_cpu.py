@@ -5,7 +5,7 @@
     run(f"python -m ... --zip {data}/parser_val.zip")
     finish()                # outputs/stage2/ files written by this run -> /kaggle/working/stage2/
 
-Inputs (kernel_sources): floorplan-stage2-data (val zips), floorplan-stage2-parser-v1 (parser), floorplan-stage2-k2a
+Inputs (kernel_sources): floorplan-stage2-data (val zips), floorplan-stage2-parser-v2 (parser v2B), floorplan-stage2-k2a
 (detector + 16-class U-Net), floorplan-stage2-k1 (constrained diffusion). No GPU needed.
 """
 
@@ -19,7 +19,7 @@ import yaml
 from src.kaggle_kernel import CODE, WORK, find, run
 
 DATA = "/tmp/s2data"
-CKPTS = {"parser": "runs/parser_v1/checkpoints/best.pt", "detector": "runs/k2a_detector/checkpoints/best.pt",
+CKPTS = {"parser": "runs/parser_v2B/checkpoints/best.pt", "detector": "runs/k2a_detector/checkpoints/best.pt",
          "unet": "runs/k2a_unet/checkpoints/best.pt", "diffusion": "runs/k1_constrained/checkpoints/best.pt"}
 START = time.time()
 

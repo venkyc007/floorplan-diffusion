@@ -14,7 +14,7 @@
   "competition_sources": [],
   "kernel_sources": [
     "venkatesh007c/floorplan-stage2-data",
-    "venkatesh007c/floorplan-stage2-parser-v1",
+    "venkatesh007c/floorplan-stage2-parser-v2",
     "venkatesh007c/floorplan-stage2-k2a",
     "venkatesh007c/floorplan-stage2-k1"
   ],

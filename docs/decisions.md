@@ -456,3 +456,10 @@ Own choices:
     not a short ink stroke (no text or symbols copied) and in the same space label (never across a wall).
   - Flat zones keep inpainting.
 - Remaining (erasure_check.png): a small mark in the hatching of row 4; a slightly paler patch in row 6.
+
+## Pipeline parser = v2B (user, 2026-10-19)
+
+- configs/stage2/pipeline.yaml and the CPU eval kernels now use parser v2B (mixed text erasure; held-out room-type mIoU
+  76.3 normal / 64.3 text erased, v1 78.1 / 54.9; outputs/stage2/parser_v2.md).
+- Caveat (user): the text eraser is inconsistent. It misses some labels (tiled floors, labels touching fixtures)
+  and sometimes erases hatching / dashed strokes. Text-erased numbers are therefore approximate.

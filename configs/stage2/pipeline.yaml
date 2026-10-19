@@ -2,7 +2,7 @@
 # Checkpoints are local copies of Kaggle outputs (git-ignored).
 
 checkpoints:
-  parser: outputs/kaggle/parser_v1/runs/parser_v1/checkpoints/best.pt
+  parser: outputs/kaggle/parser_v2/runs/parser_v2B/checkpoints/best.pt   # v2B mixed (user, 2026-10-19); v1 was parser_v1/runs/parser_v1
   detector: outputs/kaggle/k2a/runs/k2a_detector/checkpoints/best.pt
   unet: outputs/kaggle/k2a/runs/k2a_unet/checkpoints/best.pt
   diffusion: outputs/kaggle/k1/runs/k1_constrained/checkpoints/best.pt
