@@ -12,7 +12,7 @@ used by check_curve.py):
   C8        minimum room area (C8_AREAS px; inf = off)
   R5        the configured gap rule, on / off
   door ink  threshold (INK_THS; 0 = off) + per-drawing guard on all doors; candidates at ALL doors or only at the
-            relevant ones (R5's pairs: door_ink.relevant; user, 2026-10-19)
+            relevant ones (R5's pairs: door_ink.relevant; user, 2026-10-19: restricted by default)
 Found = a proposal box overlaps the omission (resized to the parse, grown 3 px).
 Choice (user, 2026-10-19): budget 0.6 false alarms per intact drawing in total. Stage 1: rules + ink (detector off)
 with the best mean recall within budget - det_min (so >= det_min stays for the detector). Stage 2: with those rules
@@ -142,13 +142,15 @@ def main():
     ap.add_argument("--budget", type=float, default=0.6)
     ap.add_argument("--det-min", type=float, default=0.25)
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--ink-all-doors", dest="ink_relevant_only", action="store_false",
+                    help="also allow the ink check on all doors (default: only R5's pairs, user 2026-10-19)")
     args = ap.parse_args()
     choice = yaml.safe_load(CHOICE.read_text(encoding="utf-8"))
     intact, omitted = build(args.zip, args.tuning, args.intact, args.omitted, 11, choice)
     # stage 1: rules + ink, detector off, within budget - det_min
     rules = [score(intact, omitted, {"det": OFF, "c8": a, "r5": r5, "ink": k, "rel": rel})
              for a, r5, k, rel in itertools.product(C8_AREAS, (True, False), INK_THS, (True, False))
-             if not (k == 0 and rel)]
+             if not (k == 0 and rel) and (rel or k == 0 or not args.ink_relevant_only)]
     ok1 = [r for r in rules if r["fa"] <= args.budget - args.det_min]
     best1 = max(ok1, key=lambda r: (r["mean"], -r["fa"]))
     # stage 2: detector inside what is left
