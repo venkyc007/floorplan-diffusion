@@ -30,7 +30,7 @@ import yaml
 
 from src.stage2.complete import sampler
 from src.stage2.complete.models16 import build16
-from src.stage2.complete.sketch_prior import apply_prior
+from src.stage2.complete.sketch_prior import SIZES, apply_prior
 from src.stage2.constraints.rules import components
 from src.stage2.data.classes16 import C16
 from src.stage2.data.plan_stats import door_side_pair
@@ -200,10 +200,29 @@ def host_room(label, m):
     return C16.names[int(np.bincount(v).argmax())] if len(v) else None
 
 
+def clip_door(door, length=None):
+    """An added door clipped to ONE wall line at the median door length (user, 2026-10-19): the band of rows
+    (or columns) holding its main run along its longer side, and +- length / 2 around that run's centre. An
+    L-shaped door spread over two walls keeps only the longer arm."""
+    length = length or SIZES["door"][1]
+    ys, xs = np.nonzero(door)
+    horizontal = (xs.max() - xs.min()) >= (ys.max() - ys.min())
+    across, along = (ys, xs) if horizontal else (xs, ys)
+    counts = np.bincount(across - across.min())
+    band = counts >= 0.5 * counts.max()
+    sel = band[across - across.min()]
+    c = int(np.median(along[sel]))
+    sel &= np.abs(along - c) <= length // 2
+    out = np.zeros_like(door)
+    out[ys[sel], xs[sel]] = True
+    return out
+
+
 def restrict(before, after, typ):
     """Type-restricted fill (user, chunk 8): inside a detected hole keep ONLY the detected type and
     revert every other changed pixel to the map before the fill.
-      door / window / railing / a fixture  -> its largest new component only (one door per hole)
+      door / window / railing / a fixture  -> its largest new component only (one door per hole;
+                                              a door clipped to one wall line at median length)
       wall                                 -> new wall pixels
       room                                 -> new walls, doors and room types (its walls, type and door)
       manual                               -> everything the model drew
@@ -218,6 +237,8 @@ def restrict(before, after, typ):
     else:
         comps = components(changed & (after == I[typ]))
         keep = max(comps, key=lambda m: m.sum()) if comps else np.zeros(after.shape, bool)
+        if typ == "door" and keep.any():
+            keep = clip_door(keep)
         if typ in FIXTURES and keep.any():
             room = host_room(before, keep)
             if room not in R.CONST.get("fixture_rooms", {}).get(typ, []):

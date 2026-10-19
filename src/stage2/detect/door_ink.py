@@ -10,6 +10,7 @@ mapped to the drawing; its swing zone = the door zone of src/stage2/data/erasure
 background, straight runs longer than 60% of the zone are texture), minus the parsed walls / windows / railings /
 fixtures (grown 1 px) and the opening itself. Score = ink pixels / door length (px): an arc + leaf drawn with
 ~1-2 px lines gives ~2.5-5; a bare opening ~0. Computed in a local window (fast on big drawings).
+Guard: no candidates in a drawing where more than half of the parsed doors score below the threshold.
 """
 
 import cv2
@@ -59,6 +60,18 @@ def door_ink_scores(image, label, ink=INK, min_px=6):
     return out
 
 
-def ink_candidates(image, label, threshold):
-    return [R.Candidate("door", R.box_of(d, label.shape), ["INK"], s)
-            for d, s in door_ink_scores(image, label) if s < threshold]
+GUARD = 0.5     # user (2026-10-19): skip the check when more than half of a drawing's parsed doors have low ink
+
+
+def guarded(scores, threshold, guard=GUARD):
+    """Per-drawing guard: a drawing whose doors are mostly drawn without a symbol (sliding doors, simplified
+    styles) gets no ink candidates at all."""
+    low = [s < threshold for s in scores]
+    return bool(low) and float(np.mean(low)) > guard
+
+
+def ink_candidates(image, label, threshold, guard=GUARD):
+    scores = door_ink_scores(image, label)
+    if guarded([s for _, s in scores], threshold, guard):
+        return []
+    return [R.Candidate("door", R.box_of(d, label.shape), ["INK"], s) for d, s in scores if s < threshold]

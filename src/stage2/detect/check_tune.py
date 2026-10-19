@@ -10,7 +10,7 @@ Drawings: typed TUNING val drawings (file order): the first `intact` stay intact
   detector  threshold x min blob (THS x BLOBS; threshold 1.01 = off)
   C8        minimum room area (C8_AREAS px; inf = off)
   R5        the configured gap rule, on / off
-  door ink  threshold on the ink score (INK_THS; 0 = off)
+  door ink  threshold on the ink score (INK_THS; 0 = off), with the per-drawing guard (door_ink.guarded)
 Found = a proposal box overlaps the omission (resized to the parse, grown 3 px). Choice = the highest mean recall
 over the omission kinds with <= budget false alarms per intact drawing (ties: fewer false alarms).
 """
@@ -28,7 +28,7 @@ import yaml
 from src.stage2.data.erasure import grown
 from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import detector_probs, proposals
-from src.stage2.detect.door_ink import door_ink_scores
+from src.stage2.detect.door_ink import door_ink_scores, guarded
 from src.stage2.detect.gaps import gap_candidates
 from src.stage2.detect.image_eval import KINDS, omit
 from src.stage2.pipeline.run import cfg, models, parse
@@ -65,7 +65,8 @@ def boxes(rec, t, b, a, r5_on, k):
     out = list(det.get((t, b), []))
     out += [bx for bx, s in c8 if s >= a]
     out += r5 if r5_on else []
-    out += [bx for bx, s in ink if s < k]
+    if not guarded([s for _, s in ink], k):              # per-drawing ink guard (user, 2026-10-19)
+        out += [bx for bx, s in ink if s < k]
     return out
 
 
