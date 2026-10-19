@@ -91,3 +91,17 @@ Note: label-level numbers above are on ground-truth label maps; these are on par
 Scope subsets (detector + C8 + R5 (final)): door (a) where the closure cuts a room off: 15 cases, found 7% (0%); door (b) between a bedroom/bathroom and a closed-pair neighbour: 14 cases, found 0% (0%).
 Parser redraws the removed component (mean share of its pixels the parser still labels with the removed class, room = its walls): door (a) 55%, door (b) 85%, window 77%, wall 26%, railing 17%, fixture 8%, room 23%.
 Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser errors count against detection (and add false alarms).
+
+## Held-out on DRAWINGS, re-run with erasure v2 (whole symbol removed; 2026-10-19)
+
+59 intact drawings + 200 omissions on 100 other held-out drawings (kinds: door (a) 29, door (b) 29, window 29, wall 29, railing 18, fixture 38, room 28). Erasure: src/stage2/data/erasure.py; then the pipeline's PARSE + CHECK (no fill). Found = a proposal overlaps the omission (in brackets: right type).
+
+| method | false alarms / intact drawing | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
+|---|---|---|---|---|---|---|---|---|---|
+| detector | 0.85 | 11% | 3% (0%) | 3% (0%) | 21% (21%) | 0% (0%) | 11% (6%) | 18% (16%) | 21% (0%) |
+| detector + C8 | 0.85 | 11% | 3% (0%) | 3% (0%) | 21% (21%) | 0% (0%) | 11% (6%) | 18% (16%) | 21% (0%) |
+| detector + C8 + R5 (final) | 0.95 | 13% | 3% (0%) | 3% (0%) | 21% (21%) | 3% (0%) | 11% (6%) | 18% (16%) | 32% (0%) |
+
+Scope subsets (detector + C8 + R5 (final)): door (a) where the closure cuts a room off: 15 cases, found 0% (0%); door (b) between a bedroom/bathroom and a closed-pair neighbour: 14 cases, found 0% (0%).
+Parser redraws the removed component (mean share of its pixels the parser still labels with the removed class, room = its walls): door (a) 23%, door (b) 81%, window 45%, wall 26%, railing 17%, fixture 4%, room 23%.
+Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser errors count against detection (and add false alarms).

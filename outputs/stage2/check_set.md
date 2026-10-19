@@ -1,20 +1,20 @@
-# Check set: 1 / 12 correct (fast mode, CPU)
+# Check set: 2 / 12 correct (fast mode, CPU)
 
 found = a hole overlaps the omission; restored = the expected class was added there; extra = added components elsewhere; correct = restored and no extra (intact: nothing added).
 
 | # | drawing | omission | found | restored | extra | correct | holes | s |
 |---|---|---|---|---|---|---|---|---|
-| 1 | colorful-11261 | door (a) | no | no | 1 | no | 1 | 34 |
+| 1 | colorful-11261 | door (a) | no | no | 1 | no | 1 | 33 |
 | 2 | colorful-1148 | door (a) | yes | no | 0 | no | 1 | 29 |
-| 3 | colorful-1261 | door (b) | no | no | 3 | no | 4 | 108 |
+| 3 | colorful-1261 | door (b) | yes | no | 3 | no | 4 | 104 |
 | 4 | colorful-13689 | door (b) | no | no | 0 | no | 0 | 2 |
 | 5 | colorful-13513 | window | no | no | 0 | no | 0 | 2 |
 | 6 | colorful-13804 | window | no | no | 0 | no | 0 | 2 |
 | 7 | colorful-13820 | wall | no | no | 1 | no | 2 | 53 |
-| 8 | colorful-13824 | wall | no | no | 0 | no | 0 | 4 |
-| 9 | colorful-13826 | fixture | no | no | 0 | no | 1 | 30 |
-| 10 | colorful-14036 | fixture | no | no | 0 | no | 1 | 25 |
-| 11 | colorful-14126 | room | yes | no | 1 | no | 3 | 76 |
+| 8 | colorful-13824 | wall | no | no | 0 | no | 0 | 5 |
+| 9 | colorful-13826 | fixture | yes | yes | 0 | **yes** | 2 | 53 |
+| 10 | colorful-14036 | fixture | no | no | 0 | no | 1 | 24 |
+| 11 | colorful-14126 | room | yes | no | 1 | no | 3 | 72 |
 | 12 | colorful-14147 | intact | no | no | 0 | **yes** | 0 | 2 |
 
 ## 1. colorful-11261 (door (a)): automatic verdict wrong
@@ -35,7 +35,7 @@ Added (messages):
 
 ## 3. colorful-1261 (door (b)): automatic verdict wrong
 
-Removed: door (b). Detected: door (R5), railing (detector), sink (detector), sink (detector). Found no, restored no, extra 3.
+Removed: door (b). Detected: door (R5), railing (detector), sink (detector), sink (detector). Found yes, restored no, extra 3.
 
 Added (messages):
 
@@ -84,12 +84,13 @@ Added (messages):
 
 - (nothing)
 
-## 9. colorful-13826 (fixture): automatic verdict wrong
+## 9. colorful-13826 (fixture): automatic verdict correct
 
-Removed: fixture. Detected: railing (detector). Found no, restored no, extra 0.
+Removed: fixture. Detected: sink (detector), railing (detector). Found yes, restored yes, extra 0.
 
 Added (messages):
 
+- sink added in other_room
 - railing missing (detector) -> nothing added (the model kept the drawing as it was)
 
 ## 10. colorful-14036 (fixture): automatic verdict wrong
@@ -118,26 +119,33 @@ Added (messages):
 
 - (nothing)
 
+## Holes in the right place: raw hybrid output (step 3)
 
-## My verdicts (after looking at check_set.png)
+Per hole overlapping the omission: new pixels of the hole's type in the RAW hybrid output (before the type restriction), its largest new component, what the restriction kept, and the classes the hybrid changed inside the box. Figure: check_set_holes.png.
+
+| # | drawing | omission | hole | raw new px of type (largest) | kept px | hybrid changed (class: px) | why nothing / what |
+|---|---|---|---|---|---|---|---|
+| 2 | colorful-1148 | door (a) | door (C8) | 0 (0) | 0 | other_room: 30 | the hybrid changed pixels but drew no door; the restriction reverts them all |
+| 3 | colorful-1261 | door (b) | door (R5) | 0 (0) | 0 | other_room: 28 | the hybrid changed pixels but drew no door; the restriction reverts them all |
+| 9 | colorful-13826 | fixture | sink (detector) | 70 (70) | 70 | sink: 70 | sink kept (70 px) on the omitted spot |
+| 11 | colorful-14126 | room | appliance (detector) | 0 (0) | 0 | kitchen: 256, living: 199, bedroom: 81, wall: 18 | the hybrid changed pixels but drew no appliance; the restriction reverts them all |
+
+## My verdicts (erasure v2 run, after looking at check_set.png and check_set_holes.png)
 
 | # | omission | verdict | why |
 |---|---|---|---|
-| 1 | door (a) | wrong | doorway not flagged; a false "appliance" hole in the kitchen and an appliance added there |
-| 2 | door (a) | partly | C8 flagged the cut-off bedroom at the right wall, but the fill added nothing (the first run, with the older erasure, did add the door) |
-| 3 | door (b) | partly | R5 fired at the open doorway on the upper floor (box next to it, not overlapping, so the automatic check says "not found"); nothing added there; 3 false holes, a railing and a sink added elsewhere |
-| 4 | door (b) | wrong | the parser drew the erased doorway back as a door, so nothing was missing for CHECK |
-| 5 | window | wrong | the parser drew the erased window back (the erased spot is also visibly blurred here); nothing flagged |
-| 6 | window | wrong | as 5: window redrawn by the parser, nothing flagged |
-| 7 | wall | wrong | a wall hole flagged in another building part; a false railing added |
+| 1 | door (a) | wrong | doorway not flagged; a false appliance hole in the kitchen, an appliance added |
+| 2 | door (a) | partly | C8 flagged the closed wall in the right place; the hybrid drew no door there (wall kept) |
+| 3 | door (b) | partly | R5 fired next to the open doorway (box overlaps the omission's edge); no door drawn; a false railing and sink added |
+| 4 | door (b) | wrong | nothing flagged (the parser labels the open gap as a door again) |
+| 5 | window | wrong | nothing flagged |
+| 6 | window | wrong | nothing flagged |
+| 7 | wall | wrong | a wall hole in another place, nothing added there; a false railing added |
 | 8 | wall | wrong | nothing flagged |
-| 9 | fixture | wrong | not flagged; a false railing hole (nothing added) |
+| 9 | fixture | correct | the sink hole was found and a sink was drawn on the erased spot; nothing else added |
 | 10 | fixture | wrong | not flagged; a false R5 door hole (nothing added) |
-| 11 | room | wrong | removed walls only partly gone in the image; R5 + appliance holes nearby, nothing useful added; a false railing added |
+| 11 | room | wrong | R5 / appliance / railing holes; nothing useful added; a false railing added |
 | 12 | intact | correct | nothing flagged, nothing added |
 
-**Score: 1 / 12 correct, 2 partly (both: the right place found, nothing added).** Settings were not changed based on this set.
-Main causes, in order: (1) the parser redraws erased doors and windows from context (see the image-level evaluation in
-detection_eval.md: 55-85% of a removed door's pixels and 77% of a window's are labelled back), so CHECK has nothing to find;
-(2) on parsed drawings the detector misses most real omissions and raises false railing / appliance holes; (3) when a hole is
-found, the fast fill with the type restriction often adds nothing of that type.
+**Score: 2 / 12 correct, 2 partly (right place found, nothing added).** Overnight (erasure v1): 1 / 12, 2 partly.
+Settings were not changed based on this set.

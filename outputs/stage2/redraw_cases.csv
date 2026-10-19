@@ -1,0 +1,401 @@
+pid,kind,class,px,redrawn,found_intact
+colorful-1261,door (a),door,80,0.0,0.95
+colorful-1261,door (b),door,39,0.9744,1.0
+colorful-1261,window,window,72,0.0,0.75
+colorful-1261,fixture,toilet,135,0.0,0.7481
+colorful-13513,door (a),door,18,0.0,1.0
+colorful-13513,door (b),door,18,0.9444,1.0
+colorful-13513,window,window,52,0.6154,1.0
+colorful-13513,fixture,sink,42,0.0,1.0
+colorful-13689,door (a),door,39,0.0,0.0
+colorful-13689,door (b),door,30,1.0,1.0
+colorful-13689,window,window,159,0.0,1.0
+colorful-13689,fixture,appliance,121,0.0,1.0
+colorful-13804,door (a),door,70,0.8429,1.0
+colorful-13804,door (b),door,60,1.0,0.9
+colorful-13804,window,window,100,0.22,1.0
+colorful-13804,fixture,toilet,66,0.0,1.0
+colorful-13820,door (a),door,45,0.0,0.5333
+colorful-13820,door (b),door,36,0.9444,0.7778
+colorful-13820,window,window,111,0.0,0.982
+colorful-13820,fixture,appliance,110,0.0,1.0
+colorful-13824,door (a),door,33,0.0,1.0
+colorful-13824,door (b),door,28,1.0,1.0
+colorful-13824,window,window,40,1.0,1.0
+colorful-13824,fixture,bath_shower,18,0.9444,0.9444
+colorful-13826,door (a),door,45,0.3556,1.0
+colorful-13826,door (b),door,69,0.8986,0.058
+colorful-13826,window,window,66,0.9697,1.0
+colorful-13826,fixture,bath_shower,20,0.65,0.85
+colorful-14126,door (a),door,22,0.0,0.9091
+colorful-14126,door (b),door,22,1.0,1.0
+colorful-14126,window,window,54,0.0,0.9815
+colorful-14126,fixture,sink,64,0.0,1.0
+colorful-14251,door (a),door,42,0.0,1.0
+colorful-14251,door (b),door,45,1.0,1.0
+colorful-14251,window,window,15,0.0,0.8
+colorful-14251,fixture,appliance,90,0.0,0.0333
+colorful-14328,door (a),door,18,0.0,1.0
+colorful-14328,door (b),door,20,1.0,0.9
+colorful-14328,window,window,138,0.0,0.9275
+colorful-14328,fixture,appliance,49,0.0204,1.0
+colorful-14616,door (a),door,14,0.0,1.0
+colorful-14616,door (b),door,9,1.0,1.0
+colorful-14616,window,window,95,0.0,0.9684
+colorful-14616,fixture,sink,24,0.0,1.0
+colorful-14928,door (a),door,39,0.0,1.0
+colorful-14928,door (b),door,24,0.375,0.8333
+colorful-14928,window,window,45,0.6889,0.9333
+colorful-14928,fixture,appliance,96,0.0,0.4896
+colorful-14935,door (a),door,44,0.0,1.0
+colorful-14935,door (b),door,22,0.3636,0.5
+colorful-14935,window,window,52,0.0,1.0
+colorful-14935,fixture,sink,35,0.0,0.9714
+colorful-14936,door (a),door,20,0.65,0.85
+colorful-14936,door (b),door,33,1.0,0.8788
+colorful-14936,window,window,52,1.0,1.0
+colorful-14936,fixture,appliance,49,0.0,1.0
+colorful-14938,door (a),door,39,0.0,1.0
+colorful-14938,door (b),door,39,1.0,1.0
+colorful-14938,window,window,70,0.7,0.9857
+colorful-14938,fixture,sink,35,0.0,1.0
+colorful-3134,door (a),door,9,0.0,1.0
+colorful-3134,door (b),door,20,0.35,0.4
+colorful-3134,window,window,60,0.7,1.0
+colorful-3134,fixture,appliance,49,0.0,1.0
+colorful-6226,door (a),door,22,0.0,1.0
+colorful-6226,door (b),door,36,0.9722,1.0
+colorful-6226,window,window,75,0.0,1.0
+colorful-6226,fixture,toilet,24,0.8333,0.8333
+colorful-6628,door (a),door,24,0.0,1.0
+colorful-6628,door (b),door,26,0.2692,1.0
+colorful-6628,window,window,93,1.0,1.0
+colorful-6628,fixture,bath_shower,6,1.0,1.0
+colorful-8396,door (a),door,65,0.0,0.9846
+colorful-8396,door (b),door,65,0.9385,0.9846
+colorful-8396,window,window,115,0.687,0.9826
+colorful-8396,fixture,toilet,10,1.0,1.0
+high_quality-13812,door (a),door,9,0.0,1.0
+high_quality-13812,door (b),door,22,0.5,0.4545
+high_quality-13812,window,window,114,0.0,1.0
+high_quality-13812,fixture,appliance,64,0.0,1.0
+high_quality-13852,door (a),door,27,0.0,1.0
+high_quality-13852,door (b),door,30,1.0,0.9667
+high_quality-13852,window,window,114,1.0,1.0
+high_quality-13852,fixture,appliance,110,0.0,1.0
+high_quality-1401,door (a),door,10,0.0,0.0
+high_quality-1401,door (b),door,24,1.0,1.0
+high_quality-1401,window,window,66,0.0,1.0
+high_quality-1401,fixture,appliance,49,0.0,1.0
+high_quality-14017,door (a),door,30,0.4,0.9667
+high_quality-14017,door (b),door,20,1.0,0.95
+high_quality-14017,window,window,57,0.1404,1.0
+high_quality-14017,fixture,toilet,40,0.0,0.875
+high_quality-14030,door (a),door,20,0.0,0.95
+high_quality-14030,door (b),door,20,1.0,0.95
+high_quality-14030,window,window,60,0.0,0.9333
+high_quality-14030,fixture,sink,30,0.1,1.0
+high_quality-14033,door (a),door,33,0.3636,1.0
+high_quality-14033,door (b),door,52,1.0,1.0
+high_quality-14033,window,window,100,0.36,1.0
+high_quality-14033,fixture,appliance,100,0.0,1.0
+high_quality-14054,door (a),door,20,0.0,1.0
+high_quality-14054,door (b),door,24,0.9167,0.9167
+high_quality-14054,window,window,130,0.0,1.0
+high_quality-14054,fixture,bath_shower,8,0.0,1.0
+high_quality-14061,door (a),door,20,0.65,1.0
+high_quality-14061,door (b),door,18,0.9444,1.0
+high_quality-14061,window,window,60,0.0,1.0
+high_quality-14061,fixture,toilet,35,0.0,0.8286
+high_quality-14094,door (a),door,7,0.0,0.0
+high_quality-14094,door (b),door,16,1.0,1.0
+high_quality-14094,window,window,45,0.0,1.0
+high_quality-14094,fixture,bath_shower,8,0.0,0.0
+high_quality-14157,door (a),door,16,0.0,0.9375
+high_quality-14157,door (b),door,26,0.9615,1.0
+high_quality-14157,window,window,18,0.0,1.0
+high_quality-14157,fixture,sink,110,0.0,0.4273
+high_quality-14245,door (a),door,28,0.0,1.0
+high_quality-14245,door (b),door,28,1.0,1.0
+high_quality-14245,window,window,155,0.0,1.0
+high_quality-14245,fixture,appliance,144,0.0,1.0
+high_quality-14250,door (a),door,32,0.0,0.9833
+high_quality-14250,door (b),door,80,0.9875,0.9875
+high_quality-14250,window,window,84,0.0,0.9333
+high_quality-14250,fixture,toilet,112,0.0,1.0
+high_quality-14252,door (a),door,14,0.0,1.0
+high_quality-14252,door (b),door,14,0.6429,0.9286
+high_quality-14252,window,window,140,0.3071,0.9383
+high_quality-14252,fixture,toilet,30,0.0,0.8333
+high_quality-14267,door (a),door,16,0.5,0.5
+high_quality-14267,door (b),door,14,1.0,1.0
+high_quality-14267,window,window,120,0.0,1.0
+high_quality-14267,fixture,appliance,148,0.0,0.6824
+high_quality-1500,door (a),door,16,0.0,1.0
+high_quality-1500,door (b),door,16,0.8125,1.0
+high_quality-1500,window,window,99,0.4141,0.8182
+high_quality-1500,fixture,appliance,98,0.0,0.4694
+high_quality-1547,door (a),door,16,0.5625,0.9375
+high_quality-1547,door (b),door,16,0.5,0.5
+high_quality-1547,window,window,60,0.0,1.0
+high_quality-1547,fixture,toilet,35,0.0,0.8571
+high_quality-1681,door (a),door,14,0.0,1.0
+high_quality-1681,door (b),door,9,0.4444,1.0
+high_quality-1681,window,window,64,0.5,0.9375
+high_quality-1681,fixture,sink,48,0.0,1.0
+high_quality-17,door (a),door,36,0.0,0.9722
+high_quality-17,door (b),door,14,0.0,0.1429
+high_quality-17,window,window,96,0.8438,0.7917
+high_quality-17,fixture,appliance,90,0.0,0.9861
+high_quality-1797,door (a),door,11,0.0,0.6364
+high_quality-1797,door (b),door,14,0.8571,1.0
+high_quality-1797,window,window,126,0.0,1.0
+high_quality-1797,fixture,sink,35,0.0,0.8286
+high_quality-20149,door (a),door,12,0.0,1.0
+high_quality-20149,door (b),door,24,1.0,1.0
+high_quality-20149,window,window,15,0.0,1.0
+high_quality-20149,fixture,appliance,66,0.0,1.0
+high_quality-2554,door (a),door,12,0.0,1.0
+high_quality-2554,door (b),door,18,1.0,1.0
+high_quality-2554,window,window,18,0.0,1.0
+high_quality-2554,fixture,sink,24,0.6667,1.0
+high_quality-3574,door (a),door,27,0.0,1.0
+high_quality-3574,door (b),door,16,1.0,1.0
+high_quality-3574,window,window,84,0.0,1.0
+high_quality-3574,fixture,appliance,49,0.7959,1.0
+high_quality-3650,door (a),door,14,0.0,0.5
+high_quality-3650,door (b),door,16,1.0,1.0
+high_quality-3650,window,window,81,0.0,0.9753
+high_quality-3650,fixture,sink,28,0.0,0.0
+high_quality-3935,door (a),door,30,0.0,0.6667
+high_quality-3935,door (b),door,24,1.0,0.9167
+high_quality-3935,window,window,48,0.0,0.8333
+high_quality-3935,fixture,bath_shower,8,0.125,0.125
+high_quality-4548,door (a),door,48,0.0,0.9583
+high_quality-4548,door (b),door,48,1.0,1.0
+high_quality-4548,window,window,84,0.631,1.0
+high_quality-4548,fixture,toilet,84,0.0,0.9048
+high_quality-4550,door (a),door,10,0.0,0.0
+high_quality-4550,door (b),door,10,0.0,0.0
+high_quality-4550,window,window,20,0.2,0.8
+high_quality-4550,fixture,bath_shower,2,0.0,0.0
+high_quality-4708,door (a),door,184,0.337,1.0
+high_quality-4708,door (b),door,44,0.0227,1.0
+high_quality-4708,window,window,124,0.4194,1.0
+high_quality-4708,fixture,sink,70,0.0,0.9286
+high_quality-4773,door (a),door,36,0.0,1.0
+high_quality-4773,door (b),door,21,0.0,1.0
+high_quality-4773,window,window,33,0.0,1.0
+high_quality-4773,fixture,appliance,30,0.0667,1.0
+high_quality-4860,door (a),door,14,0.0,1.0
+high_quality-4860,door (b),door,21,1.0,1.0
+high_quality-4860,window,window,48,0.0,1.0
+high_quality-4860,fixture,sink,30,0.0,0.9667
+high_quality-5080,door (a),door,8,0.625,1.0
+high_quality-5080,door (b),door,24,1.0,0.9167
+high_quality-5080,window,window,56,0.0357,1.0
+high_quality-5080,fixture,appliance,114,0.0,0.693
+high_quality-5682,door (a),door,21,0.0,1.0
+high_quality-5682,door (b),door,21,1.0,1.0
+high_quality-5682,window,window,51,0.0,1.0
+high_quality-5682,fixture,appliance,72,0.0,0.5833
+high_quality-5984,door (a),door,42,0.0,1.0
+high_quality-5984,door (b),door,54,0.7037,0.9815
+high_quality-5984,window,window,22,0.0,0.7727
+high_quality-5984,fixture,appliance,144,0.0,0.0
+high_quality-6079,door (a),door,26,0.0,1.0
+high_quality-6079,door (b),door,29,1.0,1.0
+high_quality-6079,window,window,96,0.0,0.875
+high_quality-6079,fixture,sink,63,0.0,1.0
+high_quality-6141,door (a),door,24,0.0,1.0
+high_quality-6141,door (b),door,48,1.0,0.9583
+high_quality-6141,window,window,72,0.1111,1.0
+high_quality-6141,fixture,bath_shower,5,1.0,1.0
+high_quality-6243,door (a),door,9,0.0,1.0
+high_quality-6243,door (b),door,16,1.0,1.0
+high_quality-6243,window,window,48,0.0,1.0
+high_quality-6243,fixture,sink,20,0.0,1.0
+high_quality-6388,door (a),door,14,0.0,0.9286
+high_quality-6388,door (b),door,27,1.0,1.0
+high_quality-6388,window,window,46,0.0,0.9565
+high_quality-6388,fixture,sink,30,0.0,0.8
+high_quality-665,door (a),door,12,0.0,1.0
+high_quality-665,door (b),door,21,0.6667,0.6667
+high_quality-665,window,window,15,0.0,0.0667
+high_quality-665,fixture,sink,30,0.0,0.9667
+high_quality-6702,door (a),door,16,0.0,1.0
+high_quality-6702,door (b),door,16,1.0,1.0
+high_quality-6702,window,window,124,0.0,0.9355
+high_quality-6702,fixture,sink,24,0.0,0.0
+high_quality-6732,door (a),door,60,0.0,0.0333
+high_quality-6732,door (b),door,60,0.1167,0.0333
+high_quality-6732,window,window,190,0.6947,1.0
+high_quality-6732,fixture,sink,99,0.0404,1.0
+high_quality-7082,door (a),door,24,0.0,1.0
+high_quality-7082,door (b),door,20,1.0,0.05
+high_quality-7082,window,window,36,0.0,1.0
+high_quality-7082,fixture,toilet,10,1.0,1.0
+high_quality-751,door (a),door,27,0.0,0.9259
+high_quality-751,door (b),door,27,0.8889,0.9259
+high_quality-751,window,window,135,0.5185,1.0
+high_quality-751,fixture,appliance,72,0.3056,1.0
+high_quality-7523,door (a),door,16,0.0,0.875
+high_quality-7523,door (b),door,16,1.0,1.0
+high_quality-7523,window,window,88,0.0,1.0
+high_quality-7523,fixture,toilet,10,1.0,1.0
+high_quality-9619,door (a),door,64,0.0,0.8438
+high_quality-9619,door (b),door,64,0.9844,0.8438
+high_quality-9619,window,window,36,0.0,0.75
+high_quality-9619,fixture,sink,72,0.0,0.9028
+high_quality-9770,door (a),door,16,0.0,1.0
+high_quality-9770,door (b),door,14,0.9286,0.9286
+high_quality-9770,window,window,84,0.5476,0.9524
+high_quality-9770,fixture,sink,35,0.0,1.0
+high_quality-9975,door (a),door,20,0.05,1.0
+high_quality-9975,door (b),door,27,0.963,1.0
+high_quality-9975,window,window,88,0.0,1.0
+high_quality-9975,fixture,sink,36,0.0,1.0
+high_quality_architectural-1052,door (a),door,12,0.0,1.0
+high_quality_architectural-1052,door (b),door,12,0.0,1.0
+high_quality_architectural-1052,window,window,15,0.4,0.5333
+high_quality_architectural-1052,fixture,appliance,50,0.0,0.82
+high_quality_architectural-1061,door (a),door,16,0.0,0.875
+high_quality_architectural-1061,door (b),door,7,1.0,1.0
+high_quality_architectural-1061,window,window,18,0.0556,0.8889
+high_quality_architectural-1061,fixture,appliance,20,0.0,1.0
+high_quality_architectural-1067,door (a),door,22,0.0,1.0
+high_quality_architectural-1067,door (b),door,13,0.8462,0.8462
+high_quality_architectural-1067,window,window,95,1.0,1.0
+high_quality_architectural-1067,fixture,sink,24,0.0,1.0
+high_quality_architectural-1075,door (a),door,40,0.0,0.75
+high_quality_architectural-1075,door (b),door,65,0.9846,1.0
+high_quality_architectural-1075,window,window,72,0.0,1.0
+high_quality_architectural-1075,fixture,sink,42,0.0,0.9524
+high_quality_architectural-1089,door (a),door,22,0.0,0.7727
+high_quality_architectural-1089,door (b),door,44,0.1818,1.0
+high_quality_architectural-1089,window,window,68,0.8088,0.9706
+high_quality_architectural-1089,fixture,appliance,49,0.0,1.0
+high_quality_architectural-1186,door (a),door,14,0.0,1.0
+high_quality_architectural-1186,door (b),door,20,1.0,1.0
+high_quality_architectural-1186,window,window,144,0.0625,0.4028
+high_quality_architectural-1186,fixture,sink,63,0.0,0.8889
+high_quality_architectural-1241,door (a),door,18,0.0,1.0
+high_quality_architectural-1241,door (b),door,26,0.5,1.0
+high_quality_architectural-1241,window,window,84,1.0,0.9524
+high_quality_architectural-1241,fixture,sink,54,0.0,0.9444
+high_quality_architectural-1324,door (a),door,18,0.5,1.0
+high_quality_architectural-1324,door (b),door,18,1.0,0.9444
+high_quality_architectural-1324,window,window,120,1.0,0.9667
+high_quality_architectural-1324,fixture,toilet,45,0.0,1.0
+high_quality_architectural-1328,door (a),door,65,0.0,0.8
+high_quality_architectural-1328,door (b),door,28,1.0,1.0
+high_quality_architectural-1328,window,window,100,1.0,1.0
+high_quality_architectural-1328,fixture,toilet,66,0.0,0.9848
+high_quality_architectural-1359,door (a),door,8,0.0,0.5
+high_quality_architectural-1359,door (b),door,18,0.6667,0.0
+high_quality_architectural-1359,window,window,21,0.0,0.0
+high_quality_architectural-1359,fixture,bath_shower,84,0.0,0.0476
+high_quality_architectural-1361,door (a),door,20,0.0,0.85
+high_quality_architectural-1361,door (b),door,8,0.0,0.875
+high_quality_architectural-1361,window,window,48,0.7083,0.8333
+high_quality_architectural-1361,fixture,sink,63,0.0,0.9841
+high_quality_architectural-1376,door (a),door,26,0.8077,1.0
+high_quality_architectural-1376,door (b),door,20,0.0,0.1154
+high_quality_architectural-1376,window,window,150,0.0,1.0
+high_quality_architectural-1376,fixture,toilet,77,0.0,0.987
+high_quality_architectural-1425,door (a),door,56,0.1786,0.9643
+high_quality_architectural-1425,door (b),door,26,0.7692,1.0
+high_quality_architectural-1425,window,window,72,1.0,0.875
+high_quality_architectural-1425,fixture,sink,99,0.0,0.0
+high_quality_architectural-1539,door (a),door,32,0.9375,1.0
+high_quality_architectural-1539,door (b),door,30,0.0667,0.0667
+high_quality_architectural-1539,window,window,100,1.0,1.0
+high_quality_architectural-1539,fixture,sink,80,0.0,1.0
+high_quality_architectural-154,door (a),door,22,1.0,1.0
+high_quality_architectural-154,door (b),door,33,0.0,1.0
+high_quality_architectural-154,window,window,100,0.5,1.0
+high_quality_architectural-154,fixture,toilet,60,0.0,0.9
+high_quality_architectural-1611,door (a),door,52,0.0,0.7692
+high_quality_architectural-1611,door (b),door,12,1.0,1.0
+high_quality_architectural-1611,window,window,162,0.8025,0.9568
+high_quality_architectural-1611,fixture,sink,60,0.0,1.0
+high_quality_architectural-1654,door (a),door,20,0.0,1.0
+high_quality_architectural-1654,door (b),door,36,1.0,1.0
+high_quality_architectural-1654,window,window,115,0.7478,1.0
+high_quality_architectural-1654,fixture,appliance,161,0.0,0.646
+high_quality_architectural-1660,door (a),door,20,0.0,1.0
+high_quality_architectural-1660,door (b),door,20,1.0,1.0
+high_quality_architectural-1660,window,window,175,1.0,1.0
+high_quality_architectural-1660,fixture,appliance,100,0.0,1.0
+high_quality_architectural-1846,door (a),door,26,0.0,1.0
+high_quality_architectural-1846,door (b),door,56,1.0,1.0
+high_quality_architectural-1846,window,window,108,0.0,1.0
+high_quality_architectural-1846,fixture,bath_shower,6,0.5,1.0
+high_quality_architectural-1848,door (a),door,22,0.7727,1.0
+high_quality_architectural-1848,door (b),door,66,0.9545,0.9545
+high_quality_architectural-1848,window,window,120,0.025,1.0
+high_quality_architectural-1848,fixture,toilet,40,0.0,0.975
+high_quality_architectural-1916,door (a),door,22,0.0,1.0
+high_quality_architectural-1916,door (b),door,60,0.8833,0.8333
+high_quality_architectural-1916,window,window,95,1.0,0.9474
+high_quality_architectural-1916,fixture,bath_shower,10,0.0,1.0
+high_quality_architectural-2039,door (a),door,24,0.0,1.0
+high_quality_architectural-2039,door (b),door,14,1.0,0.9286
+high_quality_architectural-2039,window,window,124,0.9919,1.0
+high_quality_architectural-2039,fixture,appliance,99,0.0,0.8283
+high_quality_architectural-2080,door (a),door,112,0.0,0.8701
+high_quality_architectural-2080,door (b),door,144,0.5625,0.8889
+high_quality_architectural-2080,window,window,168,0.9464,0.9925
+high_quality_architectural-2080,fixture,sink,80,0.0,0.9167
+high_quality_architectural-2148,door (a),door,22,0.0,1.0
+high_quality_architectural-2148,door (b),door,33,1.0,1.0
+high_quality_architectural-2148,window,window,66,0.1061,0.9545
+high_quality_architectural-2148,fixture,appliance,63,0.0,1.0
+high_quality_architectural-242,door (a),door,54,0.0,1.0
+high_quality_architectural-242,door (b),door,54,1.0,1.0
+high_quality_architectural-242,window,window,156,0.9231,1.0
+high_quality_architectural-242,fixture,toilet,60,0.0,0.75
+high_quality_architectural-282,door (a),door,18,0.0,1.0
+high_quality_architectural-282,door (b),door,20,0.5,0.5
+high_quality_architectural-282,window,window,168,1.0,1.0
+high_quality_architectural-282,fixture,appliance,90,0.0,0.0
+high_quality_architectural-3015,door (a),door,20,0.0,1.0
+high_quality_architectural-3015,door (b),door,33,1.0,0.8788
+high_quality_architectural-3015,window,window,55,1.0,1.0
+high_quality_architectural-3015,fixture,bath_shower,8,0.0,0.0
+high_quality_architectural-3096,door (a),door,38,1.0,1.0
+high_quality_architectural-3096,door (b),door,28,1.0,0.9286
+high_quality_architectural-3096,window,window,144,0.0,0.8403
+high_quality_architectural-3096,fixture,sink,108,0.0,0.7593
+high_quality_architectural-3256,door (a),door,24,0.0,1.0
+high_quality_architectural-3256,door (b),door,33,0.7273,1.0
+high_quality_architectural-3256,window,window,145,0.7034,1.0
+high_quality_architectural-3256,fixture,appliance,84,0.0,0.4167
+high_quality_architectural-333,door (a),door,30,0.0,0.5
+high_quality_architectural-333,door (b),door,20,0.4,1.0
+high_quality_architectural-333,window,window,30,1.0,1.0
+high_quality_architectural-333,fixture,appliance,56,0.0,1.0
+high_quality_architectural-3528,door (a),door,28,0.0,0.9091
+high_quality_architectural-3528,door (b),door,50,0.8,0.8
+high_quality_architectural-3528,window,window,125,0.776,0.952
+high_quality_architectural-3528,fixture,sink,216,0.0,0.5789
+high_quality_architectural-3546,door (a),door,12,0.0,1.0
+high_quality_architectural-3546,door (b),door,28,0.9643,0.9286
+high_quality_architectural-3546,window,window,123,1.0,1.0
+high_quality_architectural-3546,fixture,sink,143,0.0,0.9091
+high_quality_architectural-3612,door (a),door,11,0.0,0.0
+high_quality_architectural-3612,door (b),door,5,0.8,1.0
+high_quality_architectural-3612,window,window,9,0.3333,1.0
+high_quality_architectural-3612,fixture,sink,20,0.0,0.95
+high_quality_architectural-3691,door (a),door,108,0.0,0.9907
+high_quality_architectural-3691,door (b),door,96,0.9792,1.0
+high_quality_architectural-3691,window,window,180,1.0,0.9167
+high_quality_architectural-3691,fixture,appliance,132,0.0,1.0
+high_quality_architectural-3794,door (a),door,78,0.0,1.0
+high_quality_architectural-3794,door (b),door,27,0.6667,0.6667
+high_quality_architectural-3794,window,window,132,0.8333,0.8333
+high_quality_architectural-3794,fixture,bath_shower,10,0.8,1.0
+high_quality_architectural-3872,door (a),door,27,0.0,1.0
+high_quality_architectural-3872,door (b),door,9,1.0,1.0
+high_quality_architectural-3872,window,window,51,0.8627,1.0
+high_quality_architectural-3872,fixture,appliance,49,0.0,1.0
