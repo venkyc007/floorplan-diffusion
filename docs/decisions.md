@@ -568,3 +568,23 @@ Own choices:
   - 23% of erased furniture drawings (3 of 13; baseline 0%).
   v2 never fired. Real omissions: 58%. So v3 reacts somewhat to cleaned-patch traces (furniture), but most of its
   recall is not explained by traces. Kept as is (user: stick with the final CHECK); caveat noted for the report.
+
+## Overnight 2026-10-19/20: Stage 1 final test run (task 1)
+
+- The one Stage 1 test run, frozen Day 7 configurations (configs/app.yaml); the TA's new scope replaced the
+  approval step (logged earlier).
+  - src/full_eval.py and src/arch_eval.py got `--benchmark val|test` (default val).
+  - src/selection.py `--benchmark test` (test_main) scores the saved test predictions with the same metrics, builds
+    the FROZEN size-adaptive hybrid (each size bin's cases from the fixed t0 400 / 600 / 700 hybrid, no
+    re-selection), runs the paired bootstrap against matched U-Net, refine-600 and hybrid 600, and writes
+    outputs/stage1_test.md with a val-vs-test table.
+- Own choices:
+  - The test benchmark was uploaded as a separate small private dataset, floorplan-test-benchmark (3 MB); the
+    kernel checks its sha256 against configs/benchmark_checksums.json.
+  - Sampling (GPU kernel floorplan-stage1-test, launched 23:24) is separate from scoring (CPU kernel
+    afterwards), so the GPUs don't idle while CPU scoring runs.
+  - Seeds per setting as in full_eval (100 + position in the --only list).
+  - Smoke test: 20 test cases with 3 sampling steps on the laptop, the whole pipeline end to end.
+  - "> 2 points" flag = |test - val| > 2 percentage points on shares / IoU / F1 (x100) and on validity %; counts
+    (conn_err, room_count_err, dead ends) are shown raw and not flagged.
+- Local copies of data/benchmarks/{val,test}_benchmark.* were placed in the worktree's (git-ignored) data/ folder.

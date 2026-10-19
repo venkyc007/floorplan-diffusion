@@ -233,16 +233,106 @@ def boot_table(comparisons, results, rng):
     return summary, lines, overall_res
 
 
+# ------------------------------------------------------------------ final TEST run (Stage 1, run once)
+TEST_METHODS = ["size_adaptive", "unet_matched", "hybrid_refine600", "ft_constraints_refine600", "nearest_fill"]
+TEST_SCORED = ["nearest_fill", "unet_matched", "ft_constraints_refine600", "hybrid_refine400", "hybrid_refine600",
+               "hybrid_refine700"]
+FROZEN_T0 = {"small": "hybrid_refine400", "medium": "hybrid_refine600", "large": "hybrid_refine700"}  # configs/app.yaml
+TEST_COMPARISONS = [("size-adaptive - matched U-Net", "size_adaptive", "unet_matched"),
+                    ("size-adaptive - refine 600", "size_adaptive", "ft_constraints_refine600"),
+                    ("size-adaptive - hybrid 600", "size_adaptive", "hybrid_refine600")]
+POINTS = {"tmIoU": 100, "mIoU": 100, "pixel_acc": 100, "F1_door": 100, "F1_window": 100, "F1_room": 100,
+          "alignment": 100, "open_on_wall": 100, "room_leak": 100, "arch_validity_pct": 1}   # -> percentage points
+
+
+def frozen_adaptive(results):
+    """The FROZEN Day 7 size-adaptive hybrid: each size bin's cases from its fixed t0 setting (no re-selection)."""
+    sizes = results["hybrid_refine600"]["size_bin"].to_numpy()
+    return pd.concat([results[FROZEN_T0[b]][sizes == b] for b in SIZE_BINS]).sort_index()
+
+
+def score_split(per_case_dir, pred_dirs, workers, split, limit=None):
+    per_case_dir.mkdir(parents=True, exist_ok=True)
+    results, todo = {}, []
+    for n in TEST_SCORED:
+        f = per_case_dir / f"{n}.csv.gz"
+        if f.exists() and limit is None:
+            results[n] = pd.read_csv(f)
+        elif n == "nearest_fill" or find_preds(n, pred_dirs):
+            todo.append(n)
+    if todo:
+        print(f"scoring on {split}:", ", ".join(todo), flush=True)
+        with Pool(min(len(todo), workers)) as pool:
+            for name, df in pool.imap_unordered(score_setting, [(n, find_preds(n, pred_dirs), None, limit, split)
+                                                                for n in todo]):
+                if limit is None:
+                    df.to_csv(per_case_dir / f"{name}.csv.gz", index=False)
+                results[name] = df
+                print("scored", name, flush=True)
+    results["size_adaptive"] = frozen_adaptive(results)
+    return results
+
+
+def test_main(args):
+    """--benchmark test: the one final Stage 1 test run (frozen Day 7 configs, no tuning). Scores the saved test
+    predictions, builds the frozen size-adaptive hybrid, bootstraps it against the comparison methods (as on val)
+    and writes outputs/stage1_test.md with a val-vs-test table (val from outputs/arch_eval/per_case when present)."""
+    out = project_path(args.out)
+    test = score_split(out / "arch_eval_test" / "per_case", [project_path(p) for p in args.preds], args.workers,
+                       "test", args.limit)
+    val_dir = project_path("outputs/arch_eval/per_case")
+    val = None
+    if all((val_dir / f"{n}.csv.gz").exists() for n in TEST_SCORED if n != "nearest_fill"):
+        val = {n: pd.read_csv(val_dir / f"{n}.csv.gz") for n in TEST_SCORED if (val_dir / f"{n}.csv.gz").exists()}
+        val["size_adaptive"] = frozen_adaptive(val)
+    t_overall, t_groups = tables(test, TEST_METHODS)
+    rng = np.random.default_rng(0)
+    summary, boot_lines, _ = boot_table(TEST_COMPARISONS, test, rng)
+    n_test = len(test["unet_matched"])
+    L = ["# Stage 1: final TEST evaluation (run once, frozen Day 7 configurations)", "",
+         f"Test benchmark: {n_test} cases (data/benchmarks/test_benchmark.npz). Methods exactly as chosen on val "
+         "(configs/app.yaml): size-adaptive hybrid (t0 = 400 / 600 / 700 for small / medium / large holes), matched "
+         "U-Net, hybrid t0 = 600, constraint fine-tune refine-600, nearest fill. Same metrics and paired bootstrap as "
+         "on val (src/selection.py). Nothing was tuned on test.", ""]
+    keys = KEY_COLS + ["mIoU", "F1_door", "F1_window", "F1_room"]
+    if val is not None:
+        v_overall, _ = tables(val, TEST_METHODS)
+        L += ["## Val vs test (overall)", "",
+              "Differences in percentage points for shares / IoU / F1 (x100), raw for counts. **Bold** = test differs "
+              "from val by more than 2 points.", ""]
+        L += ["| method | metric | val | test | test - val |", "|---|---|---|---|---|"]
+        for m in TEST_METHODS:
+            for k in keys:
+                a, b = float(v_overall.loc[m, k]), float(t_overall.loc[m, k])
+                d = (b - a) * POINTS.get(k, 1)
+                flag = abs(d) > 2 and k in POINTS
+                L.append(f"| {m} | {k} | {a:.4f} | {b:.4f} | {'**' if flag else ''}{d:+.2f}{'**' if flag else ''} |")
+        L.append("")
+    else:
+        L += ["(Val per-case results not found here: the val-vs-test table is added when this runs locally.)", ""]
+    L += ["## Test, overall", "", to_markdown(t_overall[TABLE_COLS]), ""]
+    for g, df in t_groups.items():
+        L += [f"## Test, {g}", "", to_markdown(df[KEY_COLS]), ""]
+    L += ["## Paired bootstrap on test (size-adaptive hybrid against the comparison methods)", ""] + summary + [""] + boot_lines
+    path = out / ("stage1_test.md" if args.limit is None else "stage1_test_smoke.md")
+    path.write_text("\n".join(L) + "\n", encoding="utf-8")
+    print("\n".join(L[:40]))
+
+
 # ------------------------------------------------------------------ main
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--preds", nargs="+", default=["outputs/kaggle/selection/preds",
                                                        "outputs/kaggle/arch_eval/preds"])
+    parser.add_argument("--benchmark", choices=["val", "test"], default="val",
+                        help="test = the one final Stage 1 test run (frozen configs; see test_main)")
     parser.add_argument("--out", default="outputs")
     parser.add_argument("--workers", type=int, default=min(8, os.cpu_count() or 1))
     parser.add_argument("--limit", type=int, help="first N cases only (code check; nothing is saved)")
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
+    if args.benchmark == "test":
+        return test_main(args)
     out = project_path(args.out)
     per_case_dir = out / "arch_eval" / "per_case"
     results = load_results(per_case_dir, [project_path(p) for p in args.preds], args.workers, args.limit)

@@ -47,14 +47,15 @@ def load_preds(preds_dir, name, bench):
     if name == "nearest_fill":
         return nearest_fill({"corrupted": bench["inputs"], "masks": bench["masks"]})
     z = np.load(Path(preds_dir) / f"{name}.npz")
-    assert (z["plan_ids"] == bench["plan_ids"]).all(), f"{name}: case order differs from the benchmark"
+    n = len(z["plan_ids"])                                    # a code-check run may hold only the first n cases
+    assert (z["plan_ids"] == bench["plan_ids"][:n]).all(), f"{name}: case order differs from the benchmark"
     return z["labels"]
 
 
 def score_setting(job):
     """Per-case old + architectural metrics of one setting (worker process)."""
-    name, preds_dir, pp_n, limit = job
-    bench, meta = load_benchmark(project_path("data/benchmarks/val_benchmark.npz"))
+    name, preds_dir, pp_n, limit, *split = job          # optional 5th item: "val" (default) or "test"
+    bench, meta = load_benchmark(project_path(f"data/benchmarks/{split[0] if split else 'val'}_benchmark.npz"))
     th = yaml.safe_load(open(project_path("configs/arch_metrics.yaml"), encoding="utf-8"))
     base = name.split("+pp")[0]
     preds = load_preds(preds_dir, base, bench)

@@ -1,4 +1,4 @@
-"""Full val-benchmark evaluation (all 7,772 cases) of every model so far.
+"""Full val-benchmark evaluation (all 7,772 cases) of every model so far (--benchmark test: the final test run).
 
 Settings:
   nearest_fill                   baseline (CPU)
@@ -65,8 +65,9 @@ ORDER = ["nearest_fill", "unet", "unet_matched", "run1_ddim50", "run1_refine600"
          "ft_constraints_refine600", "ft_control_refine600"]
 
 
-def benchmark(limit=None):
-    bench, meta = load_benchmark(project_path("data/benchmarks/val_benchmark.npz"))
+def benchmark(limit=None, split="val"):
+    """val (default, all choices) or test (the one final Stage 1 run, user 2026-10-19)."""
+    bench, meta = load_benchmark(project_path(f"data/benchmarks/{split}_benchmark.npz"))
     if limit:
         bench, meta = {k: v[:limit] for k, v in bench.items()}, meta.iloc[:limit]
     return bench, meta
@@ -106,7 +107,7 @@ def load_sketch(path, bench):
 
 def run_part(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    bench, _ = benchmark(args.limit)
+    bench, _ = benchmark(args.limit, args.benchmark)
     ckpts = {"unet": args.ckpt_unet, "run1": args.ckpt_run1, "unet_matched": args.ckpt_unet_matched,
              "ft_constraints": args.ckpt_ft_constraints, "ft_control": args.ckpt_ft_control}
     preds = Path(args.preds)
@@ -134,8 +135,8 @@ def run_part(args):
 
 def score_one(job):
     """Score one setting (runs in a worker process)."""
-    name, preds_dir, limit = job
-    bench, meta = benchmark(limit)
+    name, preds_dir, limit, split = job
+    bench, meta = benchmark(limit, split)
     if name == "nearest_fill":
         fn = nearest_fill
     else:
@@ -159,7 +160,7 @@ def score(args):
     names = (args.only.split(",") if args.only else
              ["nearest_fill"] + [n for n in ORDER[1:] if (preds / f"{n}.npy").exists()])
     with Pool(min(len(names), os.cpu_count() or 1)) as pool:
-        tables = dict(pool.map(score_one, [(n, str(preds), args.limit) for n in names]))
+        tables = dict(pool.map(score_one, [(n, str(preds), args.limit, args.benchmark) for n in names]))
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     full = pd.concat({n: tables[n] for n in names}, names=["setting"])
@@ -168,7 +169,7 @@ def score(args):
     overall = pd.DataFrame({n: tables[n].loc["overall", SHOW] for n in names}).T
     overall["sec_per_case"] = [timing.get(n, float("nan")) for n in names]
     overall.index.name = "setting"
-    lines = [f"# Full val-benchmark evaluation ({int(overall['n'].iloc[0])} cases)", "",
+    lines = [f"# Full {args.benchmark}-benchmark evaluation ({int(overall['n'].iloc[0])} cases)", "",
              "## Overall", "", to_markdown(overall), ""]
     key = ["tmIoU", "mIoU", "F1_door", "F1_window", "F1_room", "conn_err", "room_leak", "room_count_err"]
     for metric in key:
@@ -245,6 +246,8 @@ def main():
     parser.add_argument("--sketch", help="saved U-Net predictions (.npz) used as the starting plan of hybrid_* settings")
     parser.add_argument("--limit", type=int, help="only the first N cases (code check)")
     parser.add_argument("--quick", action="store_true", help="3 sampling steps (code check)")
+    parser.add_argument("--benchmark", choices=["val", "test"], default="val",
+                        help="val (default, all choices) or test (final Stage 1 numbers, run once)")
     args = parser.parse_args()
     if args.figure:
         figure(args)

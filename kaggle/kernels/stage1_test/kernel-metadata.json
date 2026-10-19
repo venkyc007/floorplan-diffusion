@@ -1,0 +1,22 @@
+{
+  "id": "venkatesh007c/floorplan-stage1-test",
+  "title": "floorplan-stage1-test",
+  "code_file": "run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "venkatesh007c/floorplan-code",
+    "venkatesh007c/floorplan-test-benchmark"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "venkatesh007c/floorplan-finetune-constraints",
+    "venkatesh007c/floorplan-unet-matched"
+  ],
+  "model_sources": []
+}
