@@ -307,7 +307,12 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
     completed = parsed.copy()
     for h in holes:
         new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None)
-        completed = restrict(completed, new, h["type"])
+        kept = restrict(completed, new, h["type"])
+        y0, x0, y1, x1 = h["box"]                                # debug record: map before, raw hybrid output and
+        sl = (slice(max(0, y0 - 16), y1 + 17), slice(max(0, x0 - 16), x1 + 17))   # what the restriction kept
+        h["raw"] = {"origin": (sl[0].start, sl[1].start), "before": completed[sl].copy(), "hybrid": new[sl].copy(),
+                    "kept": kept[sl].copy()}
+        completed = kept
         h.update(info)
     times["fill"] = time.time() - t
     additions = {C16.names[k]: (completed != parsed) & (completed == k) for k in np.unique(completed[completed != parsed])}

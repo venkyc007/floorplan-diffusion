@@ -189,6 +189,77 @@ def main():
             cases.append((n, kind, c, res, verdict))
             print(n, kind, f"{res['seconds']:.0f} s", verdict, res["messages"], flush=True)
     figure(cases, args.tag)
+    hole_report(cases, args.tag)
+
+
+def hole_report(cases, tag):
+    """Step 3 (user, 2026-10-19): for every hole that overlaps the omission, the map before the fill, the hybrid's
+    RAW output (before the type restriction) and what the restriction kept -> check_set_holes{tag}.png and a
+    section appended to check_set{tag}.md with the counts that explain the outcome. Nothing is changed."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    rows, L = [], ["", "## Holes in the right place: raw hybrid output (step 3)", "",
+                   "Per hole overlapping the omission: new pixels of the hole's type in the RAW hybrid output (before "
+                   "the type restriction), its largest new component, what the restriction kept, and the classes the "
+                   "hybrid changed inside the box. Figure: check_set_holes" + tag + ".png.", "",
+                   "| # | drawing | omission | hole | raw new px of type (largest) | kept px | hybrid changed (class: px) | why nothing / what |",
+                   "|---|---|---|---|---|---|---|---|"]
+    for i, (n, kind, (img, removed, expected), res, v) in enumerate(cases):
+        comp = res["completed"]
+        rm = cv2.resize(removed.astype(np.uint8), (comp.shape[1], comp.shape[0]), interpolation=cv2.INTER_NEAREST) > 0
+        rm = grow(rm, 3) if rm.any() else rm
+        for h in res["holes"]:
+            y0, x0, y1, x1 = h["box"]
+            if not rm[y0:y1 + 1, x0:x1 + 1].any() or "raw" not in h:
+                continue
+            r = h["raw"]
+            oy, ox = r["origin"]
+            box = np.zeros(r["before"].shape, bool)
+            box[y0 - oy:y1 - oy + 1, x0 - ox:x1 - ox + 1] = True
+            changed = box & (r["hybrid"] != r["before"])
+            typ = h["type"]
+            cls = [I[typ]] if typ in I else ([I["wall"]] if typ == "room" else [])
+            new = changed & np.isin(r["hybrid"], cls)
+            comps = components(new)
+            big = max((c.sum() for c in comps), default=0)
+            kept = int((box & (r["kept"] != r["before"])).sum())
+            cnt = {C16.names[c]: int((changed & (r["hybrid"] == c)).sum()) for c in np.unique(r["hybrid"][changed])}
+            cnt = ", ".join(f"{k}: {v}" for k, v in sorted(cnt.items(), key=lambda t: -t[1])) or "none"
+            if not changed.any():
+                why = "the hybrid reproduced the map unchanged inside the box"
+            elif not new.any():
+                why = f"the hybrid changed pixels but drew no {typ}; the restriction reverts them all"
+            elif kept == 0:
+                why = (f"{typ} drawn but dropped: C15 (not a compatible room)" if typ in R.CONST.get("fixture_rooms", {})
+                       else f"{typ} drawn but nothing kept")
+            elif not v["restored"]:
+                why = f"{typ} kept ({kept} px) but not on the omitted spot"
+            else:
+                why = f"{typ} kept ({kept} px) on the omitted spot"
+            L.append(f"| {i + 1} | {n} | {kind} | {typ} ({'+'.join(h['rules'])}) | {int(new.sum())} ({big}) | {kept} | "
+                     f"{cnt} | {why} |")
+            rows.append((f"{i + 1}. {n}: {kind}, hole {typ}", r, box, rm[oy:oy + box.shape[0], ox:ox + box.shape[1]]))
+    if not rows:
+        L.append("| - | - | - | no hole overlapped an omission | | | | |")
+    else:
+        fig, axes = plt.subplots(len(rows), 3, figsize=(12, 4 * len(rows)), squeeze=False)
+        for (title, r, box, rmc), ax in zip(rows, axes):
+            for a, key, t in zip(ax, ("before", "hybrid", "kept"),
+                                 ("parse (before fill)", "hybrid RAW output", "after type restriction")):
+                a.imshow(C16.colourise(r[key]), interpolation="nearest")
+                ys, xs = np.nonzero(box)
+                a.add_patch(plt.Rectangle((xs.min() - 0.5, ys.min() - 0.5), xs.max() - xs.min() + 1,
+                                          ys.max() - ys.min() + 1, fill=False, ec="red", lw=1))
+                if rmc.any():
+                    a.contour(rmc, levels=[0.5], colors="orange", linewidths=0.8)
+                a.set_title(f"{title}: {t}" if key == "before" else t, fontsize=8)
+                a.axis("off")
+        fig.tight_layout()
+        fig.savefig(OUT / f"check_set_holes{tag}.png", dpi=80)
+    with open(OUT / f"check_set{tag}.md", "a", encoding="utf-8") as f:
+        f.write("\n".join(L) + "\n")
+    print("\n".join(L))
 
 
 def figure(cases, tag):
