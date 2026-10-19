@@ -6,15 +6,23 @@
 
 | detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0.9 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.55 | 20% | 22% | 39% | 22% | 9% | 0% | 16% | 32% |
+| v2 0.5 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.35 | 58% | 48% | 78% | 70% | 61% | 0% | 55% | 95% |
+
+## Which detector (best within the budget with the chosen rules)
+
+| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| (v2) v2 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.42 | 25% | 22% | 48% | 22% | 13% | 0% | 16% | 55% |
+| (v3) v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.38 | 54% | 48% | 74% | 52% | 57% | 0% | 52% | 95% |
+| (both) v2 0.5 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.35 | 58% | 48% | 78% | 70% | 61% | 0% | 55% | 95% |
 
 ## What R6, R7 and the second ink tier add (the choice vs the choice with that part off)
 
 | part | recall gained (points) | false alarms cost | the choice without it |
 |---|---|---|---|
-| R6 (windowless exterior span) | +0.6 | +0.03 | 0.53 false alarms, 19% recall |
-| R7 (gap too narrow) | +0.0 | +0.00 | 0.55 false alarms, 20% recall |
-| ink tier 2 (other interior doors) | +3.0 | +0.18 | 0.38 false alarms, 17% recall |
+| R6 (windowless exterior span) | +0.6 | +0.02 | 0.33 false alarms, 57% recall |
+| R7 (gap too narrow) | +0.0 | +0.00 | 0.35 false alarms, 58% recall |
+| ink tier 2 (other interior doors) | +1.9 | +0.15 | 0.20 false alarms, 56% recall |
 
 ## R6 / R7 on their own
 
@@ -44,19 +52,19 @@
 
 | detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0.9 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.55 | 20% | 22% | 39% | 22% | 9% | 0% | 16% | 32% |
-| 0.95 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.47 | 19% | 22% | 39% | 17% | 9% | 0% | 16% | 32% |
-| 0.8 / 40 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.60 | 18% | 22% | 39% | 9% | 9% | 0% | 16% | 32% |
-| 0.5 / 80 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.60 | 18% | 22% | 39% | 4% | 9% | 0% | 13% | 36% |
-| 0.98 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.45 | 17% | 22% | 39% | 13% | 9% | 0% | 16% | 23% |
-| 0.8 / 80 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.45 | 17% | 22% | 39% | 4% | 9% | 0% | 13% | 32% |
-| 0.9 / 40 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.47 | 17% | 22% | 39% | 4% | 9% | 0% | 13% | 32% |
-| 0.7 / 80 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.55 | 17% | 22% | 39% | 4% | 9% | 0% | 13% | 32% |
+| v2 0.5 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.35 | 58% | 48% | 78% | 70% | 61% | 0% | 55% | 95% |
+| v2 0.6 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.38 | 58% | 48% | 78% | 70% | 61% | 0% | 55% | 95% |
+| v2 0.5 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.42 | 58% | 48% | 78% | 70% | 61% | 0% | 55% | 95% |
+| v2 0.6 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.35 | 57% | 48% | 74% | 70% | 61% | 0% | 55% | 95% |
+| v2 0.8 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.35 | 57% | 48% | 78% | 70% | 57% | 0% | 55% | 95% |
+| v2 0.7 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.38 | 57% | 48% | 78% | 70% | 57% | 0% | 55% | 95% |
+| v2 0.5 / 40 px + v3 0.6 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.35 | 57% | 43% | 74% | 70% | 61% | 0% | 55% | 95% |
+| v2 0.5 / 40 px + v3 0.7 / 20 px | 700 | on | 1.5 / 1.0 | x1.2 | off | 0.35 | 57% | 43% | 74% | 70% | 61% | 0% | 55% | 95% |
 
 ## Detector alone (best within 0.15 / 0.25 / 0.35 false alarms)
 
 | detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0.95 / 20 px | off | off | off | off | off | 0.12 | 5% | 0% | 0% | 13% | 0% | 0% | 6% | 14% |
-| 0.9 / 20 px | off | off | off | off | off | 0.23 | 5% | 0% | 0% | 17% | 0% | 0% | 6% | 14% |
-| 0.5 / 40 px | off | off | off | off | off | 0.30 | 9% | 0% | 4% | 17% | 4% | 0% | 13% | 27% |
+| v2 0.5 / 20 px | off | off | off | off | off | 0.12 | 11% | 0% | 9% | 17% | 4% | 0% | 13% | 36% |
+| v2 0.5 / 20 px | off | off | off | off | off | 0.12 | 11% | 0% | 9% | 17% | 4% | 0% | 13% | 36% |
+| v2 0.5 / 20 px | off | off | off | off | off | 0.12 | 11% | 0% | 9% | 17% | 4% | 0% | 13% | 36% |

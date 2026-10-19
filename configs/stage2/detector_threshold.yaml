@@ -1,4 +1,4 @@
-min_blob: 20
+min_blob: 40
 source: 'detection_eval.py: best mean recall with <= 0.5 false alarms per intact val
   plan (300 val plans)'
 strong_rules:
@@ -6,7 +6,7 @@ strong_rules:
 - C17
 - C6
 - C12
-threshold: 0.9
+threshold: 0.5
 final: detector + C8 + R5 + ink tiers + R6 + R7; budget 0.6 (rules first, detector
   after)
 extra_rules:
@@ -31,3 +31,6 @@ r6_scale: 1.2
 r7_min_width: null
 manual_only_types:
 - railing
+detector_model: both
+threshold_v3: 0.5
+min_blob_v3: 20
