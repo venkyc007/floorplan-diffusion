@@ -553,3 +553,11 @@ Own choices:
   Caveat (own): v3 sees the erased drawing, so it may partly learn the erasure's traces (smoothed / inpainted
   patches) rather than missing components. Its 97% on erased walls is suspicious. Real omissions leave no such
   traces; a check with fake erasures of empty areas would tell.
+- Final round (budget 0.6, tuning drawings): detectors v2 (0.5 / 40 px) + v3 (0.5 / 20 px), C8 >= 700, R5,
+  ink 1.5 / 1.0, R6 x1.2, R7 off.
+  - Tuning: 0.35 false alarms, 58%; v2 alone 25%, v3 alone 54%.
+  - Held-out: 0.41 false alarms, 59%; the detectors alone give 58% at 0.17.
+  - Check set: 4 / 12 correct + 3 partly (automatic 5 / 12).
+- Railings: right-type recall still 0% (6% only via other-type boxes), so they stay manual-only.
+- Not yet checked: how much of v3's gain comes from erasure traces. Proposed control: fake erasures of empty room
+  areas on intact held-out drawings; v3's firing rate there.

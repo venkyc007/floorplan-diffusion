@@ -1,55 +1,57 @@
-# Check set: 3 / 12 correct (fast mode, CPU)
+# Check set: 5 / 12 correct (fast mode, CPU)
 
 found = a hole overlaps the omission; restored = the expected class was added there; extra = added components elsewhere; correct = restored and no extra (intact: nothing added).
 
 | # | drawing | omission | found | restored | extra | correct | holes | s |
 |---|---|---|---|---|---|---|---|---|
-| 1 | colorful-11261 | door (a) | yes | yes | 0 | **yes** | 1 | 38 |
-| 2 | colorful-1148 | door (a) | yes | yes | 0 | **yes** | 2 | 61 |
-| 3 | colorful-1261 | door (b) | no | no | 4 | no | 4 | 121 |
-| 4 | colorful-13689 | door (b) | no | no | 0 | no | 0 | 2 |
+| 1 | colorful-11261 | door (a) | yes | yes | 1 | no | 1 | 43 |
+| 2 | colorful-1148 | door (a) | yes | yes | 0 | **yes** | 1 | 36 |
+| 3 | colorful-1261 | door (b) | no | no | 1 | no | 1 | 52 |
+| 4 | colorful-13689 | door (b) | yes | no | 0 | no | 1 | 31 |
 | 5 | colorful-13513 | window | no | no | 0 | no | 0 | 1 |
-| 6 | colorful-13804 | window | no | no | 0 | no | 0 | 2 |
-| 7 | colorful-13820 | wall | no | no | 5 | no | 6 | 171 |
-| 8 | colorful-13824 | wall | no | no | 0 | no | 0 | 5 |
-| 9 | colorful-13826 | fixture | no | no | 0 | no | 0 | 6 |
+| 6 | colorful-13804 | window | yes | yes | 0 | **yes** | 1 | 30 |
+| 7 | colorful-13820 | wall | yes | yes | 6 | no | 8 | 223 |
+| 8 | colorful-13824 | wall | yes | yes | 0 | **yes** | 1 | 41 |
+| 9 | colorful-13826 | fixture | yes | yes | 1 | no | 2 | 65 |
 | 10 | colorful-14036 | fixture | no | no | 0 | no | 0 | 1 |
-| 11 | colorful-14126 | room | no | no | 0 | no | 0 | 1 |
-| 12 | colorful-14147 | intact | no | no | 0 | **yes** | 0 | 3 |
+| 11 | colorful-14126 | room | yes | yes | 0 | **yes** | 3 | 82 |
+| 12 | colorful-14147 | intact | no | no | 0 | **yes** | 0 | 4 |
 
-## 1. colorful-11261 (door (a)): automatic verdict correct
+## 1. colorful-11261 (door (a)): automatic verdict wrong
 
-Removed: door (a). Detected: door (INK). Found yes, restored yes, extra 0.
+Removed: door (a). Detected: room (INK+detector). Found yes, restored yes, extra 1.
 
 Added (messages):
 
-- door added on the bedroom / kitchen wall
+- door added on the bedroom / hallway wall
+- wall added next to hallway
+- wall added next to hallway
+- wall added next to hallway
+- missing room -> room drawn as bedroom, kitchen, bathroom
 
 ## 2. colorful-1148 (door (a)): automatic verdict correct
 
-Removed: door (a). Detected: door (C8), railing (detector). Found yes, restored yes, extra 0.
+Removed: door (a). Detected: door (C8+detector). Found yes, restored yes, extra 0.
 
 Added (messages):
 
 - bedroom had no door -> door added on the bedroom / hallway wall
-- railing missing (detector) -> nothing added (the model kept the drawing as it was)
 
 ## 3. colorful-1261 (door (b)): automatic verdict wrong
 
-Removed: door (b). Detected: door (R5), railing (detector), railing (detector), railing (detector). Found no, restored no, extra 4.
+Removed: door (b). Detected: door (R5). Found no, restored no, extra 1.
 
 Added (messages):
 
 - open doorway between hallway and other_room had no door -> door added
-- railing added in the plan
 
 ## 4. colorful-13689 (door (b)): automatic verdict wrong
 
-Removed: door (b). Detected: nothing. Found no, restored no, extra 0.
+Removed: door (b). Detected: door (detector). Found yes, restored no, extra 0.
 
 Added (messages):
 
-- (nothing)
+- door missing (detector) -> nothing added (the model kept the drawing as it was)
 
 ## 5. colorful-13513 (window): automatic verdict wrong
 
@@ -59,41 +61,44 @@ Added (messages):
 
 - (nothing)
 
-## 6. colorful-13804 (window): automatic verdict wrong
+## 6. colorful-13804 (window): automatic verdict correct
 
-Removed: window. Detected: nothing. Found no, restored no, extra 0.
+Removed: window. Detected: window (detector). Found yes, restored yes, extra 0.
 
 Added (messages):
 
-- (nothing)
+- window added on the kitchen wall
 
 ## 7. colorful-13820 (wall): automatic verdict wrong
 
-Removed: wall. Detected: door (INK), door (INK), door (INK), door (INK), door (INK), door (INK). Found no, restored no, extra 5.
+Removed: wall. Detected: door (detector), room (detector), door (INK), door (INK), door (INK), door (INK), door (INK), door (INK). Found yes, restored yes, extra 6.
 
 Added (messages):
 
-- door added on the bedroom / other_room wall
 - door added on the the wall
+- wall added next to other_room
+- wall added next to other_room
+- door added on the bedroom / other_room wall
 - door added on the living / hallway wall
 - door missing (INK) -> nothing added (the model kept the drawing as it was)
 - door added on the other_room / other_room wall
 
-## 8. colorful-13824 (wall): automatic verdict wrong
+## 8. colorful-13824 (wall): automatic verdict correct
 
-Removed: wall. Detected: nothing. Found no, restored no, extra 0.
+Removed: wall. Detected: wall (detector). Found yes, restored yes, extra 0.
 
 Added (messages):
 
-- (nothing)
+- wall added next to other_room
 
 ## 9. colorful-13826 (fixture): automatic verdict wrong
 
-Removed: fixture. Detected: nothing. Found no, restored no, extra 0.
+Removed: fixture. Detected: sink (detector), appliance (detector). Found yes, restored yes, extra 1.
 
 Added (messages):
 
-- (nothing)
+- sink added in bathroom
+- appliance added in kitchen
 
 ## 10. colorful-14036 (fixture): automatic verdict wrong
 
@@ -103,13 +108,18 @@ Added (messages):
 
 - (nothing)
 
-## 11. colorful-14126 (room): automatic verdict wrong
+## 11. colorful-14126 (room): automatic verdict correct
 
-Removed: room. Detected: nothing. Found no, restored no, extra 0.
+Removed: room. Detected: room (detector), room (detector), room (detector). Found yes, restored yes, extra 0.
 
 Added (messages):
 
-- (nothing)
+- wall added next to bedroom
+- missing room -> room drawn as kitchen
+- wall added next to kitchen
+- wall added next to kitchen
+- missing room -> room drawn as living, bedroom
+- wall added next to living
 
 ## 12. colorful-14147 (intact): automatic verdict correct
 
@@ -125,24 +135,32 @@ Per hole overlapping the omission: new pixels of the hole's type in the RAW hybr
 
 | # | drawing | omission | hole | raw new px of type (largest) | kept px | hybrid changed (class: px) | why nothing / what |
 |---|---|---|---|---|---|---|---|
-| 1 | colorful-11261 | door (a) | door (INK) | 11 (11) | 11 | bedroom: 12, door: 11 | door kept (11 px) on the omitted spot |
-| 2 | colorful-1148 | door (a) | door (C8) | 105 (105) | 39 | door: 105 | door kept (39 px) on the omitted spot |
+| 1 | colorful-11261 | door (a) | room (INK+detector) | 79 (43) | 204 | wall: 79, kitchen: 57, bedroom: 45, appliance: 28, door: 18, bathroom: 5 | room kept (204 px) on the omitted spot |
+| 2 | colorful-1148 | door (a) | door (C8+detector) | 105 (105) | 39 | door: 105 | door kept (39 px) on the omitted spot |
+| 4 | colorful-13689 | door (b) | door (detector) | 0 (0) | 0 | wall: 3 | the hybrid changed pixels but drew no door; the restriction reverts them all |
+| 6 | colorful-13804 | window | window (detector) | 27 (27) | 27 | window: 27, wall: 1, living: 1 | window kept (27 px) on the omitted spot |
+| 7 | colorful-13820 | wall | room (detector) | 13 (8) | 13 | wall: 13 | room kept (13 px) on the omitted spot |
+| 8 | colorful-13824 | wall | wall (detector) | 6 (6) | 6 | wall: 6 | wall kept (6 px) on the omitted spot |
+| 9 | colorful-13826 | fixture | sink (detector) | 144 (144) | 144 | sink: 144, bathroom: 7, other_room: 6 | sink kept (144 px) on the omitted spot |
+| 11 | colorful-14126 | room | room (detector) | 19 (19) | 23 | wall: 19, kitchen: 4 | room kept (23 px) on the omitted spot |
+| 11 | colorful-14126 | room | room (detector) | 9 (6) | 26 | bedroom: 14, wall: 9, living: 3 | room kept (26 px) on the omitted spot |
+| 11 | colorful-14126 | room | room (detector) | 44 (44) | 48 | wall: 44, kitchen: 4 | room kept (48 px) on the omitted spot |
 
-## My verdicts (+ R6 / R7 / ink tiers)
+## My verdicts (final CHECK: detectors v2 + v3 + rules; after looking at check_set.png and check_set_holes.png)
 
 | # | omission | verdict | why |
 |---|---|---|---|
-| 1 | door (a) | correct | ink check (tier 1) found the redrawn door; door drawn at the erased doorway |
-| 2 | door (a) | correct | C8 found the cut-off bedroom; one median door on the right wall |
-| 3 | door (b) | wrong | R5 at another gap (door added there); false railing holes, a railing added |
-| 4 | door (b) | wrong | nothing flagged |
-| 5 | window | wrong | nothing flagged (R6 did not fire) |
-| 6 | window | wrong | nothing flagged (R6 did not fire) |
-| 7 | wall | wrong | the second ink tier is back on this drawing's arc-less interior doors: 6 false door holes, 5 doors added |
-| 8 | wall | wrong | nothing flagged |
-| 9 | fixture | wrong | nothing flagged |
+| 1 | door (a) | partly | found, but the door hole merged into a "room" hole: the fill straightened the angled wall and changed room types around the doorway |
+| 2 | door (a) | correct | C8 + detector; one median door on the right wall |
+| 3 | door (b) | wrong | R5 at another gap, a door added there |
+| 4 | door (b) | wrong | the detector found the doorway, but the parse already shows a door there, so nothing is added |
+| 5 | window | wrong | nothing flagged |
+| 6 | window | correct | detector found it; a window drawn on the erased spot of the kitchen's exterior wall |
+| 7 | wall | wrong | the ink check's second tier fires on this drawing's arc-less interior doors: 6 false doors |
+| 8 | wall | correct | wall gap closed on the erased spot |
+| 9 | fixture | partly | sink drawn on the erased spot; a false appliance added in the kitchen |
 | 10 | fixture | wrong | nothing flagged |
-| 11 | room | wrong | nothing flagged |
+| 11 | room | partly | room walls redrawn in two holes on the erased band; a third hole drew a wall across an open area |
 | 12 | intact | correct | nothing flagged, nothing added |
 
-**Score: 3 / 12 correct** (same as the previous run). Settings were not changed based on this set.
+**Score: 4 / 12 correct, 3 partly** (automatic check: 5 / 12). Previous run: 3 / 12. Settings were not changed based on this set.
