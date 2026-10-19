@@ -29,7 +29,7 @@ import numpy as np
 
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
-from src.stage2.data.erasure import draw_wall, erase, open_gap
+from src.stage2.data.erasure import draw_wall, erase, erase_symbol, open_gap
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.gaps import closed_pairs
@@ -128,6 +128,8 @@ def make_case(kind, img, lbl, bad, min_len=0):
         out = draw_wall(img, m, lbl, WALL_PX)
     elif kind == "door (b)":                             # doorway left open, leaf + arc removed
         out = open_gap(img, m, lbl, WALL_PX)
+    elif kind in ("window", "fixture"):                  # whole symbol box cleared (window: wall drawn across)
+        out = erase_symbol(img, m, lbl, WALL_PX)
     else:                                                # inpainted from the surroundings (never white)
         out = erase(img, m, lbl, wall_px=WALL_PX)
     expected = {"door (a)": "door", "door (b)": "door", "window": "window", "wall": "wall", "room": "wall",

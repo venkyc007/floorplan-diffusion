@@ -24,7 +24,7 @@ import numpy as np
 
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
-from src.stage2.data.erasure import draw_wall, erase, grown, open_gap
+from src.stage2.data.erasure import draw_wall, erase, erase_symbol, grown, open_gap
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import build_heldout_cases
@@ -110,7 +110,8 @@ def omit(kind, img, lbl, rng):
     if m is None or not m.any():
         return None
     typ = C16.names[int(np.bincount(lbl[m]).argmax())] if kind == "fixture" else TYPE[kind]
-    return erase(img, m, lbl, wall_px=WALL_PX), m, typ, True
+    out = erase_symbol(img, m, lbl, WALL_PX) if kind in ("window", "fixture") else erase(img, m, lbl, wall_px=WALL_PX)
+    return out, m, typ, True
 
 
 def score(props, rm, typ):

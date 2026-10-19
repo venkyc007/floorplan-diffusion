@@ -4,7 +4,7 @@ from the spot, and the image given to the pipeline carries no figure outline."""
 import numpy as np
 
 from src.stage2.data.classes16 import C16
-from src.stage2.data.erasure import draw_wall, erase, grown, open_gap
+from src.stage2.data.erasure import door_zone, draw_wall, erase, erase_symbol, grown, open_gap, symbol_zone
 from src.stage2.pipeline import check_set
 
 I = C16.index
@@ -46,5 +46,27 @@ def test_pipeline_input_has_no_outline():
     img, lbl = toy()
     out, removed, expected = check_set.make_case("fixture", img, lbl, None)
     assert out.ndim == 2 and expected == "sink"
-    away = ~grown(removed, 2)
+    away = ~grown(symbol_zone(removed, removed.shape), 2)
     assert np.array_equal(out[away], img[away])
+
+
+def test_whole_symbol_removed_walls_kept():
+    """Ink outside the polygon (a door's swing arc, a shower hose) is cleared within the zone; walls stay;
+    a text mark outside the zone is untouched."""
+    img, lbl = toy()
+    door = np.zeros_like(lbl, bool)
+    door[20:28, 50:62] = True
+    img[door], lbl[door] = 255, I["door"]
+    img[28:40, 50] = 0                                  # leaf, outside the door polygon
+    img[60:63, 5:9] = 0                                 # "text", far away
+    for out in (open_gap(img, door, lbl), draw_wall(img, door, lbl)):
+        assert out[28:40, 50].min() > 120               # leaf gone
+        assert np.array_equal(out[lbl == I["wall"]], img[lbl == I["wall"]])
+        assert np.array_equal(out[60:63, 5:9], img[60:63, 5:9])
+    sink = lbl == I["sink"]
+    img2 = img.copy()
+    img2[37, 30:40] = 0                                 # symbol ink just below the sink polygon
+    out = erase_symbol(img2, sink, lbl)
+    assert out[37, 30:40].min() > 120
+    zone = door_zone(door, lbl.shape)
+    assert zone[28:40, 50].all() and not zone[60, 5]

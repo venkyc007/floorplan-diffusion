@@ -403,3 +403,20 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **Text erasure for the text-dependence test (`parse/text_dependence.py`): dark (< 128) 8-connected pieces with bounding box <= 32 px per side (4 wall thicknesses), <= 400 px, >= 3 px on one side, not touching walls/openings/railings/fixtures (grown 2 px), inpainted.** Seen in the smoke test: room names are removed; the dashes of dashed lines go too (character-sized); text touching a wall stays. Parser at scale 1 (the parser set is already ~8 px walls), IoU pooled over drawings.
 - **First run of the three kernels showed two erasure flaws; fixed and re-run (counts as the one retry).** (1) Door kind (a) on drawings whose walls are two thin outlines with a light inside: "median wall colour" was light, so the doorway still looked open (C8 found 0 of 15 cut-off rooms). Now the wall is drawn as a bridge (the wall mask closed across the gap) painted line by line with the median grey of that line's wall pixels just past the doorway, which continues outline walls as outlines and solid walls as fill. Leaf/arc = geometric bands (leaf line + quarter circle around the best of 4 hinge options, not across outdoor hatching) united with the earlier line-piece rule (thick arcs). Still imperfect for double-swing doors drawn as a box and for doors in angled walls (fallback fill). (2) Text erasure also removed thin non-text lines on small-scale drawings and left letter ghosts: now only pieces lying inside rooms (>= 95% on room labels), ink threshold 170; plus a control row (wall / door / window IoU original vs erased).
 - **Image-level evaluation also records how much of each removed component the parser labels back as that class ("redrawn")**: in a diagnostic on one drawing the parser drew an erased window back at 89% and half of an erased wall piece; an erased appliance was not redrawn.
+
+## Erasure v2: whole symbol removed (2026-10-19, user request after erasure_check review)
+
+- User: the v1 erasure left most symbol ink (swing arcs lie outside the CubiCasa door polygon; shower hoses, sink smudges).
+  New zones (user spec): door = opening + a square of side = door length on both sides of the wall; fixture / window =
+  polygon box grown 40%. Kind (a) = kind (b) + wall drawn across.
+- Own choices:
+  - Inside a zone only the component's pixels and ink STROKES are inpainted, not the whole zone. Clearing the whole
+    square left hourglass smears on grey / hatched fills. A stroke is >= 20 grey levels darker than the local
+    background (closing, 15 px).
+  - Straight runs longer than 60% (door zone) / 90% (symbol box) of the zone count as background texture (hatching)
+    and stay. 90% for boxes because a fixture outline spans ~70% of its box.
+  - Kept: all other labelled components and the arc zones of other doors.
+  - A window is replaced by the wall drawn across it (an omitted window is a plain wall), as for door (a).
+  - Railings, wall pieces and rooms keep the plain polygon erasure (not in the user's list).
+- Known leftovers (erasure_check.png): a faint dashed arc and a dark blob on the hatched balcony of row 1; small grey
+  smudges where strokes crossed hatching (rows 4-6).
