@@ -3,7 +3,7 @@
 
 checkpoints:
   parser: outputs/kaggle/parser_v2/runs/parser_v2B/checkpoints/best.pt   # v2B mixed (user, 2026-10-19); v1 was parser_v1/runs/parser_v1
-  detector: outputs/kaggle/k2a/runs/k2a_detector/checkpoints/best.pt
+  detector: outputs/kaggle/detv2/runs/detector_v2/checkpoints/best.pt   # v2 (user, 2026-10-19); v1 was k2a/runs/k2a_detector
   unet: outputs/kaggle/k2a/runs/k2a_unet/checkpoints/best.pt
   diffusion: outputs/kaggle/k1/runs/k1_constrained/checkpoints/best.pt
 
