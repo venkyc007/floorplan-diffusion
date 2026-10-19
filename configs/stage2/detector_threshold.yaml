@@ -26,7 +26,7 @@ ink_threshold: 1.5
 check_tuning: outputs/stage2/check_tune.md (parsed tuning drawings; budget 0.6, detector
   >= 0.25; user 2026-10-19)
 ink_relevant_only: true
-ink_threshold_interior: 1.0
+ink_threshold_interior: 0.0
 r6_scale: 1.2
 r7_min_width: null
 manual_only_types:
@@ -34,3 +34,5 @@ manual_only_types:
 detector_model: both
 threshold_v3: 0.5
 min_blob_v3: 20
+ink_tier2_note: 'off (user, 2026-10-19 overnight): fails on drawings with arc-less
+  doors (check-set case 7)'

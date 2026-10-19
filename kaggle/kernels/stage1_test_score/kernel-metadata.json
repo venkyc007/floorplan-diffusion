@@ -1,0 +1,20 @@
+{
+  "id": "venkatesh007c/floorplan-stage1-test-score",
+  "title": "floorplan-stage1-test-score",
+  "code_file": "run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [
+    "venkatesh007c/floorplan-code",
+    "venkatesh007c/floorplan-test-benchmark"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "venkatesh007c/floorplan-stage1-test"
+  ],
+  "model_sources": []
+}
