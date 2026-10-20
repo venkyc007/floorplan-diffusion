@@ -1,5 +1,5 @@
 """Kaggle kernel floorplan-stage2-eval-e2e (CPU): end-to-end validation on 12 new held-out val drawings, then the
-12-drawing check set (tag _v3: after the 2026-10-20 fixes; _v2 = the run with the gap rule before the existing-symbol check).
+12-drawing check set (tag _v4: + window / wall ink double checks), then batch 2 = 12 fresh held-out drawings (e2e_val_batch2).
 
 Inputs: code dataset venkatesh007c/floorplan-code; outputs of kernels floorplan-stage2-data (val zips) and the
 checkpoint kernels. Output: /kaggle/working/stage2/ (e2e_val.png, e2e_val.md, e2e_val.csv).
@@ -30,7 +30,8 @@ if __name__ == "__main__":
     from src.stage2.kaggle_cpu import finish, setup
     data = setup()
     try:
-        run(f"{sys.executable} -m src.stage2.pipeline.e2e_val --zip {data}/parser_val.zip --tag _v3")
-        run(f"{sys.executable} -m src.stage2.pipeline.check_set --zip {data}/parser_val.zip --tag _v3")
+        run(f"{sys.executable} -m src.stage2.pipeline.e2e_val --zip {data}/parser_val.zip --tag _v4")
+        run(f"{sys.executable} -m src.stage2.pipeline.check_set --zip {data}/parser_val.zip --tag _v4")
+        run(f"{sys.executable} -m src.stage2.pipeline.e2e_val --zip {data}/parser_val.zip --batch 2 --tag _batch2")
     finally:
         finish()

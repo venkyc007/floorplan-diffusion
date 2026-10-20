@@ -47,6 +47,7 @@ from src.stage2.detect.door_ink import ink_candidates
 from src.stage2.detect.flag_gap import flagged_gap, gap_verdict
 from src.stage2.detect.gaps import gap_candidates
 from src.stage2.detect.narrow_gaps import gap_candidates_narrow
+from src.stage2.detect.symbol_ink import wall_ink_candidates, window_ink_candidates
 from src.stage2.detect.window_runs import window_candidates
 from src.stage2.parse.train import Parser, predict_safe
 from src.utils import PROJECT_ROOT
@@ -160,6 +161,10 @@ def detect_parts(label, image=None, choice=None):
                                         choice.get("r6_scale", 1.0))
     if "R7" in extra:                                    # wall break narrower than any door -> wall missing
         parts["R7"] = gap_candidates_narrow(label, min_width=choice.get("r7_min_width", 1))
+    if "WINK" in extra and image is not None:            # parsed window without a window symbol in the drawing
+        parts["WINK"] = window_ink_candidates(image, label, choice["window_ink_dmax"], choice["window_gap_ink"])
+    if "WALLINK" in extra and image is not None:         # parsed wall with no ink under it
+        parts["WALLINK"] = wall_ink_candidates(image, label, choice["wall_ink_min_len"])
     return parts
 
 
@@ -218,7 +223,11 @@ MARKABLE = ["door", "window", "railing"] + list(C16.cfg["groups"]["F"])
 
 def existing(label, h):
     """A component of the flag's type already in the map at the flag (>= half of it inside the box grown 2 px,
-    or under the flag point), nearest the point; None if there is none or the flag has no location."""
+    or under the flag point), nearest the point; None if there is none or the flag has no location. A flag from
+    a symbol check (window / wall ink) names its parsed component itself (h["mask"])."""
+    m = h.get("mask")
+    if m is not None and h["type"] in MARKABLE + ["wall"] and (label[m] == I[h["type"]]).mean() >= 0.5:
+        return m & (label == I[h["type"]])
     if h["type"] not in MARKABLE or h.get("point") is None:
         return None
     y0, x0, y1, x1 = h["box"]
@@ -316,6 +325,13 @@ def door_walls(changed, after, door, r=None):
     return changed & near & (after == I["wall"])
 
 
+def interior_door(label, d):
+    """Does the door join two interior spaces (room types on both faces)? Room holes never get a door on an
+    exterior wall (user, 2026-10-20)."""
+    pair = door_side_pair(label, d, R.CONST["T_wall"] + 2)
+    return bool(pair) and all(c in C16.group("S") for c in pair)
+
+
 def restrict(before, after, typ, point=None):
     """Type-restricted fill (user, chunk 8): inside a detected hole keep ONLY the detected type and
     revert every other changed pixel to the map before the fill.
@@ -323,8 +339,9 @@ def restrict(before, after, typ, point=None):
                                               else the largest; a door clipped to one wall line at median
                                               length, plus the new wall pixels next to it)
       wall                                 -> new wall pixels
-      room                                 -> new walls + at most one door + ONE room type, the most common
-                                              among the changed room pixels (user, 2026-10-20)
+      room                                 -> new walls + at most one door (only between two interior
+                                              spaces, never on an exterior wall) + ONE room type, the most
+                                              common among the changed room pixels (user, 2026-10-20)
       manual                               -> everything the model drew
     A fixture is dropped if the room it lands in is not compatible with it (C15 table)."""
     if typ == "manual":
@@ -332,7 +349,8 @@ def restrict(before, after, typ, point=None):
     changed = after != before
     if typ == "room":
         keep = changed & (after == I["wall"])
-        door = pick_one(components(changed & (after == I["door"])), point)
+        doors = [d for d in components(changed & (after == I["door"])) if interior_door(after, d)]
+        door = pick_one(doors, point)
         if door is not None:
             door = clip_door(door)
             keep |= door | door_walls(changed, after, door)
@@ -390,7 +408,8 @@ def describe_additions(before, after, holes):
             if created:
                 lines.append(f"missing room -> room drawn as {', '.join(created)}")
         if h.get("existing") is not None:
-            lines = [f"{h['type']} symbol missing in the drawing -> added"]
+            lines = [f"{h['type']} symbol missing in the drawing -> added" if "WGAP" not in rules else
+                     "window missing (a gap in the drawing) -> added"]
         if not lines:
             what = f"{h['type']} missing ({'+'.join(sorted(rules))})" if rules else "manual box"
             lines.append(f"{what} -> nothing added (the model kept the drawing as it was)")
@@ -439,8 +458,8 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
     times["parse"] = time.time() - t
     t = time.time()
     if boxes is None:
-        holes = [{"type": p.type, "rules": p.rules, "box": p.box, "score": p.score, "point": flag_point(p)}
-                 for p in detect_holes(parsed, image)]
+        holes = [{"type": p.type, "rules": p.rules, "box": p.box, "score": p.score, "point": flag_point(p),
+                  "mask": p.mask} for p in detect_holes(parsed, image)]
     else:
         holes = [{"type": "manual", "rules": [], "box": tuple(int(round(v * scale)) for v in b), "point": None}
                  for b in boxes]

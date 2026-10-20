@@ -2,6 +2,9 @@
 
     python -m src.stage2.pipeline.e2e_val --zip parser_val.zip [--limit N] [--tag _v2]
         -> outputs/stage2/e2e_val{tag}.png (input | parse + flags | result | ground truth), .md, .csv
+    python -m src.stage2.pipeline.e2e_val --zip parser_val.zip --batch 2 --tag _batch2
+        -> a second batch of 12 FRESH held-out drawings (user, 2026-10-20): the same order with batch 1's drawings
+           left out, omissions with seed 21
     python -m src.stage2.pipeline.e2e_val --compare old.csv new.csv --tag _v2
         -> appends an old vs new table (same drawings) to e2e_val{tag}.md (laptop, after the kernel)
 
@@ -37,6 +40,7 @@ import argparse
 import csv
 import time
 import zipfile
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -164,11 +168,11 @@ def score(res, removed, lbl, typ):
             "flags_on_spot": len(over), "gt": gt, "rm": rm}
 
 
-def pick(z, args):
+def pick(z, args, exclude=(), seed=20):
     held = HELDOUT.read_text(encoding="utf-8").split()
     order = [held[i] for i in np.random.default_rng(20).permutation(len(held))]
-    order = [p for p in order if p not in CHECK_SET]
-    rng = np.random.default_rng(20)
+    order = [p for p in order if p not in CHECK_SET and p not in set(exclude)]
+    rng = np.random.default_rng(seed)
     used, cases = set(), []
     for kind in PLAN:
         got = 0
@@ -199,11 +203,17 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="smoke test: only the first N drawings")
     ap.add_argument("--tag", default="")
     ap.add_argument("--compare", nargs=2, metavar=("OLD_CSV", "NEW_CSV"))
+    ap.add_argument("--batch", type=int, default=1, choices=(1, 2), help="2: 12 fresh drawings, batch 1 left out")
     args = ap.parse_args()
     if args.compare:
         return compare(*args.compare, args.tag)
     z = zipfile.ZipFile(args.zip)
-    cases = pick(z, args)
+    if args.batch == 2:
+        first = {c["pid"] for c in pick(z, argparse.Namespace(limit=None))}
+        cases = pick(z, args, exclude=first, seed=21)
+        assert not first & {c["pid"] for c in cases}
+    else:
+        cases = pick(z, args)
     for c in cases:
         t = time.time()
         c["res"] = run_pipeline(c["img"], fast=True)
@@ -280,31 +290,31 @@ def report(cases, tag):
 
 
 def compare(old_csv, new_csv, tag):
-    """Old vs new run on the same drawings (old 'fixed' = by addition, the only definition then)."""
+    """Old vs new run on the same drawings. A csv without 'fixed_add' (before 2026-10-20 afternoon) only had the
+    by-addition definition, stored as 'fixed'."""
     rd = lambda f: list(csv.DictReader(open(f, encoding="utf-8")))
     old, new = rd(old_csv), rd(new_csv)
-    yn = lambda v: "yes" if v == "True" else "no"
-    L = ["", "## Old vs new (same 12 drawings)", "",
-         "Old = before the 2026-10-20 fixes (eta 0.1; its 'fixed' counted only the fill's additions). New = eta 0, "
-         "symbol-already-in-parse, door at the flag point, wall-gap rule, one room type, door + adjacent walls.", "",
-         "| # | drawing | omission | old flags | new flags | old fixed by addition | new fixed by addition | "
-         "new fixed | old -> new false adds | old -> new tol. mIoU after | old -> new valid after |",
-         "|---|---|---|---|---|---|---|---|---|---|---|"]
+    yn = lambda v: "yes" if v == "True" else ("no" if v == "False" else "-")
+    add = lambda r: r.get("fixed_add", r["fixed"])                         # fixed by addition
+    full = lambda r: r["fixed"] if "fixed_add" in r else "-"               # fixed, new definition
+    L = ["", f"## Old vs new (same {len(new)} drawings): {Path(old_csv).name} -> {Path(new_csv).name}", "",
+         "| # | drawing | omission | old flags | new flags | fixed old -> new | fixed by addition old -> new | "
+         "false adds old -> new | tol. mIoU after old -> new | valid after old -> new |",
+         "|---|---|---|---|---|---|---|---|---|---|"]
     for i, (o, n) in enumerate(zip(old, new)):
         assert o["pid"] == n["pid"], (o["pid"], n["pid"])
-        L.append(f"| {i + 1} | {n['pid']} | {n['kind']} | {o['flags']} | {n['flags']} | {yn(o['fixed'])} | "
-                 f"{yn(n['fixed_add'])} | {yn(n['fixed'])} | {o['false_adds']} -> {n['false_adds']} | "
+        L.append(f"| {i + 1} | {n['pid']} | {n['kind']} | {o['flags']} | {n['flags']} | {yn(full(o))} -> "
+                 f"{yn(full(n))} | {yn(add(o))} -> {yn(add(n))} | {o['false_adds']} -> {n['false_adds']} | "
                  f"{o['tol_after']} -> {n['tol_after']} | {yn(o['valid_after'])} -> {yn(n['valid_after'])} |")
-    cnt = lambda rows, k: sum(r[k] == "True" for r in rows)
+    cnt = lambda rows, f: sum(f(r) == "True" for r in rows)
     mean = lambda rows, k: np.mean([float(r[k]) for r in rows])
     L += ["", "| totals | found | right type | fixed (new definition) | fixed by addition | false adds | "
-              "tol. mIoU after | validity after | s per drawing |", "|---|---|---|---|---|---|---|---|---|",
-          f"| old | {cnt(old, 'found')} | {cnt(old, 'right_type')} | - | {cnt(old, 'fixed')} | "
-          f"{sum(int(r['false_adds']) for r in old)} | {mean(old, 'tol_after'):.1f} | "
-          f"{100 * cnt(old, 'valid_after') / len(old):.0f}% | {mean(old, 'seconds'):.0f} |",
-          f"| new | {cnt(new, 'found')} | {cnt(new, 'right_type')} | {cnt(new, 'fixed')} | {cnt(new, 'fixed_add')} | "
-          f"{sum(int(r['false_adds']) for r in new)} | {mean(new, 'tol_after'):.1f} | "
-          f"{100 * cnt(new, 'valid_after') / len(new):.0f}% | {mean(new, 'seconds'):.0f} |"]
+              "tol. mIoU after | validity after | s per drawing |", "|---|---|---|---|---|---|---|---|---|"]
+    for name, rows in (("old", old), ("new", new)):
+        L.append(f"| {name} | {cnt(rows, lambda r: r['found'])} | {cnt(rows, lambda r: r['right_type'])} | "
+                 f"{cnt(rows, full) if 'fixed_add' in rows[0] else '-'} | {cnt(rows, add)} | "
+                 f"{sum(int(r['false_adds']) for r in rows)} | {mean(rows, 'tol_after'):.1f} | "
+                 f"{100 * cnt(rows, lambda r: r['valid_after']) / len(rows):.0f}% | {mean(rows, 'seconds'):.0f} |")
     with open(OUT / f"e2e_val{tag}.md", "a", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
     print("\n".join(L))

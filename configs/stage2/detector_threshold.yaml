@@ -7,13 +7,14 @@ strong_rules:
 - C6
 - C12
 threshold: 0.5
-final: detector + C8 + R5 + ink tiers + R6 + R7; budget 0.6 (rules first, detector
-  after)
+final: detector + C8 + R5 + door ink + R6 + window ink (wall ink off); budget 0.4 (rules
+  first, detector after)
 extra_rules:
 - C8
 - R5
 - INK
 - R6
+- WINK
 gap_rule:
   open_rate: 0.1
   need_area: 1514
@@ -23,8 +24,8 @@ gap_rule:
     plan
 c8_min_area: 700.0
 ink_threshold: 1.5
-check_tuning: outputs/stage2/check_tune.md (parsed tuning drawings; budget 0.6, detector
-  >= 0.25; user 2026-10-19)
+check_tuning: outputs/stage2/check_tune.md (parsed tuning drawings; budget 0.4, detector
+  >= 0.15; user 2026-10-19 / 2026-10-20)
 ink_relevant_only: true
 ink_threshold_interior: 0.0
 r6_scale: 1.2
@@ -36,3 +37,8 @@ threshold_v3: 0.5
 min_blob_v3: 20
 ink_tier2_note: 'off (user, 2026-10-19 overnight): fails on drawings with arc-less
   doors (check-set case 7)'
+window_ink_dmax: 0.08
+window_gap_ink: 0.02
+wall_ink_min_len: 4
+wall_ink_note: 'chosen by the re-tune but off (2026-10-20): +0.0 recall, +0.05 false alarms in the
+  final choice (tie -> fewer false alarms); the parser rarely draws a wall over an erased gap (1 of 23)'

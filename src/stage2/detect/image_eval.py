@@ -21,6 +21,7 @@ import zipfile
 
 import cv2
 import numpy as np
+import yaml
 
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
@@ -39,6 +40,7 @@ KINDS = ["door (a)", "door (b)", "window", "wall", "railing", "fixture", "room"]
 TYPE = {"door (a)": "door", "door (b)": "door", "window": "window", "wall": "wall", "railing": "railing",
         "room": "room"}
 WALL_PX = 8
+TITLE = "final CHECK + window / wall ink double checks, re-tuned at budget 0.4 (2026-10-20)"
 
 
 def read(z, name, flag):
@@ -144,12 +146,17 @@ def main():
     methods = {"detector": ("detector",), "detector + C8": ("detector", "C8"),
                "detector + C8 + R5": ("detector", "C8", "R5"),
                "detector + C8 + R5 + ink": ("detector", "C8", "R5", "INK"),
-               "full CHECK (+ R6 + R7, final)": ("detector", "C8", "R5", "INK", "R6", "R7")}
+               "+ R6 + R7 (CHECK before the double checks)": ("detector", "C8", "R5", "INK", "R6", "R7"),
+               "+ wall ink only (diagnostic; off in the final CHECK)": ("detector", "C8", "R5", "INK", "R6", "R7",
+                                                                        "WALLINK"),
+               "+ window ink (final CHECK)": ("detector", "C8", "R5", "INK", "R6", "R7", "WINK")}
+    choice = yaml.safe_load((PROJECT_ROOT / cfg()["detect"]["settings"]).read_text(encoding="utf-8"))
+    choice["extra_rules"] = sorted(set(choice.get("extra_rules", [])) | {"WINK", "WALLINK"})   # every source scored
     rows, t0 = [], time.time()
 
     def run(pid, img, removed=None, kind=None, typ=None, scope=None, meta=None):  # img: the drawing given to PARSE
         label, _, _ = parse(img, pc)
-        parts = detect_parts(label, img)
+        parts = detect_parts(label, img, choice)
         row = {"pid": pid, "kind": kind or "intact", "type": typ, "in_scope": scope, "redrawn": ""}
         row.update({f"meta_{k}": v for k, v in (meta or omission_meta(None, None, "intact")).items()})
         rm = None
@@ -198,7 +205,7 @@ def report(rows, methods, path):
         if not rs:
             return "-"
         return f"{100 * np.mean([r[m][0] == '1' for r in rs]):.0f}% ({100 * np.mean([r[m][1] == '1' for r in rs]):.0f}%)"
-    L = ["", "## Held-out on DRAWINGS with realistic erasure (overnight, image level)", "",
+    L = ["", f"## Held-out on DRAWINGS: {TITLE}", "",
          f"{len(ints)} intact drawings + {len(om)} omissions on {len(set(r['pid'] for r in om))} other held-out drawings "
          f"(kinds: " + ", ".join(f"{k} {n_k[k]}" for k in KINDS) + "). Erasure: src/stage2/data/erasure.py; then the "
          "pipeline's PARSE + CHECK (no fill). Found = a proposal overlaps the omission (in brackets: right type).", "",

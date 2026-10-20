@@ -181,3 +181,55 @@ Note: label-level numbers above are on ground-truth label maps; these are on par
 Scope subsets (full CHECK (+ R6 + R7, final)): door (a) where the closure cuts a room off: 15 cases, found 73% (60%); door (b) between a bedroom/bathroom and a closed-pair neighbour: 14 cases, found 57% (50%).
 Parser redraws the removed component (mean share of its pixels the parser still labels with the removed class, room = its walls): door (a) 30%, door (b) 80%, window 42%, wall 27%, railing 16%, fixture 4%, room 24%.
 Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser errors count against detection (and add false alarms).
+
+## Held-out on DRAWINGS: final CHECK + window / wall ink double checks, re-tuned at budget 0.4 (2026-10-20)
+
+59 intact drawings + 200 omissions on 100 other held-out drawings (kinds: door (a) 29, door (b) 29, window 29, wall 29, railing 18, fixture 38, room 28). Erasure: src/stage2/data/erasure.py; then the pipeline's PARSE + CHECK (no fill). Found = a proposal overlaps the omission (in brackets: right type).
+
+| method | false alarms / intact drawing | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
+|---|---|---|---|---|---|---|---|---|---|
+| detector | 0.17 | 58% | 69% (55%) | 41% (34%) | 62% (62%) | 72% (45%) | 6% (0%) | 66% (39%) | 89% (89%) |
+| detector + C8 | 0.22 | 58% | 72% (66%) | 41% (34%) | 62% (62%) | 72% (45%) | 6% (0%) | 66% (39%) | 89% (89%) |
+| detector + C8 + R5 | 0.24 | 58% | 72% (66%) | 41% (34%) | 62% (62%) | 72% (45%) | 6% (0%) | 66% (39%) | 89% (79%) |
+| detector + C8 + R5 + ink | 0.32 | 58% | 72% (66%) | 41% (34%) | 62% (62%) | 72% (45%) | 6% (0%) | 66% (39%) | 89% (75%) |
+| + R6 + R7 (CHECK before the double checks) | 0.32 | 58% | 72% (66%) | 41% (34%) | 62% (62%) | 72% (45%) | 6% (0%) | 66% (39%) | 89% (75%) |
+| + wall ink only (diagnostic; off in the final CHECK) | 0.46 | 60% | 72% (66%) | 41% (34%) | 66% (59%) | 79% (59%) | 6% (0%) | 66% (39%) | 89% (61%) |
+| + window ink (final CHECK) | 0.59 | 60% | 72% (66%) | 41% (34%) | 66% (66%) | 76% (41%) | 11% (0%) | 66% (39%) | 89% (71%) |
+
+Scope subsets (+ window ink (final CHECK)): door (a) where the closure cuts a room off: 15 cases, found 67% (53%); door (b) between a bedroom/bathroom and a closed-pair neighbour: 14 cases, found 50% (43%).
+Parser redraws the removed component (mean share of its pixels the parser still labels with the removed class, room = its walls): door (a) 30%, door (b) 80%, window 42%, wall 27%, railing 16%, fixture 4%, room 24%.
+Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser errors count against detection (and add false alarms).
+
+Recall of + window ink (final CHECK) by omission metadata (found (right type)):
+
+By type:
+
+| type | n | found |
+|---|---|---|
+| door (a) | 29 | 72% (66%) |
+| door (b) | 29 | 41% (34%) |
+| window | 29 | 66% (66%) |
+| wall | 29 | 76% (41%) |
+| railing | 18 | 11% (0%) |
+| fixture | 38 | 66% (39%) |
+| room | 28 | 89% (71%) |
+
+By location:
+
+| location | n | found |
+|---|---|---|
+| interior | 98 | 61% (43%) |
+| exterior | 102 | 65% (52%) |
+
+By position:
+
+| position | n | found |
+|---|---|---|
+| centre | 112 | 70% (54%) |
+| edge | 88 | 55% (40%) |
+
+By size_bin:
+
+| size_bin | n | found |
+|---|---|---|
+| small | 200 | 63% (48%) |

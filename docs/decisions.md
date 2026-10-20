@@ -715,3 +715,48 @@ Own choices:
     false additions (they were silently skipped before).
   - Validity diagnosis v3: the rules the fill adds (drawings 1, 7, 10: C7, C9, C13, C14, C16) all come from the
     raw hybrid output, none from the type restriction; nothing further to fix simply.
+
+## 2026-10-20 (evening): parse vs drawing double check (window, wall), room doors, CHECK re-tune at 0.4
+
+- New src/stage2/detect/symbol_ink.py (doors: door_ink.py unchanged).
+  - Window: the user's "thin parallel lines" profile is computed (runs = dark runs across the band) and
+    reported in the calibration, but the rule uses d_wall = mean |grey profile across the window - grey profile
+    of the parsed wall on the same line past its ends| / 255. Own choice: erased windows are painted in the
+    drawing's own wall style (erasure.paint_wall), and many styles draw walls as two thin lines, so "solid dark"
+    would miss outline-style walls; "looks like the neighbouring wall" covers both. Gap = stroke share < WG.
+  - Ink = >= 20 grey levels below a 31 px background closing, or darker than 110 (thick solid walls are wider
+    than the closing kernel; with 15 px only, solid-wall drawings showed 24% "uninked" walls).
+  - Wall: uninked parsed wall runs (no stroke within 1 label px), length >= WL.
+  - Guard 40% per drawing and type (windows: share of windows lacking the symbol; walls: share of parsed wall
+    pixels with no ink).
+  - Flags carry the parsed component (Candidate.mask, kept through merge for the same type); the pipeline
+    marks it ("window symbol missing in the drawing -> added"; no-ink windows: "window missing (a gap in the
+    drawing) -> added") and draws it red; scored as fixed by the existing definition.
+- Room holes: the restriction keeps a door only if both faces are room types (never on an exterior wall).
+- CHECK re-tune (kernel floorplan-stage2-eval-tune v7, CPU; outputs/stage2/check_tune.md): budget 0.4 as asked
+  (the previous tuning used 0.6; its held-out result was 0.41). Own choices: rules first within 0.25 (detector
+  share 0.15, was 0.25 of 0.6), ink tier 2 kept off (user, 2026-10-19), window grid d_wall < 0.03-0.12 x gap
+  ink < 0-0.05, wall runs >= 4-13 px.
+  - Calibration: parsed windows at window omissions d_wall median 0.084 vs 0.242 on intact windows (16 of 23
+    window omissions still had a parsed window); uninked wall runs at wall omissions: 1 of 23 (the parser rarely
+    draws a wall over an erased gap).
+  - Chosen: same detector / C8 700 / R5 / door ink 1.5 / R6 x1.2, + window ink d_wall < 0.08, ink < 0.02, + wall
+    ink >= 4 px: 0.30 false alarms, 57% mean recall on tuning. Window check +1.2 points for +0.05; wall check
+    +0.0 for +0.05. Own choice: wall check switched off (a tie on recall -> fewer false alarms, the tuning's own
+    tie-break) -> 0.25 false alarms.
+- Results (CPU kernels eval-doors v9, eval-e2e v4):
+  - Held-out table (outputs/stage2/detection_eval.md, last section; same 59 intact + 200 omissions as before):
+    CHECK before the double checks (current config: ink tier 2 off) 0.32 false alarms / intact drawing, 58% mean
+    recall; + window ink (final) 0.59, 60% (window 62 -> 66%, wall 72 -> 76%, railing 6 -> 11%); wall ink alone
+    (diagnostic) 0.46, 60%. The window check cost +0.05 false alarms on tuning but +0.27 on held-out: it does not
+    generalise and takes the CHECK over the 0.4 budget. Not switched off here (settings are chosen on tuning,
+    never on held-out); left to the user.
+    (The earlier "final" held-out row, 0.41 / 59%, still had ink tier 2 on.)
+  - e2e, same 12 drawings, v3 -> v4: fixed 9 -> 9, false adds 2 -> 3 (two window-ink marks on drawing 1),
+    drawing 7 now flagged "window missing (a gap)" (wrong type: a wall was erased), validity after 8% -> 17%.
+  - Check set v3 -> v4: correct (new definition) 6 -> 6 (case 5 window now found and marked; case 8 gets one
+    false window mark), correct (old definition) 5 -> 4.
+  - Batch 2 (12 fresh held-out drawings, seed 21, batch 1 left out; outputs/stage2/e2e_val_batch2.*): found 8,
+    fixed 8 (2 by addition), 5 false additions on 4 drawings, tolerant mIoU 76.5 -> 74.5, 19 s per drawing.
+    Verdicts in the file. Own note: these drawings were in the held-out table's aggregate (all 159 held-out
+    plans are) but never looked at one by one or used to choose anything.

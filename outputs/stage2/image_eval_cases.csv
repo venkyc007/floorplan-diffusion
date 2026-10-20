@@ -1,260 +1,260 @@
-pid,kind,type,in_scope,redrawn,detector,detector + C8,detector + C8 + R5,detector + C8 + R5 + ink,"full CHECK (+ R6 + R7, final)"
-high_quality_architectural-1654,intact,,,,1,1,1,1,1
-high_quality_architectural-3096,intact,,,,1,1,1,1,1
-high_quality-6702,intact,,,,1,1,1,2,2
-high_quality_architectural-4032,intact,,,,0,0,0,0,0
-high_quality-7082,intact,,,,1,1,1,1,1
-high_quality_architectural-6347,intact,,,,0,0,0,0,0
-high_quality_architectural-3872,intact,,,,0,0,0,0,0
-high_quality_architectural-566,intact,,,,0,0,0,0,0
-high_quality-20149,intact,,,,1,1,1,1,1
-high_quality_architectural-6272,intact,,,,0,1,1,1,1
-high_quality_architectural-1089,intact,,,,0,0,0,0,0
-high_quality_architectural-8532,intact,,,,0,0,0,0,0
-high_quality_architectural-6257,intact,,,,0,0,0,0,0
-high_quality_architectural-1052,intact,,,,0,0,0,0,0
-colorful-3134,intact,,,,0,0,0,0,0
-high_quality-13852,intact,,,,0,0,0,0,0
-high_quality_architectural-1846,intact,,,,0,1,1,1,1
-high_quality_architectural-5599,intact,,,,0,0,0,0,0
-high_quality-1401,intact,,,,0,0,0,0,0
-high_quality_architectural-1067,intact,,,,0,0,0,1,1
-high_quality-5682,intact,,,,0,0,0,2,2
-high_quality_architectural-8796,intact,,,,0,0,0,0,0
-high_quality-14252,intact,,,,0,0,0,1,1
-high_quality_architectural-801,intact,,,,0,0,0,0,0
-high_quality-3935,intact,,,,0,0,0,2,2
-colorful-13804,intact,,,,0,0,0,0,0
-high_quality_architectural-2080,intact,,,,0,0,0,1,1
-high_quality-4550,intact,,,,0,0,0,0,0
-high_quality-14061,intact,,,,0,0,0,1,1
-high_quality_architectural-282,intact,,,,0,0,0,0,0
-high_quality_architectural-4820,intact,,,,0,0,0,0,0
-colorful-14938,intact,,,,1,1,1,1,1
-high_quality-14250,intact,,,,2,2,2,2,2
-high_quality-2554,intact,,,,0,0,0,0,0
-high_quality_architectural-651,intact,,,,0,0,0,0,0
-high_quality_architectural-7671,intact,,,,0,0,0,0,0
-high_quality_architectural-333,intact,,,,0,0,0,0,0
-high_quality_architectural-1425,intact,,,,0,1,1,2,2
-high_quality-1500,intact,,,,0,0,0,0,0
-high_quality_architectural-8049,intact,,,,0,0,0,0,0
-high_quality_architectural-642,intact,,,,0,0,0,0,0
-high_quality_architectural-3691,intact,,,,0,0,0,0,0
-high_quality-665,intact,,,,0,0,0,0,0
-high_quality_architectural-1328,intact,,,,0,0,0,0,0
-high_quality_architectural-8681,intact,,,,0,0,0,0,0
-high_quality_architectural-7677,intact,,,,0,0,0,0,0
-colorful-8396,intact,,,,0,0,0,0,0
-high_quality_architectural-2039,intact,,,,1,1,1,1,1
-high_quality_architectural-9516,intact,,,,0,0,0,0,0
-colorful-14126,intact,,,,0,0,0,0,0
-high_quality_architectural-1539,intact,,,,0,0,0,0,0
-high_quality_architectural-4842,intact,,,,0,0,0,0,0
-high_quality_architectural-1359,intact,,,,0,0,0,0,0
-colorful-1261,intact,,,,0,0,1,1,1
-high_quality_architectural-7777,intact,,,,1,1,1,1,1
-colorful-14616,intact,,,,0,0,0,0,0
-high_quality_architectural-8388,intact,,,,0,0,0,0,0
-high_quality_architectural-6033,intact,,,,0,0,0,0,0
-high_quality_architectural-8515,intact,,,,0,0,0,0,0
-high_quality_architectural-865,door (a),door,False,0.606,11,11,11,11,11
-high_quality_architectural-865,door (b),door,False,1.0,00,00,00,00,00
-high_quality-5080,window,window,True,0.611,11,11,11,11,11
-high_quality-5080,wall,wall,True,0.611,11,11,11,11,11
-high_quality-6079,railing,railing,True,0.519,00,00,00,00,00
-high_quality-6079,fixture,toilet,True,0.292,00,00,00,00,00
-high_quality-6141,room,room,True,0.344,11,11,11,11,11
-high_quality-6141,door (a),door,False,0.489,11,11,11,11,11
-colorful-6226,door (b),door,True,1.0,11,11,11,11,11
-colorful-6226,window,window,True,0.0,11,11,11,11,11
-colorful-14251,wall,wall,True,0.0,10,10,10,10,10
-colorful-14251,railing,railing,True,0.489,00,00,00,00,00
-high_quality-3574,fixture,sink,True,0.0,00,00,00,00,00
-high_quality-3574,room,room,True,0.014,11,11,11,11,11
-high_quality_architectural-1376,door (a),door,True,0.1,11,11,11,11,11
-high_quality_architectural-1376,door (b),door,True,0.0,00,00,00,00,00
-high_quality-9975,window,window,True,0.862,11,11,11,11,11
-high_quality-9975,wall,wall,True,0.0,11,11,11,11,11
-high_quality-14094,railing,railing,True,0.344,00,00,00,00,00
-high_quality-14094,fixture,toilet,True,0.0,00,00,00,00,00
-high_quality_architectural-9031,room,room,True,0.202,11,11,11,11,11
-high_quality_architectural-9031,door (a),door,False,0.375,00,00,00,00,00
-high_quality_architectural-3256,door (b),door,True,1.0,11,11,11,11,11
-high_quality_architectural-3256,window,window,True,0.655,11,11,11,11,11
-high_quality_architectural-4721,wall,wall,True,0.182,11,11,11,11,11
-high_quality_architectural-4721,fixture,sink,True,0.0,00,00,00,00,00
-high_quality_architectural-5579,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality_architectural-5579,room,room,True,0.043,11,11,11,11,11
-colorful-14928,door (a),door,False,0.818,11,11,11,11,11
-colorful-14928,door (b),door,False,1.0,00,00,00,00,00
-colorful-13826,window,window,True,1.0,00,00,00,00,00
-colorful-13826,wall,wall,True,0.0,00,00,00,00,00
-high_quality-6388,railing,railing,True,0.02,00,00,00,00,00
-high_quality-6388,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality_architectural-9483,room,room,True,0.495,11,11,11,11,11
-high_quality_architectural-9483,door (a),door,True,0.607,00,00,00,00,00
-high_quality-9770,door (b),door,False,1.0,00,00,00,00,00
-high_quality-9770,window,window,True,0.0,00,00,00,00,00
-high_quality-9619,wall,wall,True,0.25,00,00,00,00,00
-high_quality-9619,fixture,sink,True,0.272,11,11,11,11,11
-high_quality_architectural-9438,fixture,bath_shower,True,0.0,10,10,10,10,10
-high_quality_architectural-9438,room,room,True,0.381,11,11,11,11,11
-colorful-6628,door (a),door,False,0.244,11,11,11,11,11
-colorful-6628,door (b),door,True,1.0,11,11,11,11,11
-high_quality_architectural-6301,window,window,True,0.404,11,11,11,11,11
-high_quality_architectural-6301,wall,wall,True,0.0,10,10,10,10,10
-high_quality_architectural-1186,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality_architectural-1186,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality_architectural-3546,room,room,True,0.504,11,11,11,11,11
-high_quality_architectural-3546,door (a),door,True,0.923,11,11,11,11,11
-colorful-13820,door (b),door,False,0.923,11,11,11,11,11
-colorful-13820,window,window,True,0.0,00,00,00,00,00
-high_quality_architectural-3015,wall,wall,True,0.682,10,10,10,10,10
-high_quality_architectural-3015,railing,railing,True,0.0,10,10,10,10,10
-high_quality-4860,fixture,appliance,True,0.0,00,00,00,00,00
-high_quality-4860,room,room,True,0.0,00,00,00,00,00
-high_quality_architectural-1324,door (a),door,True,0.611,00,00,00,11,11
-high_quality_architectural-1324,door (b),door,False,0.464,10,10,10,10,10
-high_quality_architectural-4788,window,window,True,0.0,00,00,00,00,00
-high_quality_architectural-4788,wall,wall,True,0.0,10,10,10,10,10
-high_quality_architectural-6136,railing,railing,True,0.0,00,00,00,00,00
-high_quality_architectural-6136,fixture,bath_shower,True,0.0,00,00,00,00,00
-high_quality_architectural-3528,room,room,True,0.5,11,11,11,11,11
-high_quality_architectural-3528,door (a),door,False,1.0,11,11,11,11,11
-colorful-14328,door (b),door,True,1.0,00,00,00,00,00
-colorful-14328,window,window,True,0.0,11,11,11,11,11
-high_quality-4548,wall,wall,True,0.0,00,00,00,00,00
-high_quality-4548,railing,railing,True,0.0,00,00,00,00,00
-high_quality_architectural-9603,fixture,sink,True,0.0,11,11,11,11,11
-high_quality_architectural-9603,room,room,True,0.042,00,00,00,00,00
-high_quality-7523,door (a),door,True,0.0,10,10,10,10,10
-high_quality-7523,door (b),door,False,1.0,00,00,00,00,00
-high_quality_architectural-1241,window,window,True,0.0,11,11,11,11,11
-high_quality_architectural-1241,wall,wall,True,0.067,11,11,11,11,11
-high_quality_architectural-3612,railing,railing,True,0.0,00,00,00,00,00
-high_quality_architectural-3612,fixture,toilet,True,0.0,10,10,10,10,10
-high_quality-6243,room,room,True,0.009,11,11,11,11,11
-high_quality-6243,door (a),door,True,0.0,10,11,11,11,11
-high_quality-751,door (b),door,True,0.983,00,00,00,00,00
-high_quality-751,window,window,True,0.444,11,11,11,11,11
-high_quality_architectural-9491,wall,wall,True,1.0,10,10,10,10,10
-high_quality_architectural-9491,railing,railing,True,0.0,00,00,00,00,00
-high_quality_architectural-4900,fixture,appliance,True,0.0,10,10,10,10,10
-high_quality_architectural-4900,room,room,True,0.0,11,11,11,11,11
-high_quality_architectural-9905,door (a),door,True,,00,00,00,00,00
-high_quality_architectural-9905,door (b),door,True,1.0,00,00,00,00,00
-high_quality_architectural-7864,window,window,True,1.0,11,11,11,11,11
-high_quality_architectural-7864,wall,wall,True,0.0,11,11,11,11,11
-colorful-14935,railing,railing,True,0.242,00,00,00,00,00
-colorful-14935,fixture,bath_shower,True,0.0,00,00,00,00,00
-high_quality_architectural-1075,room,room,True,0.208,11,11,11,11,11
-high_quality_architectural-1075,door (a),door,True,0.111,10,10,10,10,10
-high_quality_architectural-8154,door (b),door,False,0.25,00,00,00,00,00
-high_quality_architectural-8154,window,window,True,0.767,00,00,00,00,00
-high_quality_architectural-1848,wall,wall,True,0.769,11,11,11,11,11
-high_quality_architectural-1848,railing,railing,True,0.0,00,00,00,00,00
-high_quality-4708,fixture,sink,True,0.0,00,00,00,00,00
-high_quality-4708,room,room,True,0.061,11,11,11,11,11
-colorful-13689,door (a),door,False,0.0,11,11,11,11,11
-colorful-13689,door (b),door,True,1.0,11,11,11,11,11
-high_quality-13812,window,window,True,0.0,00,00,00,00,00
-high_quality-13812,wall,wall,True,0.812,11,11,11,11,11
-high_quality_architectural-938,fixture,toilet,True,0.0,00,00,00,00,00
-high_quality_architectural-938,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality-3650,room,room,True,0.294,11,11,11,11,11
-high_quality-3650,door (a),door,True,0.0,10,11,11,11,11
-high_quality_architectural-154,door (b),door,False,1.0,11,11,11,11,11
-high_quality_architectural-154,window,window,True,0.8,11,11,11,11,11
-high_quality_architectural-3886,wall,wall,True,0.103,11,11,11,11,11
-high_quality_architectural-3886,railing,railing,True,0.533,00,00,00,00,00
-high_quality_architectural-8628,fixture,bath_shower,True,0.0,10,10,10,10,10
-high_quality_architectural-8628,room,room,True,0.446,11,11,11,11,11
-high_quality_architectural-4864,door (a),door,True,0.0,00,00,00,00,00
-high_quality_architectural-4864,door (b),door,True,0.846,11,11,11,11,11
-high_quality_architectural-1660,window,window,True,1.0,11,11,11,11,11
-high_quality_architectural-1660,wall,wall,True,0.096,10,10,10,10,10
-high_quality_architectural-5927,railing,railing,True,0.0,00,00,00,00,00
-high_quality_architectural-5927,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality_architectural-3794,room,room,True,0.034,11,11,10,10,10
-high_quality_architectural-3794,door (a),door,True,0.0,11,11,11,11,11
-high_quality-1797,door (b),door,False,0.929,00,00,00,00,00
-high_quality-1797,window,window,True,0.0,00,00,00,00,00
-high_quality-17,wall,wall,True,0.0,11,11,11,11,11
-high_quality-17,fixture,sink,True,0.0,00,00,00,00,00
-high_quality_architectural-8786,fixture,sink,True,0.0,11,11,11,11,11
-high_quality_architectural-8786,room,room,True,0.279,11,11,11,11,11
-high_quality_architectural-8117,door (a),door,False,0.0,11,11,11,11,11
-high_quality_architectural-8117,door (b),door,True,0.964,00,00,00,11,11
-colorful-13513,window,window,True,0.0,00,00,00,00,00
-colorful-13513,wall,wall,True,0.062,00,00,00,00,00
-high_quality_architectural-858,railing,railing,True,0.162,00,00,00,00,00
-high_quality_architectural-858,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality-14157,room,room,True,0.033,11,11,10,10,10
-high_quality-14157,door (a),door,True,0.0,00,00,00,00,00
-high_quality_architectural-1361,door (b),door,False,0.889,00,00,00,00,00
-high_quality_architectural-1361,window,window,True,1.0,00,00,00,00,00
-high_quality-1547,wall,wall,True,0.731,00,00,00,00,00
-high_quality-1547,fixture,toilet,True,0.0,10,10,10,10,10
-high_quality_architectural-4972,fixture,sink,True,0.0,11,11,11,11,11
-high_quality_architectural-4972,room,room,True,0.236,11,11,11,11,11
-high_quality_architectural-1061,door (a),door,False,0.0,11,11,11,11,11
-high_quality_architectural-1061,door (b),door,True,0.857,10,10,10,10,10
-high_quality_architectural-242,window,window,True,0.992,11,11,11,11,11
-high_quality_architectural-242,wall,wall,True,0.41,10,10,10,10,10
-high_quality_architectural-6339,fixture,toilet,True,0.9,00,00,00,00,00
-high_quality_architectural-6339,fixture,appliance,True,0.0,00,00,00,00,00
-high_quality_architectural-5625,room,room,True,0.0,00,00,00,00,00
-high_quality_architectural-5625,door (a),door,False,0.0,00,00,00,00,00
-high_quality_architectural-9237,door (b),door,False,0.111,00,00,00,00,00
-high_quality_architectural-9237,window,window,True,0.0,11,11,11,11,11
-high_quality-14033,wall,wall,True,0.229,11,11,11,11,11
-high_quality-14033,fixture,sink,True,0.0,00,00,00,00,00
-high_quality_architectural-834,fixture,toilet,True,0.0,11,11,11,11,11
-high_quality_architectural-834,room,room,True,0.087,11,11,11,11,11
-high_quality-14054,door (a),door,True,0.0,11,11,11,11,11
-high_quality-14054,door (b),door,True,1.0,11,11,11,11,11
-high_quality-6732,window,window,True,0.0,11,11,11,11,11
-high_quality-6732,wall,wall,True,0.7,00,00,00,00,00
-high_quality_architectural-7842,railing,railing,True,0.0,00,00,00,00,00
-high_quality_architectural-7842,fixture,appliance,True,0.0,10,10,10,10,10
-high_quality-4773,room,room,True,0.371,11,11,11,10,10
-high_quality-4773,door (a),door,False,0.0,00,00,00,00,00
-high_quality_architectural-5559,door (b),door,False,0.0,00,00,00,00,00
-high_quality_architectural-5559,window,window,True,0.0,00,00,00,00,00
-high_quality-14030,wall,wall,True,0.0,00,00,00,00,00
-high_quality-14030,railing,railing,True,0.532,00,00,00,00,00
-high_quality_architectural-1611,fixture,appliance,True,0.0,10,10,10,10,10
-high_quality_architectural-1611,room,room,True,0.255,11,11,11,11,11
-high_quality_architectural-9556,door (a),door,False,1.0,11,11,11,11,11
-high_quality_architectural-9556,door (b),door,False,0.885,11,11,11,11,11
-high_quality_architectural-8299,window,window,True,1.0,11,11,11,11,11
-high_quality_architectural-8299,wall,wall,True,0.688,11,11,11,11,11
-high_quality_architectural-5566,railing,railing,True,0.0,00,00,00,00,00
-high_quality_architectural-5566,fixture,appliance,True,0.0,11,11,11,11,11
-high_quality-14017,room,room,True,0.288,11,11,10,10,10
-high_quality-14017,door (a),door,True,0.0,00,11,11,11,11
-high_quality_architectural-8159,door (b),door,False,1.0,11,11,11,11,11
-high_quality_architectural-8159,window,window,True,0.836,11,11,11,11,11
-high_quality_architectural-6183,wall,wall,True,0.179,11,11,11,11,11
-high_quality_architectural-6183,railing,railing,True,0.0,00,00,00,00,00
-high_quality-14267,fixture,toilet,True,0.0,11,11,11,11,11
-high_quality-14267,room,room,True,0.466,11,11,11,11,11
-high_quality-5984,door (a),door,False,0.0,11,11,11,11,11
-high_quality-5984,door (b),door,True,1.0,00,00,00,00,00
-high_quality_architectural-6514,window,window,True,0.87,11,11,11,11,11
-high_quality_architectural-6514,wall,wall,True,0.077,11,11,11,11,11
-high_quality_architectural-2148,fixture,sink,True,0.0,10,10,10,10,10
-high_quality_architectural-2148,fixture,sink,True,0.0,10,10,10,10,10
-colorful-13824,room,room,True,0.525,11,11,11,11,11
-colorful-13824,door (a),door,True,0.769,11,11,11,11,11
-high_quality-14245,door (b),door,False,1.0,00,00,00,00,00
-high_quality-14245,window,window,True,0.0,00,00,00,00,00
-high_quality-1681,wall,wall,True,0.077,00,00,00,00,00
-high_quality-1681,fixture,toilet,True,0.0,10,10,10,10,10
-colorful-14936,fixture,appliance,True,0.0,11,11,11,11,11
-colorful-14936,room,room,True,0.6,11,11,11,11,11
-high_quality_architectural-1916,door (a),door,False,0.633,11,11,11,11,11
-high_quality_architectural-1916,door (b),door,True,0.188,00,00,00,00,00
-high_quality_architectural-6551,window,window,True,0.0,11,11,11,11,11
-high_quality_architectural-6551,wall,wall,True,0.0,10,10,10,10,10
+pid,kind,type,in_scope,redrawn,meta_type,meta_location,meta_position,meta_size_bin,meta_size_pct,meta_center_dist,detector,detector + C8,detector + C8 + R5,detector + C8 + R5 + ink,+ R6 + R7 (CHECK before the double checks),+ wall ink only (diagnostic; off in the final CHECK),+ window ink (final CHECK)
+high_quality_architectural-1654,intact,,,,intact,,,,,,1,1,1,1,1,1,1
+high_quality_architectural-3096,intact,,,,intact,,,,,,1,1,1,1,1,1,1
+high_quality-6702,intact,,,,intact,,,,,,1,1,1,1,1,1,1
+high_quality_architectural-4032,intact,,,,intact,,,,,,0,0,0,0,0,1,3
+high_quality-7082,intact,,,,intact,,,,,,1,1,1,1,1,1,1
+high_quality_architectural-6347,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-3872,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-566,intact,,,,intact,,,,,,0,0,0,0,0,1,0
+high_quality-20149,intact,,,,intact,,,,,,1,1,1,1,1,1,1
+high_quality_architectural-6272,intact,,,,intact,,,,,,0,1,1,1,1,1,1
+high_quality_architectural-1089,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-8532,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-6257,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-1052,intact,,,,intact,,,,,,0,0,0,0,0,0,5
+colorful-3134,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality-13852,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-1846,intact,,,,intact,,,,,,0,1,1,1,1,1,1
+high_quality_architectural-5599,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality-1401,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-1067,intact,,,,intact,,,,,,0,0,0,1,1,1,1
+high_quality-5682,intact,,,,intact,,,,,,0,0,0,2,2,2,2
+high_quality_architectural-8796,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality-14252,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-801,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality-3935,intact,,,,intact,,,,,,0,0,0,0,0,0,1
+colorful-13804,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-2080,intact,,,,intact,,,,,,0,0,0,1,1,2,1
+high_quality-4550,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality-14061,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-282,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-4820,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+colorful-14938,intact,,,,intact,,,,,,1,1,1,1,1,1,1
+high_quality-14250,intact,,,,intact,,,,,,2,2,2,2,2,2,2
+high_quality-2554,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-651,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-7671,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-333,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-1425,intact,,,,intact,,,,,,0,1,1,2,2,2,2
+high_quality-1500,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-8049,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-642,intact,,,,intact,,,,,,0,0,0,0,0,0,1
+high_quality_architectural-3691,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality-665,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-1328,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-8681,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-7677,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+colorful-8396,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-2039,intact,,,,intact,,,,,,1,1,1,1,1,1,2
+high_quality_architectural-9516,intact,,,,intact,,,,,,0,0,0,0,0,3,0
+colorful-14126,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-1539,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-4842,intact,,,,intact,,,,,,0,0,0,0,0,1,0
+high_quality_architectural-1359,intact,,,,intact,,,,,,0,0,0,0,0,0,2
+colorful-1261,intact,,,,intact,,,,,,0,0,1,1,1,2,1
+high_quality_architectural-7777,intact,,,,intact,,,,,,1,1,1,1,1,1,1
+colorful-14616,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-8388,intact,,,,intact,,,,,,0,0,0,0,0,0,3
+high_quality_architectural-6033,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-8515,intact,,,,intact,,,,,,0,0,0,0,0,0,0
+high_quality_architectural-865,door (a),door,False,0.606,door (a),exterior,edge,small,0.584,0.622,11,11,11,11,11,11,11
+high_quality_architectural-865,door (b),door,False,1.0,door (b),exterior,edge,small,0.584,0.622,00,00,00,00,00,00,00
+high_quality-5080,window,window,True,0.611,window,exterior,centre,small,0.818,0.533,11,11,11,11,11,11,11
+high_quality-5080,wall,wall,True,0.611,wall,exterior,centre,small,0.428,0.491,11,11,11,11,11,11,10
+high_quality-6079,railing,railing,True,0.519,railing,exterior,edge,small,0.233,0.685,00,00,00,00,00,00,00
+high_quality-6079,fixture,toilet,True,0.292,fixture,interior,edge,small,0.069,0.788,00,00,00,00,00,00,00
+high_quality-6141,room,room,True,0.344,room,interior,centre,small,0.538,0.471,11,11,11,11,11,10,11
+high_quality-6141,door (a),door,False,0.489,door (a),exterior,centre,small,0.084,0.372,11,11,11,11,11,11,11
+colorful-6226,door (b),door,True,1.0,door (b),interior,centre,small,0.132,0.468,11,11,11,11,11,11,11
+colorful-6226,window,window,True,0.0,window,exterior,edge,small,0.323,0.83,11,11,11,11,11,11,11
+colorful-14251,wall,wall,True,0.0,wall,interior,centre,small,0.102,0.228,10,10,10,10,10,10,10
+colorful-14251,railing,railing,True,0.489,railing,exterior,edge,small,0.494,0.726,00,00,00,00,00,00,00
+high_quality-3574,fixture,sink,True,0.0,fixture,interior,centre,small,0.35,0.443,00,00,00,00,00,00,00
+high_quality-3574,room,room,True,0.014,room,exterior,centre,small,0.878,0.331,11,11,11,11,11,11,11
+high_quality_architectural-1376,door (a),door,True,0.1,door (a),interior,edge,small,0.096,0.711,11,11,11,11,11,11,11
+high_quality_architectural-1376,door (b),door,True,0.0,door (b),interior,centre,small,0.099,0.259,00,00,00,00,00,00,00
+high_quality-9975,window,window,True,0.862,window,exterior,edge,small,0.738,0.688,11,11,11,11,11,11,11
+high_quality-9975,wall,wall,True,0.0,wall,exterior,edge,small,0.456,0.693,11,11,11,11,11,11,11
+high_quality-14094,railing,railing,True,0.344,railing,exterior,edge,small,0.245,0.722,00,00,00,00,00,00,10
+high_quality-14094,fixture,toilet,True,0.0,fixture,interior,centre,small,0.066,0.387,00,00,00,00,00,00,00
+high_quality_architectural-9031,room,room,True,0.202,room,exterior,centre,small,1.754,0.427,11,11,11,11,11,11,10
+high_quality_architectural-9031,door (a),door,False,0.375,door (a),interior,centre,small,0.14,0.123,00,00,00,00,00,00,00
+high_quality_architectural-3256,door (b),door,True,1.0,door (b),interior,centre,small,0.153,0.457,11,11,11,11,11,11,11
+high_quality_architectural-3256,window,window,True,0.655,window,exterior,edge,small,1.018,0.629,11,11,11,11,11,11,11
+high_quality_architectural-4721,wall,wall,True,0.182,wall,exterior,edge,small,0.506,0.553,11,11,11,11,11,11,11
+high_quality_architectural-4721,fixture,sink,True,0.0,fixture,interior,edge,small,0.581,0.721,00,00,00,00,00,00,00
+high_quality_architectural-5579,fixture,appliance,True,0.0,fixture,interior,centre,small,0.373,0.121,11,11,11,11,11,11,11
+high_quality_architectural-5579,room,room,True,0.043,room,exterior,centre,small,1.766,0.239,11,11,11,11,11,11,11
+colorful-14928,door (a),door,False,0.818,door (a),exterior,edge,small,0.656,0.842,11,11,11,11,11,11,11
+colorful-14928,door (b),door,False,1.0,door (b),exterior,edge,small,0.656,0.842,00,00,00,00,00,00,00
+colorful-13826,window,window,True,1.0,window,exterior,edge,small,0.088,0.878,00,00,00,00,00,00,11
+colorful-13826,wall,wall,True,0.0,wall,exterior,edge,small,0.054,0.915,00,00,00,00,00,00,10
+high_quality-6388,railing,railing,True,0.02,railing,exterior,edge,small,0.937,0.93,00,00,00,00,00,00,00
+high_quality-6388,fixture,appliance,True,0.0,fixture,interior,edge,small,0.57,0.643,11,11,11,11,11,11,11
+high_quality_architectural-9483,room,room,True,0.495,room,exterior,centre,small,0.949,0.493,11,11,11,11,11,11,11
+high_quality_architectural-9483,door (a),door,True,0.607,door (a),interior,centre,small,0.257,0.335,00,00,00,00,00,00,00
+high_quality-9770,door (b),door,False,1.0,door (b),interior,edge,small,0.036,0.875,00,00,00,00,00,00,00
+high_quality-9770,window,window,True,0.0,window,exterior,centre,small,0.092,0.171,00,00,00,00,00,00,00
+high_quality-9619,wall,wall,True,0.25,wall,exterior,edge,small,0.268,0.924,00,00,00,00,00,11,00
+high_quality-9619,fixture,sink,True,0.272,fixture,interior,centre,small,1.068,0.511,11,11,11,11,11,11,11
+high_quality_architectural-9438,fixture,bath_shower,True,0.0,fixture,interior,centre,small,0.764,0.499,10,10,10,10,10,10,10
+high_quality_architectural-9438,room,room,True,0.381,room,interior,centre,small,0.234,0.399,11,11,11,11,11,11,11
+colorful-6628,door (a),door,False,0.244,door (a),exterior,edge,small,0.132,0.559,11,11,11,11,11,11,11
+colorful-6628,door (b),door,True,1.0,door (b),interior,centre,small,0.104,0.365,11,11,11,11,11,11,11
+high_quality_architectural-6301,window,window,True,0.404,window,exterior,edge,small,0.61,0.758,11,11,11,11,11,11,11
+high_quality_architectural-6301,wall,wall,True,0.0,wall,interior,centre,small,0.248,0.281,10,10,10,10,10,10,10
+high_quality_architectural-1186,fixture,appliance,True,0.0,fixture,interior,centre,small,0.191,0.069,11,11,11,11,11,11,11
+high_quality_architectural-1186,fixture,appliance,True,0.0,fixture,interior,centre,small,0.191,0.069,11,11,11,11,11,11,11
+high_quality_architectural-3546,room,room,True,0.504,room,exterior,centre,small,0.989,0.175,11,11,11,11,11,11,11
+high_quality_architectural-3546,door (a),door,True,0.923,door (a),interior,centre,small,0.101,0.263,11,11,11,11,11,11,11
+colorful-13820,door (b),door,False,0.923,door (b),exterior,centre,small,0.079,0.409,11,11,11,11,11,11,11
+colorful-13820,window,window,True,0.0,window,exterior,edge,small,0.118,0.882,00,00,00,00,00,00,00
+high_quality_architectural-3015,wall,wall,True,0.682,wall,exterior,edge,small,0.366,0.955,10,10,10,10,10,11,10
+high_quality_architectural-3015,railing,railing,True,0.0,railing,interior,centre,small,0.332,0.528,10,10,10,10,10,10,10
+high_quality-4860,fixture,appliance,True,0.0,fixture,interior,centre,small,0.647,0.282,00,00,00,00,00,00,00
+high_quality-4860,room,room,True,0.0,room,interior,centre,small,0.351,0.063,00,00,00,00,00,00,00
+high_quality_architectural-1324,door (a),door,True,0.611,door (a),interior,edge,small,0.117,0.551,00,00,00,00,00,00,00
+high_quality_architectural-1324,door (b),door,False,0.464,door (b),interior,centre,small,0.198,0.132,10,10,10,10,10,10,10
+high_quality_architectural-4788,window,window,True,0.0,window,exterior,edge,small,2.557,0.841,00,00,00,00,00,00,00
+high_quality_architectural-4788,wall,wall,True,0.0,wall,exterior,centre,small,0.878,0.547,10,10,10,10,10,10,10
+high_quality_architectural-6136,railing,railing,True,0.0,railing,exterior,edge,small,0.406,0.735,00,00,00,00,00,00,00
+high_quality_architectural-6136,fixture,bath_shower,True,0.0,fixture,interior,centre,small,0.013,0.409,00,00,00,00,00,00,00
+high_quality_architectural-3528,room,room,True,0.5,room,exterior,centre,small,1.266,0.173,11,11,11,11,11,11,11
+high_quality_architectural-3528,door (a),door,False,1.0,door (a),exterior,edge,small,0.333,0.791,11,11,11,11,11,11,11
+colorful-14328,door (b),door,True,1.0,door (b),interior,edge,small,0.193,0.594,00,00,00,00,00,00,00
+colorful-14328,window,window,True,0.0,window,exterior,edge,small,1.682,0.812,11,11,11,11,11,11,11
+high_quality-4548,wall,wall,True,0.0,wall,exterior,centre,small,0.09,0.456,00,00,00,00,00,00,00
+high_quality-4548,railing,railing,True,0.0,railing,interior,centre,small,0.153,0.059,00,00,00,00,00,00,00
+high_quality_architectural-9603,fixture,sink,True,0.0,fixture,interior,centre,small,0.27,0.238,11,11,11,11,11,11,11
+high_quality_architectural-9603,room,room,True,0.042,room,interior,centre,small,0.361,0.28,00,00,00,00,00,00,00
+high_quality-7523,door (a),door,True,0.0,door (a),interior,edge,small,0.22,0.575,10,10,10,10,10,10,10
+high_quality-7523,door (b),door,False,1.0,door (b),exterior,edge,small,0.357,0.824,00,00,00,00,00,00,00
+high_quality_architectural-1241,window,window,True,0.0,window,exterior,centre,small,0.313,0.46,11,11,11,11,11,11,11
+high_quality_architectural-1241,wall,wall,True,0.067,wall,interior,centre,small,0.334,0.516,11,11,11,11,11,11,11
+high_quality_architectural-3612,railing,railing,True,0.0,railing,interior,centre,small,0.132,0.263,00,00,00,00,00,00,00
+high_quality_architectural-3612,fixture,toilet,True,0.0,fixture,interior,centre,small,0.198,0.065,10,10,10,10,10,10,10
+high_quality-6243,room,room,True,0.009,room,exterior,centre,small,0.785,0.516,11,11,11,11,11,11,11
+high_quality-6243,door (a),door,True,0.0,door (a),interior,centre,small,0.122,0.364,10,11,11,11,11,11,11
+high_quality-751,door (b),door,True,0.983,door (b),exterior,centre,small,0.314,0.446,00,00,00,00,00,00,00
+high_quality-751,window,window,True,0.444,window,exterior,edge,small,0.671,0.843,11,11,11,11,11,11,11
+high_quality_architectural-9491,wall,wall,True,1.0,wall,exterior,centre,small,0.272,0.53,10,10,10,10,10,11,10
+high_quality_architectural-9491,railing,railing,True,0.0,railing,exterior,edge,small,0.184,0.703,00,00,00,00,00,00,00
+high_quality_architectural-4900,fixture,appliance,True,0.0,fixture,interior,edge,small,0.499,0.589,10,10,10,10,10,10,10
+high_quality_architectural-4900,room,room,True,0.0,room,interior,centre,small,0.253,0.229,11,11,11,11,11,11,11
+high_quality_architectural-9905,door (a),door,True,,door (a),interior,centre,small,0.113,0.468,00,00,00,00,00,00,00
+high_quality_architectural-9905,door (b),door,True,1.0,door (b),interior,centre,small,0.143,0.174,00,00,00,00,00,00,00
+high_quality_architectural-7864,window,window,True,1.0,window,exterior,edge,small,0.67,0.677,11,11,11,11,11,11,11
+high_quality_architectural-7864,wall,wall,True,0.0,wall,interior,centre,small,0.146,0.248,11,11,11,11,11,11,11
+colorful-14935,railing,railing,True,0.242,railing,exterior,edge,small,1.132,0.89,00,00,00,00,00,00,00
+colorful-14935,fixture,bath_shower,True,0.0,fixture,interior,edge,small,0.14,0.678,00,00,00,00,00,00,00
+high_quality_architectural-1075,room,room,True,0.208,room,exterior,edge,small,0.602,0.613,11,11,11,11,11,11,11
+high_quality_architectural-1075,door (a),door,True,0.111,door (a),interior,edge,small,0.06,0.707,10,10,10,10,10,10,10
+high_quality_architectural-8154,door (b),door,False,0.25,door (b),exterior,centre,small,0.248,0.424,00,00,00,00,00,00,00
+high_quality_architectural-8154,window,window,True,0.767,window,exterior,edge,small,1.436,0.894,00,00,00,00,00,00,00
+high_quality_architectural-1848,wall,wall,True,0.769,wall,exterior,edge,small,0.753,0.641,11,11,11,11,11,11,11
+high_quality_architectural-1848,railing,railing,True,0.0,railing,exterior,edge,small,0.235,0.837,00,00,00,00,00,00,00
+high_quality-4708,fixture,sink,True,0.0,fixture,interior,centre,small,0.107,0.454,00,00,00,00,00,00,00
+high_quality-4708,room,room,True,0.061,room,exterior,centre,small,0.354,0.021,11,11,11,11,11,11,11
+colorful-13689,door (a),door,False,0.0,door (a),exterior,centre,small,0.205,0.498,11,11,11,11,11,11,11
+colorful-13689,door (b),door,True,1.0,door (b),interior,centre,small,0.201,0.284,11,11,11,11,11,11,11
+high_quality-13812,window,window,True,0.0,window,exterior,centre,small,1.118,0.521,00,00,00,00,00,00,00
+high_quality-13812,wall,wall,True,0.812,wall,interior,centre,small,0.58,0.357,11,11,11,11,11,11,11
+high_quality_architectural-938,fixture,toilet,True,0.0,fixture,interior,centre,small,0.156,0.454,00,00,00,00,00,00,00
+high_quality_architectural-938,fixture,appliance,True,0.0,fixture,interior,centre,small,0.184,0.116,11,11,11,11,11,11,11
+high_quality-3650,room,room,True,0.294,room,exterior,centre,small,1.044,0.322,11,11,11,11,11,11,11
+high_quality-3650,door (a),door,True,0.0,door (a),interior,centre,small,0.13,0.179,10,11,11,11,11,11,11
+high_quality_architectural-154,door (b),door,False,1.0,door (b),interior,centre,small,0.063,0.47,11,11,11,11,11,11,11
+high_quality_architectural-154,window,window,True,0.8,window,exterior,centre,small,0.462,0.491,11,11,11,11,11,11,11
+high_quality_architectural-3886,wall,wall,True,0.103,wall,interior,centre,small,0.224,0.127,11,11,11,11,11,11,11
+high_quality_architectural-3886,railing,railing,True,0.533,railing,exterior,edge,small,0.713,0.869,00,00,00,00,00,00,00
+high_quality_architectural-8628,fixture,bath_shower,True,0.0,fixture,interior,edge,small,0.548,0.599,10,10,10,10,10,10,10
+high_quality_architectural-8628,room,room,True,0.446,room,exterior,centre,small,0.614,0.446,11,11,11,11,11,11,11
+high_quality_architectural-4864,door (a),door,True,0.0,door (a),interior,centre,small,0.085,0.227,00,00,00,00,00,00,00
+high_quality_architectural-4864,door (b),door,True,0.846,door (b),interior,centre,small,0.085,0.227,11,11,11,11,11,11,11
+high_quality_architectural-1660,window,window,True,1.0,window,exterior,edge,small,1.421,0.661,11,11,11,11,11,11,11
+high_quality_architectural-1660,wall,wall,True,0.096,wall,exterior,edge,small,0.381,0.772,10,10,10,10,10,10,10
+high_quality_architectural-5927,railing,railing,True,0.0,railing,interior,centre,small,0.121,0.325,00,00,00,00,00,00,00
+high_quality_architectural-5927,fixture,appliance,True,0.0,fixture,interior,centre,small,0.173,0.3,11,11,11,11,11,11,11
+high_quality_architectural-3794,room,room,True,0.034,room,exterior,centre,small,0.599,0.116,11,11,10,10,10,10,10
+high_quality_architectural-3794,door (a),door,True,0.0,door (a),exterior,centre,small,0.213,0.288,11,11,11,11,11,11,11
+high_quality-1797,door (b),door,False,0.929,door (b),interior,centre,small,0.142,0.313,00,00,00,00,00,00,00
+high_quality-1797,window,window,True,0.0,window,exterior,edge,small,1.86,0.56,00,00,00,00,00,00,00
+high_quality-17,wall,wall,True,0.0,wall,exterior,edge,small,0.647,0.802,11,11,11,11,11,11,11
+high_quality-17,fixture,sink,True,0.0,fixture,interior,edge,small,0.349,0.563,00,00,00,00,00,00,00
+high_quality_architectural-8786,fixture,sink,True,0.0,fixture,interior,edge,small,0.211,0.721,11,11,11,11,11,11,11
+high_quality_architectural-8786,room,room,True,0.279,room,exterior,edge,small,0.591,0.653,11,11,11,11,11,11,11
+high_quality_architectural-8117,door (a),door,False,0.0,door (a),exterior,centre,small,0.055,0.057,11,11,11,11,11,11,11
+high_quality_architectural-8117,door (b),door,True,0.964,door (b),interior,edge,small,0.042,0.569,00,00,00,00,00,00,00
+colorful-13513,window,window,True,0.0,window,exterior,edge,small,0.152,0.596,00,00,00,00,00,00,00
+colorful-13513,wall,wall,True,0.062,wall,interior,centre,small,0.202,0.044,00,00,00,00,00,00,00
+high_quality_architectural-858,railing,railing,True,0.162,railing,exterior,edge,small,1.304,0.818,00,00,00,00,00,00,00
+high_quality_architectural-858,fixture,appliance,True,0.0,fixture,interior,edge,small,0.846,0.678,11,11,11,11,11,11,11
+high_quality-14157,room,room,True,0.033,room,exterior,centre,small,1.075,0.352,11,11,10,10,10,10,10
+high_quality-14157,door (a),door,True,0.0,door (a),interior,edge,small,0.135,0.565,00,00,00,00,00,00,00
+high_quality_architectural-1361,door (b),door,False,0.889,door (b),interior,centre,small,0.125,0.29,00,00,00,00,00,00,00
+high_quality_architectural-1361,window,window,True,1.0,window,exterior,edge,small,0.855,0.795,00,00,00,00,00,00,00
+high_quality-1547,wall,wall,True,0.731,wall,interior,centre,small,0.346,0.175,00,00,00,00,00,11,00
+high_quality-1547,fixture,toilet,True,0.0,fixture,interior,centre,small,0.556,0.136,10,10,10,10,10,10,10
+high_quality_architectural-4972,fixture,sink,True,0.0,fixture,interior,edge,small,0.276,0.621,11,11,11,11,11,11,11
+high_quality_architectural-4972,room,room,True,0.236,room,exterior,edge,small,1.395,0.592,11,11,11,11,11,11,11
+high_quality_architectural-1061,door (a),door,False,0.0,door (a),exterior,edge,small,0.501,0.81,11,11,11,11,11,11,11
+high_quality_architectural-1061,door (b),door,True,0.857,door (b),interior,centre,small,0.084,0.336,10,10,10,10,10,10,10
+high_quality_architectural-242,window,window,True,0.992,window,exterior,edge,small,1.391,0.623,11,11,11,11,11,11,11
+high_quality_architectural-242,wall,wall,True,0.41,wall,exterior,edge,small,0.385,0.701,10,10,10,10,10,10,10
+high_quality_architectural-6339,fixture,toilet,True,0.9,fixture,interior,edge,small,0.071,0.791,00,00,00,00,00,00,00
+high_quality_architectural-6339,fixture,appliance,True,0.0,fixture,interior,centre,small,0.269,0.33,00,00,00,00,00,00,00
+high_quality_architectural-5625,room,room,True,0.0,room,exterior,edge,small,0.226,0.557,00,00,00,00,00,00,00
+high_quality_architectural-5625,door (a),door,False,0.0,door (a),exterior,edge,small,0.085,0.789,00,00,00,00,00,00,00
+high_quality_architectural-9237,door (b),door,False,0.111,door (b),exterior,centre,small,0.31,0.416,00,00,00,00,00,00,00
+high_quality_architectural-9237,window,window,True,0.0,window,exterior,edge,small,1.321,0.769,11,11,11,11,11,10,11
+high_quality-14033,wall,wall,True,0.229,wall,interior,edge,small,0.22,0.601,11,11,11,11,11,11,11
+high_quality-14033,fixture,sink,True,0.0,fixture,interior,centre,small,0.179,0.234,00,00,00,00,00,00,00
+high_quality_architectural-834,fixture,toilet,True,0.0,fixture,interior,centre,small,0.342,0.212,11,11,11,11,11,11,11
+high_quality_architectural-834,room,room,True,0.087,room,exterior,centre,small,0.843,0.306,11,11,11,11,11,11,11
+high_quality-14054,door (a),door,True,0.0,door (a),interior,centre,small,0.067,0.509,11,11,11,11,11,11,11
+high_quality-14054,door (b),door,True,1.0,door (b),interior,centre,small,0.083,0.447,11,11,11,11,11,11,11
+high_quality-6732,window,window,True,0.0,window,exterior,centre,small,0.554,0.508,11,11,11,11,11,11,11
+high_quality-6732,wall,wall,True,0.7,wall,interior,centre,small,0.111,0.242,00,00,00,00,00,00,00
+high_quality_architectural-7842,railing,railing,True,0.0,railing,exterior,edge,small,0.362,0.895,00,00,00,00,00,00,00
+high_quality_architectural-7842,fixture,appliance,True,0.0,fixture,interior,centre,small,0.549,0.248,10,10,10,10,10,10,10
+high_quality-4773,room,room,True,0.371,room,interior,edge,small,0.352,0.674,11,11,11,10,10,10,10
+high_quality-4773,door (a),door,False,0.0,door (a),exterior,edge,small,0.136,0.768,00,00,00,00,00,00,00
+high_quality_architectural-5559,door (b),door,False,0.0,door (b),exterior,edge,small,0.165,0.71,00,00,00,00,00,00,00
+high_quality_architectural-5559,window,window,True,0.0,window,exterior,centre,small,0.198,0.281,00,00,00,00,00,10,00
+high_quality-14030,wall,wall,True,0.0,wall,interior,centre,small,0.119,0.223,00,00,00,00,00,00,00
+high_quality-14030,railing,railing,True,0.532,railing,exterior,edge,small,0.55,0.907,00,00,00,00,00,00,00
+high_quality_architectural-1611,fixture,appliance,True,0.0,fixture,interior,edge,small,1.108,0.565,10,10,10,10,10,10,10
+high_quality_architectural-1611,room,room,True,0.255,room,exterior,centre,small,1.457,0.399,11,11,11,11,11,10,11
+high_quality_architectural-9556,door (a),door,False,1.0,door (a),exterior,edge,small,0.193,0.591,11,11,11,11,11,11,11
+high_quality_architectural-9556,door (b),door,False,0.885,door (b),exterior,centre,small,0.447,0.536,11,11,11,11,11,11,11
+high_quality_architectural-8299,window,window,True,1.0,window,exterior,centre,small,0.554,0.518,11,11,11,11,11,11,11
+high_quality_architectural-8299,wall,wall,True,0.688,wall,interior,centre,small,0.383,0.129,11,11,11,11,11,11,11
+high_quality_architectural-5566,railing,railing,True,0.0,railing,exterior,edge,small,0.066,0.965,00,00,00,00,00,00,00
+high_quality_architectural-5566,fixture,appliance,True,0.0,fixture,interior,centre,small,0.996,0.492,11,11,11,11,11,11,11
+high_quality-14017,room,room,True,0.288,room,exterior,edge,small,0.489,0.666,11,11,10,10,10,10,10
+high_quality-14017,door (a),door,True,0.0,door (a),interior,centre,small,0.109,0.304,00,11,11,11,11,11,11
+high_quality_architectural-8159,door (b),door,False,1.0,door (b),interior,centre,small,0.06,0.113,11,11,11,11,11,11,11
+high_quality_architectural-8159,window,window,True,0.836,window,exterior,centre,small,0.462,0.539,11,11,11,11,11,11,11
+high_quality_architectural-6183,wall,wall,True,0.179,wall,interior,centre,small,0.104,0.261,11,11,11,11,11,11,11
+high_quality_architectural-6183,railing,railing,True,0.0,railing,exterior,edge,small,0.114,0.753,00,00,00,00,00,00,00
+high_quality-14267,fixture,toilet,True,0.0,fixture,interior,edge,small,0.463,0.624,11,11,11,11,11,11,11
+high_quality-14267,room,room,True,0.466,room,exterior,centre,small,0.79,0.428,11,11,11,11,11,10,11
+high_quality-5984,door (a),door,False,0.0,door (a),interior,centre,small,0.081,0.344,11,11,11,11,11,11,11
+high_quality-5984,door (b),door,True,1.0,door (b),interior,edge,small,0.075,0.718,00,00,00,00,00,00,00
+high_quality_architectural-6514,window,window,True,0.87,window,exterior,edge,small,1.05,0.577,11,11,11,11,11,11,11
+high_quality_architectural-6514,wall,wall,True,0.077,wall,interior,centre,small,0.37,0.391,11,11,11,11,11,11,11
+high_quality_architectural-2148,fixture,sink,True,0.0,fixture,interior,centre,small,0.681,0.251,10,10,10,10,10,10,10
+high_quality_architectural-2148,fixture,sink,True,0.0,fixture,interior,centre,small,0.681,0.251,10,10,10,10,10,10,10
+colorful-13824,room,room,True,0.525,room,exterior,centre,small,0.229,0.24,11,11,11,11,11,10,11
+colorful-13824,door (a),door,True,0.769,door (a),interior,edge,small,0.059,0.743,11,11,11,11,11,11,11
+high_quality-14245,door (b),door,False,1.0,door (b),interior,centre,small,0.114,0.366,00,00,00,00,00,00,00
+high_quality-14245,window,window,True,0.0,window,exterior,edge,small,0.458,0.684,00,00,00,00,00,00,00
+high_quality-1681,wall,wall,True,0.077,wall,exterior,edge,small,0.274,0.686,00,00,00,00,00,00,00
+high_quality-1681,fixture,toilet,True,0.0,fixture,interior,centre,small,0.374,0.393,10,10,10,10,10,10,10
+colorful-14936,fixture,appliance,True,0.0,fixture,interior,centre,small,1.046,0.298,11,11,11,11,11,11,11
+colorful-14936,room,room,True,0.6,room,exterior,centre,small,1.622,0.424,11,11,11,11,11,11,11
+high_quality_architectural-1916,door (a),door,False,0.633,door (a),exterior,edge,small,0.548,0.579,11,11,11,11,11,11,11
+high_quality_architectural-1916,door (b),door,True,0.188,door (b),interior,centre,small,0.141,0.111,00,00,00,00,00,00,00
+high_quality_architectural-6551,window,window,True,0.0,window,exterior,edge,small,0.636,0.81,11,11,11,11,11,11,11
+high_quality_architectural-6551,wall,wall,True,0.0,wall,exterior,edge,small,0.562,0.767,10,10,10,10,10,10,10

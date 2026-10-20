@@ -1,0 +1,13 @@
+pid,kind,expected,type,location,position,size_bin,size_pct,center_dist,found,right_type,fix_iou,fixed,fix_iou_add,fixed_add,false_adds,tol_before,tol_after,valid_before,valid_after,viol_gt,viol_before,viol_after,gap,diagnosis,flags,seconds
+high_quality_architectural-8299,door (a),door,door (a),interior,centre,small,0.392,0.406,True,True,0.582,True,0.0,False,0,95.1,95.1,False,False,2,8,8,,,door (detector),7.3
+high_quality-6141,door (a),door,door (a),interior,centre,small,0.08,0.281,True,True,0.714,True,0.0,False,0,97.8,97.8,False,False,2,4,4,,,door (detector),5.4
+high_quality_architectural-6514,door (b),door,door (b),interior,centre,small,0.172,0.358,True,True,0.474,True,0.0,False,0,58.4,58.4,False,False,5,10,10,,,door (INK+detector),1.6
+high_quality-4548,door (b),door,door (b),interior,centre,small,0.095,0.373,False,False,0.718,False,0.0,False,0,89.1,89.1,True,True,34,15,15,,,none,5.4
+high_quality_architectural-9491,window,window,window,exterior,edge,small,0.172,0.56,True,True,0.609,True,0.0,False,1,86.0,86.0,False,False,3,6,6,,,window (detector); wall (detector),28.1
+high_quality_architectural-6301,window,window,window,exterior,edge,small,0.61,0.758,True,True,0.404,True,0.0,False,0,57.9,57.9,True,True,9,8,8,,,window (detector),1.3
+high_quality_architectural-8532,wall,wall,wall,interior,centre,small,0.134,0.185,False,False,0.111,False,0.0,False,0,67.0,67.0,False,False,1,6,6,,,none,3.5
+high_quality-4708,wall,wall,wall,interior,centre,small,0.053,0.238,True,True,0.727,True,0.914,True,1,51.8,71.6,False,False,2,16,12,,,window (WINK); wall (detector),43.7
+high_quality_architectural-865,fixture,sink,fixture,interior,edge,small,0.456,0.568,False,False,0.0,False,0.0,False,1,77.9,77.9,True,True,6,5,5,,,sink (detector),24.0
+high_quality_architectural-3794,fixture,bath_shower,fixture,interior,centre,small,0.043,0.382,False,False,0.455,False,0.0,False,0,83.4,83.4,False,False,2,5,5,,,none,4.6
+high_quality_architectural-3096,room,room,room,interior,centre,small,0.321,0.419,True,True,0.308,True,0.173,False,2,72.3,37.3,False,False,10,30,11,,,room (detector); appliance (detector),52.7
+high_quality_architectural-5566,room,room,room,interior,centre,small,1.042,0.35,True,True,0.519,True,0.352,True,0,81.7,72.1,False,False,9,59,39,,,room (detector); room (detector),48.9

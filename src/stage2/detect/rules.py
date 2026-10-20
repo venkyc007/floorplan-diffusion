@@ -45,6 +45,7 @@ class Candidate:
     rules: list = field(default_factory=list)
     score: float = 0.0
     peak: tuple = None            # (y, x) where the flag points (detector heat peak), if known
+    mask: object = None           # bool mask of the parsed component the flag is about (symbol checks), if any
 
 
 def load_thresholds(path=THRESHOLDS_FILE):
@@ -208,9 +209,11 @@ def merge(cands):
                 m.rules = sorted(set(m.rules) | set(c.rules))
                 m.score += c.score
                 m.peak = m.peak or c.peak
+                if m.mask is None and c.type == m.type:
+                    m.mask = c.mask
                 break
         else:
-            merged.append(Candidate(c.type, c.box, list(c.rules), c.score, c.peak))
+            merged.append(Candidate(c.type, c.box, list(c.rules), c.score, c.peak, c.mask))
     return merged
 
 

@@ -15,8 +15,13 @@ used by check_curve.py):
             0 = off); exterior doors never; per-drawing guard on all doors (user, 2026-10-19)
   R6        windowless exterior span, run >= scale x the training threshold (R6_SCALES; inf = off)
   R7        wall break narrower than a door, >= min width px (R7_WIDTHS; inf = off)
-Found = a proposal box overlaps the omission (resized to the parse, grown 3 px).
-Choice (user, 2026-10-19): budget 0.6 false alarms per intact drawing in total. Stage 1: all rules + ink (detector
+  window ink  parsed window with no window symbol drawn (src/stage2/detect/symbol_ink.py): drawn as plain wall
+            (d_wall < WD) or no ink (ink < WG); (0, 0) = off; per-drawing guard 40% (user, 2026-10-20)
+  wall ink  parsed wall with no ink under it, run >= WL px (inf = off); guard 40% of the parsed wall pixels
+  (ink tier 2 stays off, user 2026-10-19 overnight: its grid is [0])
+Calibration: the window / wall features of parsed components on the intact drawings vs at the window / wall
+omissions (percentiles), written before the tables. = a proposal box overlaps the omission (resized to the parse, grown 3 px).
+Choice (user, 2026-10-19; budget 0.4 on 2026-10-20): budget false alarms per intact drawing in total. Stage 1: all rules + ink (detector
 off) with the best mean recall within budget - det_min (so >= det_min stays for the detector). Stage 2: with those
 rules fixed, the detector threshold / blob with the best mean recall of the whole within the budget.
 """
@@ -40,6 +45,7 @@ from src.stage2.detect.door_ink import category, door_ink_scores, guarded
 from src.stage2.detect.gaps import closed_pairs, gap_candidates, instance_areas
 from src.stage2.detect.image_eval import KINDS, omit
 from src.stage2.detect.narrow_gaps import gap_candidates_narrow
+from src.stage2.detect.symbol_ink import GUARD, wall_ink_runs, window_features, window_verdict
 from src.stage2.detect.window_runs import window_candidates
 from src.stage2.pipeline.run import cfg, models, parse
 from src.utils import PROJECT_ROOT
@@ -51,7 +57,9 @@ THS = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98]
 BLOBS = [20, 40, 80, 160]
 C8_AREAS = [0, 200, 400, 700, 1000, 1500, 2756, np.inf]
 INK_THS = [0, 0.25, 0.5, 1.0, 1.5, 2.0, 3.0]
-INK2_THS = [0, 0.25, 0.5, 1.0]
+INK2_THS = [0]                                 # tier 2 off (user, 2026-10-19 overnight)
+WINK = [(0, 0)] + [(d, g) for d in (0.03, 0.05, 0.08, 0.12) for g in (0, 0.02, 0.05)]   # (d_wall max, gap ink max)
+WALL_LENS = [4, 6, 9, 13]
 R6_SCALES = [1.0, 1.2, 1.5]
 R7_WIDTHS = [1, 2, 3]
 OFF = None                                     # detector off
@@ -81,13 +89,16 @@ def collect(img, choice):
     r6 = [(c.box, c.score) for c in window_candidates(label, WR["thresholds"], WR["need_area"], SIZES["window"][1],
                                                       min(R6_SCALES))]
     r7 = [(c.box, c.score) for c in gap_candidates_narrow(label, min_width=1)]
-    return label.shape, det, c8, r5, ink, r6, r7, det3
+    wf = [(R.box_of(d, label.shape), f) for d, f in window_features(img, label)]
+    runs, share = wall_ink_runs(img, label)
+    wl = ([(R.box_of(m, label.shape), n) for m, n in runs if n >= min(WALL_LENS)], share)
+    return label.shape, det, c8, r5, ink, r6, r7, det3, wf, wl
 
 
 def boxes(rec, S):
     """Proposal boxes of one drawing under setting S = {det: v2 (t, b) or None, det3: v3 (t, b) or None, c8, r5,
     ink, ink2, r6, r7}."""
-    _, det, c8, r5, ink, r6, r7, det3 = rec
+    _, det, c8, r5, ink, r6, r7, det3, wf, wl = rec
     out = list(det.get(S["det"], [])) if S["det"] is not OFF else []
     out += list(det3.get(S.get("det3"), [])) if S.get("det3") is not OFF else []
     out += [bx for bx, s in c8 if s >= S["c8"]]
@@ -96,6 +107,13 @@ def boxes(rec, S):
         out += [bx for bx, s, cat in ink if (cat == "relevant" and s < S["ink"]) or (cat == "interior" and s < S["ink2"])]
     out += [bx for bx, r in r6 if r >= S["r6"]]
     out += [bx for bx, w in r7 if w >= S["r7"]]
+    wd, wg = S.get("wink", (0, 0))
+    if wd > 0 or wg > 0:
+        v = [(bx, window_verdict(f, wd, wg)) for bx, f in wf]
+        if v and np.mean([x is not None for _, x in v]) <= GUARD:
+            out += [bx for bx, x in v if x is not None]
+    if S.get("wallink", np.inf) < np.inf and wl[1] <= GUARD:
+        out += [bx for bx, n in wl[0] if n >= S["wallink"]]
     return out
 
 
@@ -121,13 +139,40 @@ def fmt(r):
     ink = "off" if r["ink"] == 0 else f"{r['ink']} / {r['ink2'] or 'off'}"
     r6 = "off" if r["r6"] == np.inf else f"x{r['r6']}"
     r7 = "off" if r["r7"] == np.inf else f">= {int(r['r7'])} px"
-    return (f"| {det} | {c8} | {'on' if r['r5'] else 'off'} | {ink} | {r6} | {r7} | {r['fa']:.2f} | "
+    wd, wg = r.get("wink", (0, 0))
+    wk = "off" if wd == 0 and wg == 0 else f"d_wall < {wd} / ink < {wg}"
+    wl = "off" if r.get("wallink", np.inf) == np.inf else f">= {int(r['wallink'])} px"
+    return (f"| {det} | {c8} | {'on' if r['r5'] else 'off'} | {ink} | {r6} | {r7} | {wk} | {wl} | {r['fa']:.2f} | "
             f"{100 * r['mean']:.0f}% | " + " | ".join(f"{100 * r[kd]:.0f}%" if kd in r else "-" for kd in KINDS) + " |")
 
 
 HDR = ["| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | "
-       "false alarms / intact | mean recall | " + " | ".join(KINDS) + " |",
-       "|---|---|---|---|---|---|---|---|" + "---|" * len(KINDS)]
+       "window ink | wall ink | false alarms / intact | mean recall | " + " | ".join(KINDS) + " |",
+       "|---|---|---|---|---|---|---|---|---|---|" + "---|" * len(KINDS)]
+
+
+def calibration(intact, omitted):
+    """Window / wall double-check features: parsed components on intact drawings vs at the omissions."""
+    pct = lambda v: (" / ".join(f"{np.nanpercentile(v, q):.3f}" for q in (10, 50, 90)) if len(v) else "-")
+    at = lambda bx, rm: rm[bx[0]:bx[2] + 1, bx[1]:bx[3] + 1].any()
+    wi = [f for r in intact for _, f in r[8]]
+    wo = [f for kd, rm, r in omitted if kd == "window" for bx, f in r[8] if at(bx, rm)]
+    n_win = sum(kd == "window" for kd, _, _ in omitted)
+    li = [n for r in intact for _, n in r[9][0]]
+    lo = [max([n for bx, n in r[9][0] if at(bx, rm)] or [0]) for kd, rm, r in omitted if kd == "wall"]
+    L = ["## Calibration of the window / wall double checks (tuning drawings)", "",
+         "Percentiles 10 / 50 / 90. Intact = every parsed window (wall run) on the intact drawings; omission = the "
+         "parsed windows overlapping a window omission (the parser kept a window there), the longest uninked wall "
+         "run overlapping a wall omission (0 = none: the parser left the gap or the wall is inked).", "",
+         "| feature | intact components | at omissions | n intact / n at omissions |", "|---|---|---|---|"]
+    for k in ("d_wall", "ink", "runs"):
+        L.append(f"| window {k} | {pct([f[k] for f in wi])} | {pct([f[k] for f in wo])} | {len(wi)} / {len(wo)} |")
+    L += [f"| uninked wall run length (px, runs >= {min(WALL_LENS)}) | {pct(li)} | {pct(lo)} | {len(li)} / {len(lo)} |",
+          f"| share of parsed wall px uninked, per drawing | {pct([r[9][1] for r in intact])} | "
+          f"{pct([r[9][1] for kd, _, r in omitted if kd == 'wall'])} | |", "",
+          f"Window omissions with a parsed window at the omission: {len(wo)} of {n_win}; uninked wall runs >= "
+          f"{min(WALL_LENS)} px at a wall omission: {sum(n > 0 for n in lo)} of {len(lo)}.", ""]
+    return L
 
 
 def build(zip_path, ids, n_intact, n_omitted, seed, choice):
@@ -166,26 +211,28 @@ def main():
     ap.add_argument("--tuning", required=True)
     ap.add_argument("--intact", type=int, default=40)
     ap.add_argument("--omitted", type=int, default=80)
-    ap.add_argument("--budget", type=float, default=0.6)
-    ap.add_argument("--det-min", type=float, default=0.25)
+    ap.add_argument("--budget", type=float, default=0.4)
+    ap.add_argument("--det-min", type=float, default=0.15)
     ap.add_argument("--write", action="store_true")
     args = ap.parse_args()
     choice = yaml.safe_load(CHOICE.read_text(encoding="utf-8"))
     intact, omitted = build(args.zip, args.tuning, args.intact, args.omitted, 11, choice)
     t0 = time.time()
     # stage 1: rules + ink, detector off, within budget - det_min
-    rules = [score(intact, omitted, {"det": OFF, "det3": OFF, "c8": a, "r5": r5, "ink": k, "ink2": k2, "r6": r6, "r7": r7})
-             for a, r5, k, k2, r6, r7 in itertools.product(C8_AREAS, (True, False), INK_THS, INK2_THS,
-                                                           R6_SCALES + [np.inf], R7_WIDTHS + [np.inf])
+    rules = [score(intact, omitted, {"det": OFF, "det3": OFF, "c8": a, "r5": r5, "ink": k, "ink2": k2, "r6": r6, "r7": r7,
+                                     "wink": wk, "wallink": wl})
+             for a, r5, k, k2, r6, r7, wk, wl in itertools.product(C8_AREAS, (True, False), INK_THS, INK2_THS,
+                                                                   R6_SCALES + [np.inf], R7_WIDTHS + [np.inf],
+                                                                   WINK, WALL_LENS + [np.inf])
              if not (k == 0 and k2 > 0) and k2 <= k]
     print(f"stage 1: {len(rules)} settings ({time.time() - t0:.0f} s)", flush=True)
     ok1 = [r for r in rules if r["fa"] <= args.budget - args.det_min]
     best1 = max(ok1, key=lambda r: (r["mean"], -r["fa"]))
     # stage 2: detector inside what is left
-    base = {k: best1[k] for k in ("c8", "r5", "ink", "ink2", "r6", "r7")}
+    base = {k: best1[k] for k in ("c8", "r5", "ink", "ink2", "r6", "r7", "wink", "wallink")}
     grid = [(t, b) for t in THS for b in BLOBS]
     full = {"v2": [score(intact, omitted, {**base, "det": tb}) for tb in grid]}
-    if any(r[-1] for r in intact):                       # detector v3 proposals collected
+    if any(r[7] for r in intact):                        # detector v3 proposals collected
         full["v3"] = [score(intact, omitted, {**base, "det": OFF, "det3": tb}) for tb in grid]
         full["both"] = [score(intact, omitted, {**base, "det": a, "det3": b}) for a in grid for b in grid]
     bests = {k: max([r for r in v if r["fa"] <= args.budget] or [best1], key=lambda r: (r["mean"], -r["fa"]))
@@ -193,30 +240,35 @@ def main():
     ok2 = [r for v in full.values() for r in v if r["fa"] <= args.budget]
     best = max(list(bests.values()) + [best1], key=lambda r: (r["mean"], -r["fa"]))
     adds = []                                          # what each new part adds: the choice with that part off
-    for name, off in (("R6 (windowless exterior span)", {"r6": np.inf}), ("R7 (gap too narrow)", {"r7": np.inf}),
-                      ("ink tier 2 (other interior doors)", {"ink2": 0})):
+    for name, off in (("window ink check (parse vs drawing)", {"wink": (0, 0)}),
+                      ("wall ink check (parse vs drawing)", {"wallink": np.inf}),
+                      ("R6 (windowless exterior span)", {"r6": np.inf}), ("R7 (gap too narrow)", {"r7": np.inf})):
         r = score(intact, omitted, {**best, **off})
         adds.append((name, best["mean"] - r["mean"], best["fa"] - r["fa"], r))
     det_only = [score(intact, omitted, {"det": (t, b), "det3": OFF, "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf,
-                                        "r7": np.inf}) for t in THS for b in BLOBS]
+                                        "r7": np.inf, "wink": (0, 0), "wallink": np.inf}) for t in THS for b in BLOBS]
     # each new rule on its own (best within the stage-1 budget with only that rule on)
     alone = []
-    for name, grid in (("R6 alone", [{"r6": s} for s in R6_SCALES]), ("R7 alone", [{"r7": w} for w in R7_WIDTHS])):
+    for name, grid in (("R6 alone", [{"r6": s} for s in R6_SCALES]), ("R7 alone", [{"r7": w} for w in R7_WIDTHS]),
+                       ("window ink alone", [{"wink": w} for w in WINK[1:]]),
+                       ("wall ink alone", [{"wallink": n} for n in WALL_LENS])):
         rs = [score(intact, omitted, {"det": OFF, "det3": OFF, "c8": np.inf, "r5": False, "ink": 0, "ink2": 0, "r6": np.inf,
-                                      "r7": np.inf, **g}) for g in grid]
+                                      "r7": np.inf, "wink": (0, 0), "wallink": np.inf, **g}) for g in grid]
         alone += [(name, r) for r in rs]
-    L = ["# CHECK tuned on parsed TUNING drawings (parser v2B, detector v2, erasure v2; + R6, R7, ink tiers)", "",
+    L = ["# CHECK tuned on parsed TUNING drawings (parser v2B, detectors v2 + v3, erasure v2; + window / wall ink "
+         "double checks, 2026-10-20)", "",
          f"{len(intact)} intact + {len(omitted)} omissions on tuning drawings. Budget {args.budget} false alarms per intact "
          f"drawing in total; rules + ink chosen first within {args.budget - args.det_min:.2f}, then the detector inside "
          "what is left (user, 2026-10-19). Found = a proposal overlaps the omission. Ink column: tier-1 threshold "
-         "(R5's door pairs) / tier-2 threshold (other interior doors).", "", "## Chosen", ""] + HDR + [fmt(best)]
+         "(R5's door pairs) / tier-2 threshold (other interior doors).", ""] + calibration(intact, omitted) + \
+        ["## Chosen", ""] + HDR + [fmt(best)]
     L += ["", "## Which detector (best within the budget with the chosen rules)", ""] + HDR + \
          [fmt(r).replace("| ", f"| ({k}) ", 1) for k, r in bests.items()]
-    L += ["", "## What R6, R7 and the second ink tier add (the choice vs the choice with that part off)", "",
+    L += ["", "## What the window / wall ink checks, R6 and R7 add (the choice vs the choice with that part off)", "",
           "| part | recall gained (points) | false alarms cost | the choice without it |", "|---|---|---|---|"]
     L += [f"| {n} | {100 * dr:+.1f} | {dfa:+.2f} | {r['fa']:.2f} false alarms, {100 * r['mean']:.0f}% recall |"
           for n, dr, dfa, r in adds]
-    L += ["", "## R6 / R7 on their own", ""] + HDR + [fmt(r).replace("| ", f"| ({n}) ", 1) for n, r in alone]
+    L += ["", "## R6 / R7 / window ink / wall ink on their own", ""] + HDR + [fmt(r).replace("| ", f"| ({n}) ", 1) for n, r in alone]
     L += ["", f"## Stage 1 (rules + ink, detector off; budget {args.budget - args.det_min:.2f}), top 8", ""] + HDR + \
          [fmt(r) for r in sorted(ok1, key=lambda r: (-r["mean"], r["fa"]))[:8]]
     L += ["", f"## Stage 2 (detector added to the chosen rules; budget {args.budget}), top 8", ""] + HDR + \
@@ -239,12 +291,16 @@ def main():
                       ink_threshold_interior=float(best["ink2"]),
                       r6_scale=None if best["r6"] == np.inf else float(best["r6"]),
                       r7_min_width=None if best["r7"] == np.inf else int(best["r7"]),
+                      window_ink_dmax=float(best["wink"][0]), window_gap_ink=float(best["wink"][1]),
+                      wall_ink_min_len=None if best["wallink"] == np.inf else int(best["wallink"]),
                       extra_rules=[s for s, on in (("C8", best["c8"] != np.inf), ("R5", best["r5"]),
                                                    ("INK", best["ink"] > 0), ("R6", best["r6"] != np.inf),
-                                                   ("R7", best["r7"] != np.inf)) if on],
-                      final=f"detector + C8 + R5 + ink tiers + R6 + R7; budget {args.budget} (rules first, detector after)",
+                                                   ("R7", best["r7"] != np.inf), ("WINK", best["wink"] != (0, 0)),
+                                                   ("WALLINK", best["wallink"] != np.inf)) if on],
+                      final=f"detector + C8 + R5 + door ink + R6 + R7 + window / wall ink; budget {args.budget} "
+                            "(rules first, detector after)",
                       check_tuning=f"outputs/stage2/check_tune.md (parsed tuning drawings; budget {args.budget}, "
-                                   f"detector >= {args.det_min}; user 2026-10-19)")
+                                   f"detector >= {args.det_min}; user 2026-10-19 / 2026-10-20)")
         CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
         print("written", CHOICE)
 
