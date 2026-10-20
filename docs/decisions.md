@@ -760,3 +760,31 @@ Own choices:
     fixed 8 (2 by addition), 5 false additions on 4 drawings, tolerant mIoU 76.5 -> 74.5, 19 s per drawing.
     Verdicts in the file. Own note: these drawings were in the held-out table's aggregate (all 159 held-out
     plans are) but never looked at one by one or used to choose anything.
+
+## 2026-10-20 (night): large omissions, batch 3, size-balanced test mix
+
+- New src/stage2/data/erasure_large.py; kinds "room (whole)" and "region" in image_eval.omit (expected type "room").
+  Own choices:
+  - Room (whole): rooms of type bedroom / bathroom / kitchen / other_room at 2-15% of the building (as asked).
+    Interior walls = wall pixels within 2 wall thicknesses of the room and not within 2 wall thicknesses of
+    outdoor / background (the outer building walls stay). Its doors (in its walls) are cleared with their arcs;
+    exterior doors and its windows are closed with wall in the drawing's style (as door (a) / window omissions:
+    the outer wall stays continuous). Then every remaining stroke inside the merged room, its name text
+    included, is filled with the local paper grey (Telea inpainting alone left smears and half fixture symbols).
+  - Region: rectangle, aspect 0.6-1.6, 5-25% of the building inside it, needs >= 100 px of interior walls /
+    doors (else up to 30 retries), the same erase order and final stroke clearing.
+  - Scoring: "found" / "fixed" on the erased components (walls, openings, fixtures; class wall, local IoU as
+    for room omissions); the size bin on the whole area (the room + its walls / the rectangle in the building).
+  - Examples figure from TUNING drawings (outputs/stage2/erasure_large_examples.png), so batch 3 stays fresh.
+- Batch 3 (e2e_val --batch 3): held-out order as before, batches 1 and 2 left out, seed 22; 4 room (whole),
+  4 region, 4 small (a random small kind per drawing, the next if the drawing lacks it).
+  Realised sizes: room (whole) 1 medium + 3 large, region 4 large, small 4 small.
+- Test mix (configs/stage2/test_eval.yaml, src/stage2/detect/omission_mix.py): plan_bins cycles small / medium /
+  large in equal thirds; small = the image_eval kinds kept only if measured small; medium = room (whole) at
+  2.7-7.7% or region at 5-7.7%; large = room (whole) at 7.7-15% or region at 7.7-25%; each case checked against
+  its own measured size bin; a drawing where nothing fits takes the next bin (realised counts to be reported).
+- Batch 3 results (kernel eval-e2e v5, CPU; outputs/stage2/e2e_val_batch3.*): found 7 / 12, fixed 2 / 12 (large:
+  1 of 7; medium 0 of 1; small 1 of 4), 10 false additions (6 window-ink marks), tolerant mIoU 44.8 -> 44.9,
+  15 s per drawing. Large omissions get flags but of small types (sink / window / door); there is no "region
+  missing" type and the fill windows are <= 100 px. Erasure caveat: on a grey-fill drawing (batch 3 #2) the
+  room (whole) erasure left a visible grey smudge.

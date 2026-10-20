@@ -26,6 +26,7 @@ import yaml
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
 from src.stage2.data.erasure import draw_wall, erase, erase_symbol, grown, open_gap
+from src.stage2.data.erasure_large import erase_region, erase_room
 from src.stage2.data.omission_meta import FIELDS, breakdowns, omission_meta
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
@@ -85,9 +86,20 @@ def room_walls(lbl, rng):
     return None
 
 
+LARGE_KINDS = ["room (whole)", "region"]        # src/stage2/data/erasure_large.py (user, 2026-10-20)
+
+
 def omit(kind, img, lbl, rng):
     """(erased drawing, omitted mask, expected type, in-scope flag, metadata) or None.
-    metadata: type / location / position / size bin of the omission (src/stage2/data/omission_meta.py)."""
+    metadata: type / location / position / size bin of the omission (src/stage2/data/omission_meta.py).
+    Large kinds: omitted mask = the erased components (walls, openings, fixtures), expected type "room",
+    metadata measured on the whole area (the room + its walls / the rectangle inside the building)."""
+    if kind in LARGE_KINDS:
+        o = (erase_room if kind == "room (whole)" else erase_region)(img, lbl, rng)
+        if o is None:
+            return None
+        out, structure, area = o
+        return out, structure, "room", True, omission_meta(lbl, area, kind)
     if kind in ("door (a)", "door (b)"):
         doors = [d for d in components(lbl == I["door"]) if d.sum() >= 40]
         if not doors:

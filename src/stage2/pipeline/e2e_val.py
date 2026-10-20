@@ -5,6 +5,9 @@
     python -m src.stage2.pipeline.e2e_val --zip parser_val.zip --batch 2 --tag _batch2
         -> a second batch of 12 FRESH held-out drawings (user, 2026-10-20): the same order with batch 1's drawings
            left out, omissions with seed 21
+    python -m src.stage2.pipeline.e2e_val --zip parser_val.zip --batch 3 --tag _batch3
+        -> batch 3: 12 more fresh drawings (batches 1-2 left out, seed 22): 4 room (whole), 4 region (large
+           omissions, src/stage2/data/erasure_large.py) + 4 random small omissions as a reference
     python -m src.stage2.pipeline.e2e_val --compare old.csv new.csv --tag _v2
         -> appends an old vs new table (same drawings) to e2e_val{tag}.md (laptop, after the kernel)
 
@@ -168,16 +171,21 @@ def score(res, removed, lbl, typ):
             "flags_on_spot": len(over), "gt": gt, "rm": rm}
 
 
-def pick(z, args, exclude=(), seed=20):
+BATCH3 = [("room (whole)", 4), ("region", 4), ("small", 4)]   # user, 2026-10-20: large omissions + reference
+
+
+def pick(z, args, exclude=(), seed=20, plan=None):
+    """plan: [(kind, count)] (default: every PLAN kind x PER_KIND); kind "small" = a random small kind per drawing
+    (the next one in PLAN if the drawing lacks it)."""
     held = HELDOUT.read_text(encoding="utf-8").split()
     order = [held[i] for i in np.random.default_rng(20).permutation(len(held))]
     order = [p for p in order if p not in CHECK_SET and p not in set(exclude)]
     rng = np.random.default_rng(seed)
     used, cases = set(), []
-    for kind in PLAN:
+    for want, count in plan or [(k, PER_KIND) for k in PLAN]:
         got = 0
         for pid in order:
-            if got >= PER_KIND:
+            if got >= count:
                 break
             if pid in used:
                 continue
@@ -185,7 +193,15 @@ def pick(z, args, exclude=(), seed=20):
             if (lbl == 255).any():                     # untyped plan
                 continue
             img = read(z, f"{pid}_img.png", cv2.IMREAD_GRAYSCALE)
-            o = omit(kind, img, lbl, rng)
+            if want == "small":
+                k0 = int(rng.integers(len(PLAN)))
+                for kind in PLAN[k0:] + PLAN[:k0]:
+                    o = omit(kind, img, lbl, rng)
+                    if o is not None:
+                        break
+            else:
+                kind = want
+                o = omit(kind, img, lbl, rng)
             if o is None:
                 continue
             used.add(pid)
@@ -203,14 +219,20 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="smoke test: only the first N drawings")
     ap.add_argument("--tag", default="")
     ap.add_argument("--compare", nargs=2, metavar=("OLD_CSV", "NEW_CSV"))
-    ap.add_argument("--batch", type=int, default=1, choices=(1, 2), help="2: 12 fresh drawings, batch 1 left out")
+    ap.add_argument("--batch", type=int, default=1, choices=(1, 2, 3),
+                    help="2: 12 fresh drawings, batch 1 left out; 3: 4 room (whole) + 4 region + 4 small, batches 1-2 out")
     args = ap.parse_args()
     if args.compare:
         return compare(*args.compare, args.tag)
     z = zipfile.ZipFile(args.zip)
-    if args.batch == 2:
+    if args.batch in (2, 3):
         first = {c["pid"] for c in pick(z, argparse.Namespace(limit=None))}
-        cases = pick(z, args, exclude=first, seed=21)
+        if args.batch == 2:
+            cases = pick(z, args, exclude=first, seed=21)
+        else:
+            second = {c["pid"] for c in pick(z, argparse.Namespace(limit=None), exclude=first, seed=21)}
+            cases = pick(z, args, exclude=first | second, seed=22, plan=BATCH3)
+            first |= second
         assert not first & {c["pid"] for c in cases}
     else:
         cases = pick(z, args)

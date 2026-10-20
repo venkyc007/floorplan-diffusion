@@ -5,7 +5,8 @@
         "size_pct": 0.41, "center_dist": 0.73}
 
 Fields (the Stage 1 rules, src/data/corruptions.py describe(), constants from configs/corruption.yaml):
-  type       door (a) / door (b) / window / wall / fixture / room / railing (intact drawings: "intact")
+  type       door (a) / door (b) / window / wall / fixture / room / railing / room (whole) / region
+             (intact drawings: "intact")
   location   exterior if the omitted component touches outdoor / background (4-neighbours), else interior
   position   distance of the omission's centre from the building centre, divided by the building "radius"
              (largest centre-to-building-pixel distance): < 0.55 -> centre, else edge
@@ -28,7 +29,8 @@ _S1 = yaml.safe_load((PROJECT_ROOT / "configs" / "corruption.yaml").read_text(en
 EDGE_CUTOFF = _S1["position"]["edge_cutoff"]          # 0.55 (Stage 1)
 SIZE_EDGES = tuple(_S1["size_bins"]["edges"])         # (2.7, 7.7) % of the building (Stage 1)
 FIELDS = ("type", "location", "position", "size_bin")
-ORDER = {"type": ["door (a)", "door (b)", "window", "wall", "railing", "fixture", "room", "intact"],
+ORDER = {"type": ["door (a)", "door (b)", "window", "wall", "railing", "fixture", "room", "room (whole)", "region",
+                  "intact"],
          "location": ["interior", "exterior"], "position": ["centre", "edge"],
          "size_bin": ["small", "medium", "large"]}
 CROSS = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], np.uint8)
