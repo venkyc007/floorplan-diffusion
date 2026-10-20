@@ -40,7 +40,7 @@ from src.stage2.data.erasure import grown
 from src.stage2.detect.image_eval import LARGE_KINDS
 from src.stage2.detect.omission_mix import omit_in_bin
 from src.stage2.pipeline import e2e_val
-from src.stage2.pipeline.run import cfg, parse, run_pipeline
+from src.stage2.pipeline.run import cfg, generator, parse, run_pipeline
 from src.utils import PROJECT_ROOT
 
 OUT = PROJECT_ROOT / "outputs" / "stage2"
@@ -131,7 +131,7 @@ def run_case(c, mode):
     hole[c["box"][0]:c["box"][2] + 1, c["box"][1]:c["box"][3] + 1] = True
     for name, strat, t0r in STRATS:
         if mode in ("manual", "both"):
-            g = torch.Generator().manual_seed(0)
+            g = generator(0)
             t = time.time()
             new, info = fill_large(parsed, hole, strat, fc, fast, g, t0r or 150)
             sec = time.time() - t
@@ -204,6 +204,8 @@ def report(cs, mode, tag):
 
 
 def figure(cs, tag, mode="manual"):
+    if len(STRATS) < 4:
+        return
     """6 cases (the first 2 of each group, no selection): input | B1 | B2 (t0 of the better manual mean) | B3 | GT."""
     import matplotlib
     matplotlib.use("Agg")
@@ -246,7 +248,11 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--mode", default="both", choices=("both", "manual", "auto"))
     ap.add_argument("--tag", default="")
+    ap.add_argument("--strats", default=None, help="comma-separated subset of B1,B2,B3 (default: all)")
     args = ap.parse_args()
+    if args.strats:
+        keep = args.strats.split(",")
+        STRATS[:] = [s for s in STRATS if s[0].split()[0] in keep]
     cs = cases(zipfile.ZipFile(args.zip), args.limit)
     print("cases:", [(c["pid"], c["group"], c["kind"], c["meta"]["size_bin"], c["meta"]["size_pct"]) for c in cs], flush=True)
     for c in cs:

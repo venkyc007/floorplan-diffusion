@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from src.stage2.complete.windows import TYPES, model_inputs, sample_window
+from src.stage2.complete.windows import TYPES, model_inputs, sample_mixed_window, sample_window
 
 
 def load_plans(zip_path, limit=None, seed=None):
@@ -24,13 +24,14 @@ def load_plans(zip_path, limit=None, seed=None):
         return [(n[:-4], cv2.imdecode(np.frombuffer(z.read(n), np.uint8), cv2.IMREAD_UNCHANGED)) for n in names]
 
 
-def fixed_windows(plans, n, seed=0, win=128, types=TYPES):
-    """n reproducible windows (labels, masks, types, plan ids) around random typed deletions."""
+def fixed_windows(plans, n, seed=0, win=128, types=TYPES, large_frac=0.0):
+    """n reproducible windows (labels, masks, types, plan ids) around random typed deletions
+    (large_frac > 0: that share of large holes, windows.sample_mixed_window)."""
     rng = np.random.default_rng(seed)
     labs, masks, kinds, ids = [], [], [], []
     while len(labs) < n:
         pid, lab = plans[rng.integers(len(plans))]
-        w = sample_window(lab, rng, win, types)
+        w = sample_mixed_window(lab, rng, win, large_frac) if large_frac else sample_window(lab, rng, win, types)
         if w is None:
             continue
         labs.append(w[0])
@@ -43,8 +44,8 @@ def fixed_windows(plans, n, seed=0, win=128, types=TYPES):
 class WindowSet(Dataset):
     """Infinite-style dataset of fresh random windows (one per request) -> (cond, target, mask)."""
 
-    def __init__(self, plans, win=128, length=10**7):
-        self.plans, self.win, self.length = plans, win, length
+    def __init__(self, plans, win=128, length=10**7, large_frac=0.0):
+        self.plans, self.win, self.length, self.large_frac = plans, win, length, large_frac
         self.rng = None
 
     def __len__(self):
@@ -54,7 +55,9 @@ class WindowSet(Dataset):
         if self.rng is None:
             self.rng = np.random.default_rng(torch.initial_seed() % 2**32)
         while True:
-            w = sample_window(self.plans[self.rng.integers(len(self.plans))][1], self.rng, self.win)
+            lab = self.plans[self.rng.integers(len(self.plans))][1]
+            w = (sample_mixed_window(lab, self.rng, self.win, self.large_frac) if self.large_frac
+                 else sample_window(lab, self.rng, self.win))
             if w is not None:
                 cond, target, mask = model_inputs(w[0][None], w[1][None])
                 return cond[0], target[0], mask[0]

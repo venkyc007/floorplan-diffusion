@@ -1,0 +1,21 @@
+{
+  "id": "venkatesh007c/floorplan-stage2-final-test",
+  "title": "floorplan-stage2-final-test",
+  "code_file": "stage2_final_test.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "venkatesh007c/floorplan-code",
+    "venkatesh007c/floorplan-stage2-final"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "venkatesh007c/floorplan-stage2-data"
+  ],
+  "model_sources": []
+}

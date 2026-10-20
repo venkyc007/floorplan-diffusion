@@ -26,6 +26,7 @@ Returns a dict: completed (completion-scale label map), parsed (same scale, befo
 additions and marked components in red; doors drawn as gap + leaf + arc), messages (text list), timings.
 """
 
+import os
 import time
 from functools import lru_cache
 
@@ -55,6 +56,14 @@ from src.stage2.parse.train import Parser, predict_safe
 from src.utils import PROJECT_ROOT
 
 CFG_FILE = PROJECT_ROOT / "configs" / "stage2" / "pipeline.yaml"
+# Device of the parser and the fill models (env STAGE2_DEVICE, default cpu; the final test notebook sets cuda).
+# The detectors and the rules always run on the CPU.
+DEVICE = torch.device(os.environ.get("STAGE2_DEVICE", "cpu"))
+
+
+def generator(seed):
+    """A torch generator on DEVICE (the samplers draw their noise there)."""
+    return torch.Generator(device=DEVICE).manual_seed(int(seed))
 I = C16.index
 
 
@@ -73,14 +82,21 @@ def models():
     parser = Parser(ck["config"]["model"], encoder_weights=None)
     parser.load_state_dict(ck["model"])
     detector, dcfg = load_detector(PROJECT_ROOT / c["detector"])
-    out = {"parser": parser.eval(), "detector": detector, "detector_K": dcfg["model"]["K"]}
+    out = {"parser": parser.eval().to(DEVICE), "detector": detector, "detector_K": dcfg["model"]["K"]}
     for name in ("unet", "diffusion"):
         ck = load(c[name])
         m = build16(ck["config"]["model"])
         m.load_state_dict(ck["model"])
-        out[name] = m.eval()
+        out[name] = m.eval().to(DEVICE)
     if c.get("detector_v3") and (PROJECT_ROOT / c["detector_v3"]).exists():
         out["detector_v3"] = load_v3(PROJECT_ROOT / c["detector_v3"])
+    for name in ("unet", "diffusion"):                   # B4 large-hole models (256 px fine-tune), if present
+        p = c.get(f"b4_{name}")
+        if p and (PROJECT_ROOT / p).exists():
+            ck = load(p)
+            m = build16(ck["config"]["model"])
+            m.load_state_dict(ck["model"])
+            out[f"b4_{name}"] = m.eval().to(DEVICE)
     return out
 
 
@@ -104,7 +120,7 @@ def parse_at(image, scale, max_side):
     H, W = -(-img.shape[0] // 32) * 32, -(-img.shape[1] // 32) * 32
     pad = np.full((H, W), 255, np.uint8)
     pad[:img.shape[0], :img.shape[1]] = img
-    x = torch.from_numpy(pad)[None, None].float() / 255
+    x = torch.from_numpy(pad)[None, None].float().to(DEVICE) / 255
     with torch.no_grad():
         lab = predict_safe(models()["parser"], x, amp=False, tile=1024, overlap=64)[:img.shape[0], :img.shape[1]]
     return lab.astype(np.uint8), s
@@ -168,7 +184,8 @@ def detect_parts(label, image=None, choice=None):
     if "WALLINK" in extra and image is not None:         # parsed wall with no ink under it
         parts["WALLINK"] = wall_ink_candidates(image, label, choice["wall_ink_min_len"])
     if "R8" in extra:                                    # oversized / merged room -> region missing
-        parts["R8"] = merged_room_candidates(label, choice.get("r8_area_mult") or np.inf, bool(choice.get("r8_mix")))
+        parts["R8"] = merged_room_candidates(label, choice.get("r8_k_type") or np.inf, choice.get("r8_k_all") or np.inf,
+                                             bool(choice.get("r8_mix")), skip_open=bool(choice.get("r8_skip_open")))
     return parts
 
 
@@ -257,10 +274,11 @@ def fill_hole(label, box, fc, generator, fast=None, typ=None, rules=(), point=No
     t0 = fc["t0"][0] if share < fc["size_bins"][0] else (fc["t0"][1] if share < fc["size_bins"][1] else fc["t0"][2])
     t0 = fc.get("t0_fixed") or t0
     with torch.no_grad():
+        cond = cond.to(DEVICE)
         sketch = m["unet"].predict(cond)
     if fc.get("sketch_prior") and typ:                   # type-guided fill: the missing component painted
-        sk = apply_prior(sketch[0].numpy().astype(np.uint8), hole > 0, typ, rules, wpoint, wgap)   # into the sketch
-        sketch = torch.from_numpy(sk.astype(np.int64))[None]
+        sk = apply_prior(sketch[0].cpu().numpy().astype(np.uint8), hole > 0, typ, rules, wpoint, wgap)   # into the sketch
+        sketch = torch.from_numpy(sk.astype(np.int64))[None].to(DEVICE)
     kw = {"n": fc["n_samples"]} if fast is None else {"n": fast["n_samples"], "steps_from_t0": fast["steps_from_t0"],
                                                          "guide_last": fast["guide_last"]}
     out, info = sampler.fill(m["diffusion"], cond, sketch=sketch, t0=t0, eta_guidance=fc["eta_guidance"],
@@ -268,7 +286,7 @@ def fill_hole(label, box, fc, generator, fast=None, typ=None, rules=(), point=No
     new = label.copy()
     oy, ox = origin
     h, w = label.shape
-    res = out[0].numpy().astype(np.uint8)
+    res = out[0].cpu().numpy().astype(np.uint8)
     ys, xs = np.nonzero(hole)
     gy, gx = ys + oy, xs + ox
     ok = (gy >= 0) & (gy < h) & (gx >= 0) & (gx < w)
@@ -488,7 +506,7 @@ def run_pipeline(image, boxes=None, seed=None, fast=False, large=None, t0_refine
             h["point"] = (min(max(h["point"][0], y0), y1), min(max(h["point"][1], x0), x1))
     times["detect"] = time.time() - t
     t = time.time()
-    g = torch.Generator().manual_seed(c["fill"]["seed"] if seed is None else seed)
+    g = generator(c["fill"]["seed"] if seed is None else seed)
     completed = parsed.copy()
     marked = np.zeros(parsed.shape, bool)
     for h in holes:

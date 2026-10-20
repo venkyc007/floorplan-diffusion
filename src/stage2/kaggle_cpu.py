@@ -22,7 +22,8 @@ DATA = "/tmp/s2data"
 CKPTS = {"parser": "runs/parser_v2B/checkpoints/best.pt", "detector": "runs/detector_v2/checkpoints/best.pt", "detector_v3": "runs/detector_v3/checkpoints/best.pt",
          "unet": "runs/k2a_unet/checkpoints/best.pt", "diffusion": "runs/k1_constrained/checkpoints/best.pt"}
 OPTIONAL = {"stage1_unet": "runs/unet_matched/checkpoints/best.pt",                 # frozen Stage 1 (large-hole B2):
-            "stage1_diffusion": "runs/finetune_constraints/checkpoints/best.pt"}    # copied when attached
+            "stage1_diffusion": "runs/finetune_constraints/checkpoints/best.pt",    # copied when attached
+            "b4_unet": "runs/b4_unet/checkpoints/best.pt", "b4_diffusion": "runs/b4_diffusion/checkpoints/best.pt"}
 START = time.time()
 
 

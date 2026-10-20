@@ -7,8 +7,11 @@ checkpoints:
   detector_v3: outputs/kaggle/detv3/runs/detector_v3/checkpoints/best.pt   # drawing + parse (user, 2026-10-19)
   unet: outputs/kaggle/k2a/runs/k2a_unet/checkpoints/best.pt
   diffusion: outputs/kaggle/k1/runs/k1_constrained/checkpoints/best.pt
+  diffusion_control: outputs/kaggle/k1/runs/k1_control/checkpoints/best.pt   # K1 control (ablation, final test)
   stage1_unet: outputs/runs/unet_matched/checkpoints/best.pt    # frozen Stage 1 (configs/app.yaml): large-hole B2
   stage1_diffusion: outputs/kaggle/finetune_constraints/runs/finetune_constraints/checkpoints/best.pt
+  b4_unet: outputs/kaggle/b4/runs/b4_unet/checkpoints/best.pt            # B4: 256 px large-hole fine-tune (2026-10-21)
+  b4_diffusion: outputs/kaggle/b4/runs/b4_diffusion/checkpoints/best.pt
 
 parse:
   scales: [0.5, 0.7, 1.0, 1.4, 2.0]   # tried on the input drawing; keep the one with walls closest to 8 px
@@ -34,6 +37,7 @@ fill:
   large_strategy: tiled                # big / coarse / tiled (src/stage2/complete/large_fill.py); provisional until
                                        # the comparison (outputs/stage2/large_fill_compare.md)
   t0_refine: 150                       # coarse: t0 of the 16-class refinement of the Stage 1 layout
+  large_models: current                # current / b4: the models used for large holes (B4 when validated, user 2026-10-21)
   seed: 0
 
 fast:                                  # live-app settings on the CPU (evaluation numbers use `fill`)

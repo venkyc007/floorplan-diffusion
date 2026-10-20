@@ -125,3 +125,98 @@ def model_inputs(labels, masks):
     mask = torch.as_tensor(np.asarray(masks)).float()[:, None]
     cond = torch.cat([target * (1 - mask), mask], 1)
     return cond, target, mask
+
+
+# ---------------------------------------------------------------- large holes (B4, user 2026-10-21)
+
+LARGE_TYPES = ["room_whole", "region_large"]
+LARGE_ROOMS = ["bedroom", "bathroom", "kitchen", "other_room"]
+WALL3 = 3                                         # completion-scale wall thickness
+
+
+def _building(label):
+    return ~np.isin(label, C16.group("OUT"))
+
+
+def large_deletion(label, kind, rng, room_pct=(2.0, 15.0), region_pct=(5.0, 25.0)):
+    """Label-level twin of src/stage2/data/erasure_large.py at completion scale (walls 3 px):
+    room_whole    a bedroom / bathroom / kitchen / other_room instance of room_pct % of the building + its interior
+                  walls (within 2 wall thicknesses, not within 2 of outdoor / background), the doors in them, its
+                  windows and fixtures;
+    region_large  a rectangle (aspect 0.6-1.6) covering region_pct % of the building.
+    -> bool mask of the removed pixels (region: the rectangle) or None."""
+    b = _building(label)
+    nb = max(int(b.sum()), 1)
+    if kind == "room_whole":
+        from src.stage2.constraints.rules import room_instances
+        rooms = [m for c, m in room_instances(label) if C16.names[c] in LARGE_ROOMS
+                 and room_pct[0] <= 100.0 * m.sum() / nb <= room_pct[1]]
+        if not rooms:
+            return None
+        room = rooms[rng.integers(len(rooms))]
+        grow = lambda m, r: cv2.dilate(m.astype(np.uint8), np.ones((2 * r + 1,) * 2, np.uint8)) > 0
+        near, outer = grow(room, 2 * WALL3), grow(np.isin(label, C16.group("OUT")), 2 * WALL3)
+        out = room | (near & (label == I["wall"]) & ~outer)
+        for m, _ in _components(label == I["door"]):
+            if (m & grow(room, 3)).any():
+                out |= m
+        for m, _ in _components(label == I["window"]):
+            if (m & near).sum() >= 0.5 * m.sum():
+                out |= m
+        for m, _ in _components(np.isin(label, FIX)):
+            if (m & grow(room, 2)).sum() >= 0.5 * m.sum():
+                out |= m
+        return out
+    if kind == "region_large":
+        ys, xs = np.nonzero(b)
+        if len(ys) == 0:
+            return None
+        for _ in range(20):
+            target = rng.uniform(*region_pct) / 100 * nb
+            aspect = rng.uniform(0.6, 1.6)
+            h, w = int(np.sqrt(target * aspect)), int(np.sqrt(target / aspect))
+            k = rng.integers(len(ys))
+            m = np.zeros(label.shape, bool)
+            m[max(0, ys[k] - h // 2):ys[k] - h // 2 + h, max(0, xs[k] - w // 2):xs[k] - w // 2 + w] = True
+            if region_pct[0] <= 100.0 * (m & b).sum() / nb <= region_pct[1]:
+                return m
+        return None
+    raise KeyError(kind)
+
+
+def sample_large_window(label, rng, win=256, augment=True):
+    """(window labels, mask, type) with ONE large hole (the removed pixels' box + 2-6 px, as Stage 1) inside the
+    window, or None."""
+    for kind in rng.permutation(LARGE_TYPES):
+        removed = large_deletion(label, kind, rng)
+        if removed is None or not removed.any():
+            continue
+        y0, y1, x0, x1 = _bbox(removed)
+        pad = rng.integers(2, 7, size=4)
+        h, w = label.shape
+        y0, x0, y1, x1 = max(0, y0 - pad[0]), max(0, x0 - pad[2]), min(h - 1, y1 + pad[1]), min(w - 1, x1 + pad[3])
+        if y1 - y0 + 1 > win - 16 or x1 - x0 + 1 > win - 16:
+            continue
+        oy = int(rng.integers(y1 - win + 9, y0 - 7))
+        ox = int(rng.integers(x1 - win + 9, x0 - 7))
+        lab = np.full((win, win), I["background"], np.uint8)
+        sy0, sx0, sy1, sx1 = max(0, oy), max(0, ox), min(h, oy + win), min(w, ox + win)
+        lab[sy0 - oy:sy1 - oy, sx0 - ox:sx1 - ox] = label[sy0:sy1, sx0:sx1]
+        mask = np.zeros((win, win), np.uint8)
+        mask[y0 - oy:y1 - oy + 1, x0 - ox:x1 - ox + 1] = 1
+        if augment:
+            k = int(rng.integers(4))
+            lab, mask = np.rot90(lab, k), np.rot90(mask, k)
+            if rng.random() < 0.5:
+                lab, mask = lab[:, ::-1], mask[:, ::-1]
+        return np.ascontiguousarray(lab), np.ascontiguousarray(mask), str(kind)
+    return None
+
+
+def sample_mixed_window(label, rng, win=256, large_frac=0.5):
+    """B4 training mix: large_frac large holes, the rest the original small component holes (same window size)."""
+    if rng.random() < large_frac:
+        w = sample_large_window(label, rng, win)
+        if w is not None:
+            return w
+    return sample_window(label, rng, win)

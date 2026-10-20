@@ -8,3 +8,9 @@ size_mix:
   medium: 0.3333
   large: 0.3334
 fallback: true          # a drawing where no kind fits its target bin takes the next bin in turn; report realised counts
+# Case counts of src/stage2/final_test.py (the notebook kaggle/notebooks/stage2_final_test)
+seed: 2026
+n_fill_per_bin: 40      # FILL ablation (hole given): 40 small + 40 medium + 40 large windows of completion_test
+n_detect_intact: 60     # CHECK: intact test drawings (false alarms)
+n_detect_omitted: 120   # CHECK: test drawings with one size-balanced omission
+n_e2e: 60               # whole pipeline: further test drawings with one size-balanced omission

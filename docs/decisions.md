@@ -820,3 +820,40 @@ Own choices:
   omission_mix.omit_in_bin (7 measured medium of 20).
 - Part D: none of B1-B3 is clearly good -> B4 plan (fine-tune at 256 px with large holes, ~4 GPU h) written in
   outputs/stage2/large_fill_compare.md, not launched.
+
+## 2026-10-21: R5 forced on, R8 v2, B4 launched, final test notebook
+
+- R5 forced ON in CHECK (user): it targets the TA's "every room must have a door" case (a doorway left open between
+  rooms that need a door). check_tune.R5_GRID = (True,); the rest re-tuned around it within 0.4. Tuning v9 (R8 v2 first
+  grid): same detectors, C8 >= 700, door ink 1.5, R6 x1.5, window ink, R8 mix only: 0.30 FA, 71% mean recall; R5 costs
+  +0.05 FA for +0.0 recall on the tuning omissions (kept by the user's decision).
+- R8 v2 (src/stage2/detect/merged_rooms.py): relative to the drawing (user): area > k_type x the median of the OTHER
+  rooms of its type, or > k_all x the median of all other rooms when the type appears once; or the fixture mix. Own
+  choices: the room's own area is left out of both medians; rooms < 50 px ignored; box margin 4 px; score 2 + ratio
+  (wins merges). First grid (1.5-2.2 x type / 2.0-3.0 x all) cost 1.2-1.6 false alarms per intact drawing alone
+  (real living rooms / halls are several times the median room) -> tuning kept only "mix". Extended grid (own
+  choice): up to 4 x type / 5 x all, and a variant whose size test skips living rooms and hallways; re-tune v10.
+- Region flags: the whole flagged room's box (+ 4 px) goes to the large-hole fill (run.is_large), not to a
+  single-type restricted fill (unchanged from 2026-10-20, now with the margin).
+- B4 launched 2026-10-21 00:57 (kernel floorplan-stage2-b4 v1, T4 x2): GPU0 U-Net, GPU1 constrained diffusion, both
+  warm-started from the CURRENT checkpoints (k2a_unet, k1_constrained best.pt) under new names b4_unet / b4_diffusion.
+  Own choices: 256 x 256 windows, 50% large holes (windows.sample_large_window: whole room 2-15% / region 5-25% of the
+  building, the erasure_large definitions at label level; hole = box + 2-6 px) + 50% the original small holes;
+  batch 8 per GPU (4x the pixels of 128 px), lr 5e-5 (U-Net) / 2e-5 (diffusion), warm-up 100, cosine over the time
+  budget; same 14 constraints and weights; checkpoint every 15 min; in-training val on 64 mixed val windows (seed
+  1234). Hard stop: 1.65 h of training per run + a watchdog at 1.85 h after the kernel start (< 1.9 h, < 3.8 GPU h).
+- Pipeline device: STAGE2_DEVICE (default cpu) moves the parser and the fill models to the GPU (detectors stay on the
+  CPU); samplers get a generator on that device (run.generator). CPU results unchanged (checked on e2e drawing 10).
+- Large-hole models: fill.large_models (current / b4) chooses which 16-class models the large-hole fill uses; B4
+  checkpoints at checkpoints.b4_*.
+- Final test notebook (prepared, not run): kaggle/notebooks/stage2_final_test (src/stage2/final_test.py, two shards
+  on two T4s, per-case jsonl = checkpoint / resume, report); steps in docs/final_test_notebook.md; dataset builder
+  src/stage2/package_final.py (checkpoints + offline wheels). Own choices: counts 40 / 40 / 40 fill windows, 60 intact
+  + 120 omitted CHECK drawings, 60 end-to-end drawings (configs/stage2/test_eval.yaml); evaluation sampling (N = 4,
+  DDIM 50); the ablation runs on the FILL with the hole given (same sketch and seed, constrained vs control
+  diffusion), with paired bootstrap CIs. The test data come from the floorplan-stage2-data notebook output.
+- Tuning v10 (extended R8 v2 grid; outputs/stage2/check_tune.md): no size variant fits the budget. Alone they cost
+  1.6 (1.5 x type / 2 x all) down to 0.30 false alarms per intact tuning drawing (4 x type / 5 x all, size test
+  skipping living / hallway: finds 50% of whole rooms, 35% of regions); the rules get <= 0.25, so the choice keeps
+  R8 = fixture mix only (+1.1 points for +0.05). Chosen CHECK: detectors v2 0.6 / 20 + v3 0.5 / 20, C8 >= 700,
+  R5 on, door ink 1.5, R6 x1.5, window ink 0.08 / 0.02, R8 mix: 0.30 FA, 71% mean recall on tuning.

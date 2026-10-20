@@ -45,9 +45,18 @@ CTX = 32
 TILE, STRIDE = 128, 96
 
 
+OVERRIDE = {}          # tests / validation: {"unet": model, "diffusion": model} replaces the configured ones
+
+
 def _models():
-    from src.stage2.pipeline.run import models
-    return models()
+    """The 16-class models used for large holes: OVERRIDE, else the B4 models when fill.large_models is "b4" and
+    they are present (configs/stage2/pipeline.yaml checkpoints.b4_*), else the current ones."""
+    from src.stage2.pipeline.run import cfg, models
+    m = dict(models())
+    if cfg()["fill"].get("large_models") == "b4" and "b4_unet" in m and "b4_diffusion" in m:
+        m["unet"], m["diffusion"] = m["b4_unet"], m["b4_diffusion"]
+    m.update(OVERRIDE)
+    return m
 
 
 def crop(arr, oy, ox, side, fill):
@@ -101,17 +110,18 @@ def hybrid_window(label, hole, oy, ox, side, t0, fc, fast, generator, sketch=Non
     m = _models()
     win = crop(label, oy, ox, side, I["background"])
     wh = crop(hole.astype(np.uint8), oy, ox, side, 0) > 0
-    cond = _cond(win, wh)
+    from src.stage2.pipeline.run import DEVICE
+    cond = _cond(win, wh).to(DEVICE)
     with torch.no_grad():
         unet_sk = m["unet"].predict(cond)
-    sk = unet_sk if sketch is None else torch.from_numpy(sketch.astype(np.int64))[None]
+    sk = unet_sk if sketch is None else torch.from_numpy(sketch.astype(np.int64))[None].to(DEVICE)
     kw = {"n": fc["n_samples"]} if fast is None else {"n": fast["n_samples"], "steps_from_t0": fast["steps_from_t0"],
                                                        "guide_last": fast["guide_last"]}
     out, info = sampler.fill(m["diffusion"], cond, sketch=sk, t0=t0, eta_guidance=fc["eta_guidance"],
                              steps=fc["ddim_steps"], generator=generator, **kw)
     new = label.copy()
-    paste(new, out[0].numpy().astype(np.uint8), oy, ox, wh)
-    return new, info[0], unet_sk[0].numpy().astype(np.uint8)
+    paste(new, out[0].cpu().numpy().astype(np.uint8), oy, ox, wh)
+    return new, info[0], unet_sk[0].cpu().numpy().astype(np.uint8)
 
 
 def fill_big(label, hole, fc, fast, generator):
@@ -176,7 +186,8 @@ def stage1_repairer():
     acfg = load_config()
     c = pcfg()["checkpoints"]
     acfg["checkpoints"] = {"unet_matched": c["stage1_unet"], "diffusion": c["stage1_diffusion"]}
-    return Repairer(acfg, device=torch.device("cpu"))
+    from src.stage2.pipeline.run import DEVICE
+    return Repairer(acfg, device=DEVICE)
 
 
 def frame6(label):
@@ -208,7 +219,8 @@ def fill_coarse(label, hole, fc, fast, generator, t0_refine=150, seed=0):
     wh = crop(hole.astype(np.uint8), oy, ox, side, 0) > 0
     win = crop(label, oy, ox, side, I["background"])
     with torch.no_grad():
-        unet_sk = _models()["unet"].predict(_cond(win, wh))[0].numpy().astype(np.uint8)
+        from src.stage2.pipeline.run import DEVICE
+        unet_sk = _models()["unet"].predict(_cond(win, wh).to(DEVICE))[0].cpu().numpy().astype(np.uint8)
     lay = crop(layout, oy, ox, side, I["background"])
     room_px = unet_sk[wh & np.isin(unet_sk, ROOMS)]
     default_room = int(np.bincount(room_px).argmax()) if len(room_px) else I["other_room"]

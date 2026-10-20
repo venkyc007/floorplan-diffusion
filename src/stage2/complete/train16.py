@@ -95,6 +95,7 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--init", default=None, help="Stage 1 best.pt (class-expanded warm start)")
+    ap.add_argument("--init16", default=None, help="16-class best.pt (B4: fine-tune the current Stage 2 model)")
     ap.add_argument("--smoke", action="store_true")
     args = ap.parse_args()
     t_start = time.time()
@@ -115,6 +116,10 @@ def main():
     last = out / "checkpoints" / "last.pt"
     if args.init and not last.exists() and not args.smoke:
         model, _ = warm_start(mcfg["kind"], args.init, mcfg)
+    elif args.init16 and not last.exists() and not args.smoke:
+        model = build16(mcfg)
+        model.load_state_dict(torch.load(args.init16, map_location="cpu", weights_only=False)["model"])
+        print("warm start from", args.init16, flush=True)
     else:
         model = build16(mcfg)
     model.to(device)
@@ -135,8 +140,10 @@ def main():
     data = Path(args.data)
     plans = load_plans(data / cfg["data"]["completion_zip"], limit=20 if args.smoke else None, seed=0)
     vplans = load_plans(data / cfg["data"]["val_zip"])
-    val = fixed_windows(vplans, 8 if args.smoke else 256, seed=1234)[:2]
-    loader = torch.utils.data.DataLoader(WindowSet(plans), batch_size=tc["batch_size"],
+    win, large = cfg["data"].get("window", 128), cfg["data"].get("large_frac", 0.0)
+    val = fixed_windows(vplans, 8 if args.smoke else cfg["data"].get("val_windows", 256), seed=1234, win=win,
+                        large_frac=large)[:2]
+    loader = torch.utils.data.DataLoader(WindowSet(plans, win=win, large_frac=large), batch_size=tc["batch_size"],
                                          num_workers=cfg["data"]["num_workers"], drop_last=True,
                                          pin_memory=device.type == "cuda",
                                          persistent_workers=cfg["data"]["num_workers"] > 0)
