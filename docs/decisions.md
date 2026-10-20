@@ -637,3 +637,18 @@ Own choices:
   - The label-level simulator (omissions.simulate_one, older bins 0.5 / 2 %) is left as it was: its tables are
     already reported.
   - breakdown() / breakdowns() split any per-case table by the four fields; image_eval's report and e2e_val use it.
+- eta (guidance strength), user rule, kernel floorplan-stage2-eta (GPU T4, 09:23-10:02, ~0.65 GPU h):
+  150 holes from the TUNING val plans (25 each: door, window, wall, railing, fixture, room; region left out:
+  not a component), fast hybrid with the sketch prior, same seed per hole for every eta; raw sampler output scored.
+  - eta 0 / 0.1-3: tolerant mIoU 71.7 / 71.6, violations 5.35 / 5.32, validity 59 / 59 %. 0.1, 0.3, 1 and 3
+    give IDENTICAL output; the 0.4% of hole pixels that differ from eta 0 come from guide_x0's clamp(-1, 1),
+    not from the constraint gradient.
+  - Why: the calibrated constraint losses' gradient through softmax(x0 / 0.2) is ~1e-8 - 1e-6 per pixel on
+    the near one-hot x0 of the last steps; guidance only acts from eta ~1e5 (laptop check, then the extra rows):
+    3e5 -> 70.0 / 6.05, 1e6 -> 66.8 / 8.53, 3e6 -> 62.2 / 15.04 (worse on both).
+  - Choice (user rule: fewest violations within 1 mIoU point of eta 0; ties -> higher mIoU, smaller eta):
+    eta = 0.1, written to configs/stage2/pipeline.yaml. Own choice: the extra rows (1e5-3e6) were diagnostic
+    only and not eligible, since the user named the grid. Same answer either way.
+  - Note for the report: in this setup x0 guidance is effectively off; the verifier (best-of-N) and the
+    training-time constraints carry the constraint work. Guidance costs ~2.4x fill time on GPU (1.55 vs 0.64 s
+    per hole).
