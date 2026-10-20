@@ -625,3 +625,15 @@ Own choices:
     configs/benchmark_checksums.json holds make_benchmark's ARRAY checksum. Fixed and relaunched; no GPU work was
     done by the first attempt.
   - GPU session ~1.5 h (sampling) + CPU scoring kernel.
+
+## 2026-10-20: omission metadata, eta tuning, end-to-end validation
+
+- Omission metadata (deliverable 5; src/stage2/data/omission_meta.py): every image-level omission
+  (image_eval.omit, check_set.make_case, hence check_tune / check_curve / judge / e2e) records type, location,
+  position, size bin, size %, centre distance.
+  - Stage 1 constants read from configs/corruption.yaml (edge cutoff 0.55; size bins 2.7 / 7.7 %), not copied.
+  - Own choices: building = every pixel that is not outdoor / background (Stage 1: wall + door + window + room);
+    size = the omitted component's own pixels (Stage 1 used the padded mask box); "touches" = 4-neighbour.
+  - The label-level simulator (omissions.simulate_one, older bins 0.5 / 2 %) is left as it was: its tables are
+    already reported.
+  - breakdown() / breakdowns() split any per-case table by the four fields; image_eval's report and e2e_val use it.

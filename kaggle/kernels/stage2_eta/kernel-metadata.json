@@ -1,0 +1,25 @@
+{
+  "id": "venkatesh007c/floorplan-stage2-eta",
+  "title": "floorplan-stage2-eta",
+  "code_file": "run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "venkatesh007c/floorplan-code"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "venkatesh007c/floorplan-stage2-data",
+    "venkatesh007c/floorplan-stage2-parser-v2",
+    "venkatesh007c/floorplan-stage2-k2a",
+    "venkatesh007c/floorplan-stage2-k1",
+    "venkatesh007c/floorplan-stage2-detv2",
+    "venkatesh007c/floorplan-stage2-detv3"
+  ],
+  "model_sources": []
+}

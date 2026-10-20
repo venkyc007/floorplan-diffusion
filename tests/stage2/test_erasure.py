@@ -44,8 +44,9 @@ def test_door_kinds():
 def test_pipeline_input_has_no_outline():
     """make_case returns the image that goes to run_pipeline: single channel, changed only at the spot."""
     img, lbl = toy()
-    out, removed, expected = check_set.make_case("fixture", img, lbl, None)
+    out, removed, expected, meta = check_set.make_case("fixture", img, lbl, None)
     assert out.ndim == 2 and expected == "sink"
+    assert meta["type"] == "fixture" and meta["location"] == "interior"
     away = ~grown(symbol_zone(removed, removed.shape), 2)
     assert np.array_equal(out[away], img[away])
 

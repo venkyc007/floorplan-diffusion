@@ -25,6 +25,7 @@ import numpy as np
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
 from src.stage2.data.erasure import draw_wall, erase, erase_symbol, grown, open_gap
+from src.stage2.data.omission_meta import FIELDS, breakdowns, omission_meta
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import build_heldout_cases
@@ -83,7 +84,8 @@ def room_walls(lbl, rng):
 
 
 def omit(kind, img, lbl, rng):
-    """(erased drawing, omitted mask, expected type, in-scope flag) or None."""
+    """(erased drawing, omitted mask, expected type, in-scope flag, metadata) or None.
+    metadata: type / location / position / size bin of the omission (src/stage2/data/omission_meta.py)."""
     if kind in ("door (a)", "door (b)"):
         doors = [d for d in components(lbl == I["door"]) if d.sum() >= 40]
         if not doors:
@@ -94,11 +96,11 @@ def omit(kind, img, lbl, rng):
             plan[d] = I["wall"]
             reach = R.reachable_parts(plan)
             cut = any(not (reach & m).any() for _, m in room_instances(plan) if (grown(d, 3) & m).any())
-            return draw_wall(img, d, lbl, WALL_PX), d, "door", cut
+            return draw_wall(img, d, lbl, WALL_PX), d, "door", cut, omission_meta(lbl, d, kind)
         pair = door_side_pair(lbl, d, 2 * WALL_PX)
         scope = bool(pair and pair[0] != pair[1] and closed_pairs()[pair[0], pair[1]]
                      and {C16.names[p] for p in pair} & {"bedroom", "bathroom"})
-        return open_gap(img, d, lbl, WALL_PX), d, "door", scope
+        return open_gap(img, d, lbl, WALL_PX), d, "door", scope, omission_meta(lbl, d, kind)
     if kind == "wall":
         m = wall_piece(lbl, rng)
     elif kind == "room":
@@ -111,7 +113,7 @@ def omit(kind, img, lbl, rng):
         return None
     typ = C16.names[int(np.bincount(lbl[m]).argmax())] if kind == "fixture" else TYPE[kind]
     out = erase_symbol(img, m, lbl, WALL_PX) if kind in ("window", "fixture") else erase(img, m, lbl, wall_px=WALL_PX)
-    return out, m, typ, True
+    return out, m, typ, True, omission_meta(lbl, m, kind)
 
 
 def score(props, rm, typ):
@@ -145,10 +147,11 @@ def main():
                "full CHECK (+ R6 + R7, final)": ("detector", "C8", "R5", "INK", "R6", "R7")}
     rows, t0 = [], time.time()
 
-    def run(pid, img, removed=None, kind=None, typ=None, scope=None):  # img: the drawing given to PARSE
+    def run(pid, img, removed=None, kind=None, typ=None, scope=None, meta=None):  # img: the drawing given to PARSE
         label, _, _ = parse(img, pc)
         parts = detect_parts(label, img)
         row = {"pid": pid, "kind": kind or "intact", "type": typ, "in_scope": scope, "redrawn": ""}
+        row.update({f"meta_{k}": v for k, v in (meta or omission_meta(None, None, "intact")).items()})
         rm = None
         if removed is not None:
             rm = cv2.resize(removed.astype(np.uint8), (label.shape[1], label.shape[0]), interpolation=cv2.INTER_NEAREST) > 0
@@ -176,7 +179,7 @@ def main():
                 kind = KINDS[(k + step) % len(KINDS)]
                 o = omit(kind, img, lbl, rng)
                 if o is not None:
-                    run(pid, o[0], o[1], kind, o[2], o[3])
+                    run(pid, o[0], o[1], kind, o[2], o[3], o[4])
                     break
         print(f"omitted {j + 1}/{len(omitted)} ({time.time() - t0:.0f} s)", flush=True)
     with open(OUT / ("image_eval_smoke.csv" if args.limit else "image_eval_cases.csv"), "w", newline="", encoding="utf-8") as f:
@@ -217,6 +220,10 @@ def report(rows, methods, path):
               for k in KINDS if any(r['kind'] == k and r['redrawn'] != '' for r in om)) + ".",
           "Note: label-level numbers above are on ground-truth label maps; these are on parsed drawings, so parser "
           "errors count against detection (and add false alarms)."]
+    if om and "meta_location" in om[0]:                  # recall of the final CHECK by omission metadata
+        meta_rows = [{**{f: r[f"meta_{f}"] for f in FIELDS}, "r": r} for r in om]
+        L += ["", f"Recall of {fin} by omission metadata (found (right type)):"]
+        L += breakdowns(meta_rows, {"found": lambda rs: rec([x["r"] for x in rs], fin)})
     with open(OUT / "detection_eval.md", "a", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
     print("\n".join(L))

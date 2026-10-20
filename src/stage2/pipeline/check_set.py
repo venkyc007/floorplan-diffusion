@@ -30,6 +30,7 @@ import numpy as np
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
 from src.stage2.data.erasure import draw_wall, erase, erase_symbol, open_gap
+from src.stage2.data.omission_meta import omission_meta
 from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.gaps import closed_pairs
@@ -116,9 +117,10 @@ def room_walls(lbl):
 
 
 def make_case(kind, img, lbl, bad, min_len=0):
-    """(image with the omission, removed mask in image px, expected added class) or None."""
+    """(image with the omission, removed mask in image px, expected added class, metadata) or None.
+    metadata: type / location / position / size bin (src/stage2/data/omission_meta.py)."""
     if kind == "intact":
-        return img, np.zeros(lbl.shape, bool), None
+        return img, np.zeros(lbl.shape, bool), None, omission_meta(lbl, None, "intact")
     m = {"door (a)": lambda: door_a(lbl), "door (b)": lambda: door_b(lbl, bad, min_len),
          "window": lambda: first_component(lbl, [I["window"]]), "fixture": lambda: first_component(lbl, C16.group("F")),
          "wall": lambda: wall_piece(lbl), "room": lambda: room_walls(lbl)}[kind]()
@@ -134,7 +136,7 @@ def make_case(kind, img, lbl, bad, min_len=0):
         out = erase(img, m, lbl, wall_px=WALL_PX)
     expected = {"door (a)": "door", "door (b)": "door", "window": "window", "wall": "wall", "room": "wall",
                 "fixture": C16.names[int(np.bincount(lbl[m]).argmax())]}[kind]
-    return out, m, expected
+    return out, m, expected, omission_meta(lbl, m, kind)
 
 
 def judge(res, removed, expected):
@@ -205,7 +207,7 @@ def hole_report(cases, tag):
                    "hybrid changed inside the box. Figure: check_set_holes" + tag + ".png.", "",
                    "| # | drawing | omission | hole | raw new px of type (largest) | kept px | hybrid changed (class: px) | why nothing / what |",
                    "|---|---|---|---|---|---|---|---|"]
-    for i, (n, kind, (img, removed, expected), res, v) in enumerate(cases):
+    for i, (n, kind, (img, removed, expected, *_), res, v) in enumerate(cases):
         comp = res["completed"]
         rm = cv2.resize(removed.astype(np.uint8), (comp.shape[1], comp.shape[0]), interpolation=cv2.INTER_NEAREST) > 0
         rm = grow(rm, 3) if rm.any() else rm
@@ -273,10 +275,10 @@ def figure(cases, tag):
          "found = a hole overlaps the omission; restored = the expected class was added there; extra = added "
          "components elsewhere; correct = restored and no extra (intact: nothing added).", "",
          "| # | drawing | omission | found | restored | extra | correct | holes | s |", "|---|---|---|---|---|---|---|---|---|"]
-    for i, (n, kind, (white, removed, expected), res, v) in enumerate(cases):
+    for i, (n, kind, (white, removed, expected, *_), res, v) in enumerate(cases):
         L.append(f"| {i + 1} | {n} | {kind} | {'yes' if v['found'] else 'no'} | {'yes' if v['restored'] else 'no'} | "
                  f"{v['extra']} | {'**yes**' if v['correct'] else 'no'} | {len(res['holes'])} | {res['seconds']:.0f} |")
-    for i, (n, kind, (white, removed, expected), res, v) in enumerate(cases):
+    for i, (n, kind, (white, removed, expected, *_), res, v) in enumerate(cases):
         a, b, c = axes[i]
         a.imshow(white, cmap="gray", vmin=0, vmax=255)
         if removed.any():
