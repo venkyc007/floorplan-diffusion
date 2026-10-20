@@ -21,6 +21,8 @@ from src.kaggle_kernel import CODE, WORK, find, run
 DATA = "/tmp/s2data"
 CKPTS = {"parser": "runs/parser_v2B/checkpoints/best.pt", "detector": "runs/detector_v2/checkpoints/best.pt", "detector_v3": "runs/detector_v3/checkpoints/best.pt",
          "unet": "runs/k2a_unet/checkpoints/best.pt", "diffusion": "runs/k1_constrained/checkpoints/best.pt"}
+OPTIONAL = {"stage1_unet": "runs/unet_matched/checkpoints/best.pt",                 # frozen Stage 1 (large-hole B2):
+            "stage1_diffusion": "runs/finetune_constraints/checkpoints/best.pt"}    # copied when attached
 START = time.time()
 
 
@@ -44,6 +46,13 @@ def setup():
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy(src[0], dst)
         print(name, "<-", src[0], flush=True)
+    for name, pattern in OPTIONAL.items():
+        src = find(pattern)
+        if src and name in paths:
+            dst = os.path.join(CODE, paths[name])
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy(src[0], dst)
+            print(name, "<-", src[0], flush=True)
     return DATA
 
 

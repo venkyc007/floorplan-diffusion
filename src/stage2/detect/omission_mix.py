@@ -48,7 +48,7 @@ def _large(kind, img, lbl, rng, room_pct, region_pct):
     if o is None:
         return None
     out, structure, area = o
-    return out, structure, "room", True, omission_meta(lbl, area, kind)
+    return out, structure, "room", True, omission_meta(lbl, area, kind), area
 
 
 def omit_in_bin(target, img, lbl, rng):

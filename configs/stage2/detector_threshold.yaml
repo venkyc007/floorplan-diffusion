@@ -1,4 +1,4 @@
-min_blob: 40
+min_blob: 20
 source: 'detection_eval.py: best mean recall with <= 0.5 false alarms per intact val
   plan (300 val plans)'
 strong_rules:
@@ -6,15 +6,15 @@ strong_rules:
 - C17
 - C6
 - C12
-threshold: 0.5
-final: detector + C8 + R5 + door ink + R6 + window ink (wall ink off); budget 0.4 (rules
-  first, detector after)
+threshold: 0.6
+final: detectors v2 + v3 + C8 + door ink + R6 + window ink + R8 (R5, R7, wall ink off); budget
+  0.4 on tuning drawings with small + large omissions (rules first, detector after)
 extra_rules:
 - C8
-- R5
 - INK
 - R6
 - WINK
+- R8
 gap_rule:
   open_rate: 0.1
   need_area: 1514
@@ -22,13 +22,13 @@ gap_rule:
   min_len: 11
   source: gap_tune.py on the tuning plans; R5 alone <= 0.09 false alarms per intact
     plan
-c8_min_area: 700.0
-ink_threshold: 1.5
+c8_min_area: 400.0
+ink_threshold: 2.0
 check_tuning: outputs/stage2/check_tune.md (parsed tuning drawings; budget 0.4, detector
   >= 0.15; user 2026-10-19 / 2026-10-20)
 ink_relevant_only: true
 ink_threshold_interior: 0.0
-r6_scale: 1.2
+r6_scale: 1.5
 r7_min_width: null
 manual_only_types:
 - railing
@@ -39,6 +39,9 @@ ink_tier2_note: 'off (user, 2026-10-19 overnight): fails on drawings with arc-le
   doors (check-set case 7)'
 window_ink_dmax: 0.08
 window_gap_ink: 0.02
-wall_ink_min_len: 4
-wall_ink_note: 'chosen by the re-tune but off (2026-10-20): +0.0 recall, +0.05 false alarms in the
-  final choice (tie -> fewer false alarms); the parser rarely draws a wall over an erased gap (1 of 23)'
+wall_ink_min_len: null
+wall_ink_note: 'chosen by the re-tune but off (2026-10-20): +0.0 recall, +0.05 false
+  alarms in the final choice (tie -> fewer false alarms); the parser rarely draws
+  a wall over an erased gap (1 of 23)'
+r8_area_mult: 1.0
+r8_mix: true

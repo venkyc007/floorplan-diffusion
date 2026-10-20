@@ -58,7 +58,7 @@ def test_every_image_level_omission_carries_metadata():
     lbl = plan()
     img = np.where(np.isin(lbl, [I["wall"]]), 0, 255).astype(np.uint8)
     o = omit("window", img, lbl, np.random.default_rng(0))
-    assert o is not None and len(o) == 5
+    assert o is not None and len(o) == 6 and np.array_equal(o[5], o[1])     # area = the omitted mask (small kinds)
     meta = o[4]
     assert set(FIELDS) <= set(meta)
     assert meta["type"] == "window" and meta["location"] == "exterior"

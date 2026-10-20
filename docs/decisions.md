@@ -788,3 +788,26 @@ Own choices:
   15 s per drawing. Large omissions get flags but of small types (sink / window / door); there is no "region
   missing" type and the fill windows are <= 100 px. Erasure caveat: on a grey-fill drawing (batch 3 #2) the
   room (whole) erasure left a visible grey smudge.
+
+## 2026-10-20 (night 2): large holes - R8 merged-room rule, three large fills (B1-B3), comparison
+
+- Part A, R8 (src/stage2/detect/merged_rooms.py): a parsed room instance is "region missing" when its area > mult x
+  its type's p99 (R1 table) or it holds fixtures no single room type takes (C15 table). Own choices: other_room is
+  dropped from the C15 sets (it accepts every fixture, so no intersection would ever be empty); a fixture belongs
+  to a room if >= half of it lies in the room grown 2 px; box = the room's bounding box + 1 px; score = area / p99
+  (>= 1), so region flags win merges with overlapping small flags.
+- CHECK re-tuned with R8 (kernel eval-tune v8, CPU; outputs/stage2/check_tune.md), budget 0.4. Own choices: the
+  tuning omissions now cycle over the small kinds AND room (whole) / region (so R8 can earn recall); grid pruned to
+  stay < 1 h (R7 and wall ink off: both +0 before; window ink off or at 0.08 / 0.02). Because the omission set
+  changed, the whole CHECK was re-chosen: detectors v2 0.6 / 20 px + v3 0.5 / 20 px, C8 >= 400 px, R5 OFF, door
+  ink < 2.0, R6 x1.5, window ink 0.08 / 0.02, R8 > 1.0 x p99 + mix: 0.35 false alarms / intact tuning drawing,
+  72% mean recall (room (whole) 89%, region 76%). R8 adds +1.1 points for +0.05 (alone it finds 12% of regions,
+  6% of whole rooms). The window-ink decision (held-out cost) is still the user's.
+- Part B, src/stage2/complete/large_fill.py: B1 big window, B2 coarse-to-fine (frozen Stage 1 hybrid, configs/app.yaml
+  settings, then 16-class refinement at t0 150 / 300), B3 tiled (128 px, 32 px overlap, most-known-context first).
+  Own choices: B1 / B3 use the Stage 1 size-adaptive t0 (400 / 600 / 700 by the hole's share), not t0_fixed 300
+  (chosen on small holes); 16 -> 6 mapping: railing -> wall, fixtures -> room; Stage 1 hole = its frame pixels
+  covered >= 25% by the hole; region holes = the flag's box. Restriction for region holes: everything kept except
+  doors that do not join two interior spaces. Pipeline: region flags and manual boxes > max_hole (100 px) go to
+  fill.large_strategy (provisional: tiled); checkpoints.stage1_unet / stage1_diffusion added to pipeline.yaml.
+  Smoke (1 case, manual): B1 runs on a 256 px window (attention fine at that size).

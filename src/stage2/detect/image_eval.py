@@ -90,16 +90,17 @@ LARGE_KINDS = ["room (whole)", "region"]        # src/stage2/data/erasure_large.
 
 
 def omit(kind, img, lbl, rng):
-    """(erased drawing, omitted mask, expected type, in-scope flag, metadata) or None.
+    """(erased drawing, omitted mask, expected type, in-scope flag, metadata, area mask) or None.
     metadata: type / location / position / size bin of the omission (src/stage2/data/omission_meta.py).
     Large kinds: omitted mask = the erased components (walls, openings, fixtures), expected type "room",
-    metadata measured on the whole area (the room + its walls / the rectangle inside the building)."""
+    metadata measured on the whole area (the room + its walls / the rectangle inside the building). area mask =
+    that area (large kinds) or the omitted mask (small kinds): what a manual box around the omission covers."""
     if kind in LARGE_KINDS:
         o = (erase_room if kind == "room (whole)" else erase_region)(img, lbl, rng)
         if o is None:
             return None
         out, structure, area = o
-        return out, structure, "room", True, omission_meta(lbl, area, kind)
+        return out, structure, "room", True, omission_meta(lbl, area, kind), area
     if kind in ("door (a)", "door (b)"):
         doors = [d for d in components(lbl == I["door"]) if d.sum() >= 40]
         if not doors:
@@ -110,11 +111,11 @@ def omit(kind, img, lbl, rng):
             plan[d] = I["wall"]
             reach = R.reachable_parts(plan)
             cut = any(not (reach & m).any() for _, m in room_instances(plan) if (grown(d, 3) & m).any())
-            return draw_wall(img, d, lbl, WALL_PX), d, "door", cut, omission_meta(lbl, d, kind)
+            return draw_wall(img, d, lbl, WALL_PX), d, "door", cut, omission_meta(lbl, d, kind), d
         pair = door_side_pair(lbl, d, 2 * WALL_PX)
         scope = bool(pair and pair[0] != pair[1] and closed_pairs()[pair[0], pair[1]]
                      and {C16.names[p] for p in pair} & {"bedroom", "bathroom"})
-        return open_gap(img, d, lbl, WALL_PX), d, "door", scope, omission_meta(lbl, d, kind)
+        return open_gap(img, d, lbl, WALL_PX), d, "door", scope, omission_meta(lbl, d, kind), d
     if kind == "wall":
         m = wall_piece(lbl, rng)
     elif kind == "room":
@@ -127,7 +128,7 @@ def omit(kind, img, lbl, rng):
         return None
     typ = C16.names[int(np.bincount(lbl[m]).argmax())] if kind == "fixture" else TYPE[kind]
     out = erase_symbol(img, m, lbl, WALL_PX) if kind in ("window", "fixture") else erase(img, m, lbl, wall_px=WALL_PX)
-    return out, m, typ, True, omission_meta(lbl, m, kind)
+    return out, m, typ, True, omission_meta(lbl, m, kind), m
 
 
 def score(props, rm, typ):

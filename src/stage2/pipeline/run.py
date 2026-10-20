@@ -35,6 +35,7 @@ import torch
 import yaml
 
 from src.stage2.complete import sampler
+from src.stage2.complete.large_fill import fill_large
 from src.stage2.complete.models16 import build16
 from src.stage2.complete.sketch_prior import SIZES, apply_prior
 from src.stage2.constraints.rules import components
@@ -46,6 +47,7 @@ from src.stage2.detect.detector_v3 import load_v3, v3_probs
 from src.stage2.detect.door_ink import ink_candidates
 from src.stage2.detect.flag_gap import flagged_gap, gap_verdict
 from src.stage2.detect.gaps import gap_candidates
+from src.stage2.detect.merged_rooms import merged_room_candidates
 from src.stage2.detect.narrow_gaps import gap_candidates_narrow
 from src.stage2.detect.symbol_ink import wall_ink_candidates, window_ink_candidates
 from src.stage2.detect.window_runs import window_candidates
@@ -165,6 +167,8 @@ def detect_parts(label, image=None, choice=None):
         parts["WINK"] = window_ink_candidates(image, label, choice["window_ink_dmax"], choice["window_gap_ink"])
     if "WALLINK" in extra and image is not None:         # parsed wall with no ink under it
         parts["WALLINK"] = wall_ink_candidates(image, label, choice["wall_ink_min_len"])
+    if "R8" in extra:                                    # oversized / merged room -> region missing
+        parts["R8"] = merged_room_candidates(label, choice.get("r8_area_mult") or np.inf, bool(choice.get("r8_mix")))
     return parts
 
 
@@ -403,7 +407,7 @@ def describe_additions(before, after, holes):
                 lines.append(f"{c} added {where}")
         if h.get("gap") is not None and any(m.startswith("wall added") for m in lines):
             lines.insert(0, f"{h['gap_len']} px break in a wall line: no door fits -> wall missing, closed")
-        if h["type"] == "room":
+        if h["type"] in ("room", "region"):
             created = [C16.names[c] for c in np.unique(after[changed]) if c in C16.group("S")]
             if created:
                 lines.append(f"missing room -> room drawn as {', '.join(created)}")
@@ -449,9 +453,18 @@ def overlay(image, before, after, scale, marked=None):
 
 # ---------------------------------------------------------------- entry point
 
-def run_pipeline(image, boxes=None, seed=None, fast=False):
-    """fast=True: the live-app settings (configs/stage2/pipeline.yaml `fast`)."""
+def is_large(h, max_hole):
+    """Region-missing flags (R8) and manual boxes larger than max_hole go to the large-hole fill."""
+    y0, x0, y1, x1 = h["box"]
+    return h["type"] == "region" or (h["type"] == "manual" and max(y1 - y0, x1 - x0) + 1 > max_hole)
+
+
+def run_pipeline(image, boxes=None, seed=None, fast=False, large=None, t0_refine=None):
+    """fast=True: the live-app settings (configs/stage2/pipeline.yaml `fast`). large: strategy for large holes
+    ("big" / "coarse" / "tiled", src/stage2/complete/large_fill.py; default fill.large_strategy)."""
     c = cfg()
+    large = large or c["fill"].get("large_strategy", "tiled")
+    t0_refine = t0_refine or c["fill"].get("t0_refine", 150)
     times = {}
     t = time.time()
     parsed, scale, pinfo = parse(image, c["parse"])
@@ -465,6 +478,8 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
                  for b in boxes]
     mh = c["fill"]["max_hole"]
     for h in holes:                                              # keep holes window-sized
+        if is_large(h, mh):
+            continue
         y0, x0, y1, x1 = h["box"]
         cy, cx = (y0 + y1) // 2, (x0 + x1) // 2
         h["box"] = (max(cy - mh // 2, y0), max(cx - mh // 2, x0), min(cy + mh // 2, y1), min(cx + mh // 2, x1))
@@ -483,9 +498,16 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
             marked |= ex
             continue
         gap_rule(completed, h)
-        new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None, h["type"], h["rules"],
-                              h["point"], h.get("gap"))
-        kept = restrict(completed, new, h["type"], h["point"])
+        if is_large(h, mh):                                      # region missing / big manual box
+            y0, x0, y1, x1 = h["box"]
+            hole = np.zeros(completed.shape, bool)
+            hole[y0:y1 + 1, x0:x1 + 1] = True
+            new, info = fill_large(completed, hole, large, c["fill"], c["fast"] if fast else None, g, t0_refine)
+            kept = new
+        else:
+            new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None, h["type"],
+                                  h["rules"], h["point"], h.get("gap"))
+            kept = restrict(completed, new, h["type"], h["point"])
         y0, x0, y1, x1 = h["box"]                                # debug record: map before, raw hybrid output and
         sl = (slice(max(0, y0 - 16), y1 + 17), slice(max(0, x0 - 16), x1 + 17))   # what the restriction kept
         h["raw"] = {"origin": (sl[0].start, sl[1].start), "before": completed[sl].copy(), "hybrid": new[sl].copy(),

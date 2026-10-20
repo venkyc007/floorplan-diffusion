@@ -8,94 +8,99 @@ Percentiles 10 / 50 / 90. Intact = every parsed window (wall run) on the intact 
 
 | feature | intact components | at omissions | n intact / n at omissions |
 |---|---|---|---|
-| window d_wall | 0.103 / 0.242 / 0.454 | 0.024 / 0.084 / 0.239 | 206 / 16 |
-| window ink | 0.250 / 0.505 / 0.683 | 0.395 / 0.651 / 0.801 | 206 / 16 |
-| window runs | 1.000 / 2.000 / 3.000 | 1.000 / 1.500 / 3.000 | 206 / 16 |
-| uninked wall run length (px, runs >= 4) | 19.800 / 51.000 / 82.200 | 0.000 / 0.000 / 0.000 | 2 / 23 |
-| share of parsed wall px uninked, per drawing | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.005 | |
+| window d_wall | 0.103 / 0.242 / 0.454 | 0.012 / 0.078 / 0.132 | 206 / 14 |
+| window ink | 0.250 / 0.505 / 0.683 | 0.559 / 0.588 / 0.753 | 206 / 14 |
+| window runs | 1.000 / 2.000 / 3.000 | 1.000 / 1.000 / 2.000 | 206 / 14 |
+| uninked wall run length (px, runs >= 4) | 19.800 / 51.000 / 82.200 | 0.000 / 0.000 / 0.000 | 2 / 18 |
+| share of parsed wall px uninked, per drawing | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.008 | |
 
-Window omissions with a parsed window at the omission: 16 of 23; uninked wall runs >= 4 px at a wall omission: 1 of 23.
+Window omissions with a parsed window at the omission: 14 of 18; uninked wall runs >= 4 px at a wall omission: 0 of 18.
 
 ## Chosen
 
-| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| v2 0.5 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 57% | 43% | 74% | 74% | 61% | 0% | 55% | 95% |
+| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | R8 merged room | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room | room (whole) | region |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| v2 0.6 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.35 | 72% | 78% | 72% | 89% | 83% | 0% | 58% | 100% | 89% | 76% |
 
 ## Which detector (best within the budget with the chosen rules)
 
-| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| (v2) v2 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.35 | 31% | 26% | 43% | 43% | 30% | 0% | 16% | 59% |
-| (v3) v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 53% | 43% | 70% | 57% | 57% | 0% | 52% | 95% |
-| (both) v2 0.5 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 57% | 43% | 74% | 74% | 61% | 0% | 55% | 95% |
+| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | R8 merged room | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room | room (whole) | region |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| (v2) v2 0.6 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.33 | 35% | 39% | 22% | 39% | 28% | 0% | 17% | 53% | 61% | 53% |
+| (v3) v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.30 | 69% | 78% | 72% | 78% | 83% | 0% | 54% | 100% | 89% | 65% |
+| (both) v2 0.6 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.35 | 72% | 78% | 72% | 89% | 83% | 0% | 58% | 100% | 89% | 76% |
 
 ## What the window / wall ink checks, R6 and R7 add (the choice vs the choice with that part off)
 
 | part | recall gained (points) | false alarms cost | the choice without it |
 |---|---|---|---|
-| window ink check (parse vs drawing) | +1.2 | +0.05 | 0.25 false alarms, 56% recall |
-| wall ink check (parse vs drawing) | +0.0 | +0.05 | 0.25 false alarms, 57% recall |
-| R6 (windowless exterior span) | +0.6 | +0.02 | 0.28 false alarms, 57% recall |
-| R7 (gap too narrow) | +0.0 | +0.00 | 0.30 false alarms, 57% recall |
+| R8 merged room (region missing) | +1.1 | +0.05 | 0.30 false alarms, 71% recall |
+| window ink check (parse vs drawing) | +1.2 | +0.05 | 0.30 false alarms, 71% recall |
+| wall ink check (parse vs drawing) | +0.0 | +0.00 | 0.35 false alarms, 72% recall |
+| R6 (windowless exterior span) | +0.0 | +0.00 | 0.35 false alarms, 72% recall |
+| R7 (gap too narrow) | +0.0 | +0.00 | 0.35 false alarms, 72% recall |
 
 ## R6 / R7 / window ink / wall ink on their own
 
-| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| (R6 alone) off | off | off | off | x1.0 | off | off | off | 0.17 | 1% | 0% | 0% | 4% | 0% | 0% | 0% | 0% |
-| (R6 alone) off | off | off | off | x1.2 | off | off | off | 0.03 | 1% | 0% | 0% | 4% | 0% | 0% | 0% | 0% |
-| (R6 alone) off | off | off | off | x1.5 | off | off | off | 0.00 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
-| (R7 alone) off | off | off | off | off | >= 1 px | off | off | 0.17 | 3% | 0% | 0% | 4% | 0% | 7% | 0% | 9% |
-| (R7 alone) off | off | off | off | off | >= 2 px | off | off | 0.17 | 2% | 0% | 0% | 4% | 0% | 7% | 0% | 5% |
-| (R7 alone) off | off | off | off | off | >= 3 px | off | off | 0.07 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.03 / ink < 0 | off | 0.07 | 1% | 0% | 0% | 9% | 0% | 0% | 0% | 0% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.03 / ink < 0.02 | off | 0.07 | 4% | 0% | 0% | 9% | 17% | 0% | 0% | 5% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.03 / ink < 0.05 | off | 0.07 | 4% | 0% | 0% | 9% | 17% | 0% | 0% | 5% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.05 / ink < 0 | off | 0.03 | 2% | 4% | 0% | 13% | 0% | 0% | 0% | 0% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.05 / ink < 0.02 | off | 0.03 | 6% | 4% | 0% | 13% | 17% | 0% | 0% | 5% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.05 / ink < 0.05 | off | 0.03 | 6% | 4% | 0% | 13% | 17% | 0% | 0% | 5% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.08 / ink < 0 | off | 0.05 | 4% | 4% | 0% | 22% | 0% | 0% | 0% | 5% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.08 / ink < 0.02 | off | 0.05 | 8% | 4% | 0% | 22% | 17% | 0% | 0% | 9% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.08 / ink < 0.05 | off | 0.05 | 8% | 4% | 0% | 22% | 17% | 0% | 0% | 9% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.12 / ink < 0 | off | 0.12 | 4% | 4% | 0% | 22% | 0% | 0% | 0% | 5% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.12 / ink < 0.02 | off | 0.12 | 8% | 4% | 0% | 22% | 17% | 0% | 0% | 9% |
-| (window ink alone) off | off | off | off | off | off | d_wall < 0.12 / ink < 0.05 | off | 0.12 | 8% | 4% | 0% | 22% | 17% | 0% | 0% | 9% |
-| (wall ink alone) off | off | off | off | off | off | off | >= 4 px | 0.05 | 3% | 4% | 0% | 0% | 4% | 0% | 0% | 14% |
-| (wall ink alone) off | off | off | off | off | off | off | >= 6 px | 0.05 | 3% | 0% | 0% | 0% | 4% | 0% | 0% | 14% |
-| (wall ink alone) off | off | off | off | off | off | off | >= 9 px | 0.05 | 1% | 0% | 0% | 0% | 0% | 0% | 0% | 5% |
-| (wall ink alone) off | off | off | off | off | off | off | >= 13 px | 0.03 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | R8 merged room | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room | room (whole) | region |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| (R6 alone) off | off | off | off | x1.0 | off | off | off | off | 0.17 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| (R6 alone) off | off | off | off | x1.2 | off | off | off | off | 0.03 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| (R6 alone) off | off | off | off | x1.5 | off | off | off | off | 0.00 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| (R7 alone) off | off | off | off | off | >= 1 px | off | off | off | 0.17 | 1% | 0% | 0% | 0% | 0% | 8% | 0% | 0% | 0% | 0% |
+| (R7 alone) off | off | off | off | off | >= 2 px | off | off | off | 0.17 | 1% | 0% | 0% | 0% | 0% | 8% | 0% | 0% | 0% | 0% |
+| (R7 alone) off | off | off | off | off | >= 3 px | off | off | off | 0.07 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.03 / ink < 0 | off | off | 0.07 | 6% | 0% | 0% | 11% | 0% | 0% | 0% | 0% | 17% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.03 / ink < 0.02 | off | off | 0.07 | 10% | 0% | 0% | 11% | 11% | 0% | 0% | 24% | 17% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.03 / ink < 0.05 | off | off | 0.07 | 11% | 0% | 0% | 11% | 22% | 0% | 0% | 24% | 17% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.05 / ink < 0 | off | off | 0.03 | 8% | 6% | 0% | 17% | 0% | 0% | 0% | 0% | 22% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.05 / ink < 0.02 | off | off | 0.03 | 11% | 6% | 0% | 11% | 11% | 0% | 0% | 24% | 22% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.05 / ink < 0.05 | off | off | 0.03 | 12% | 6% | 0% | 11% | 22% | 0% | 0% | 24% | 22% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.08 / ink < 0 | off | off | 0.05 | 11% | 6% | 0% | 33% | 0% | 0% | 0% | 12% | 28% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.08 / ink < 0.02 | off | off | 0.05 | 14% | 6% | 0% | 28% | 11% | 0% | 0% | 29% | 28% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.08 / ink < 0.05 | off | off | 0.05 | 15% | 6% | 0% | 28% | 22% | 0% | 0% | 29% | 28% | 24% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.12 / ink < 0 | off | off | 0.12 | 10% | 6% | 0% | 39% | 0% | 0% | 0% | 0% | 17% | 29% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.12 / ink < 0.02 | off | off | 0.12 | 13% | 6% | 0% | 33% | 11% | 0% | 0% | 18% | 17% | 29% |
+| (window ink alone) off | off | off | off | off | off | d_wall < 0.12 / ink < 0.05 | off | off | 0.12 | 14% | 6% | 0% | 33% | 22% | 0% | 0% | 18% | 17% | 29% |
+| (wall ink alone) off | off | off | off | off | off | off | >= 4 px | off | 0.05 | 6% | 0% | 0% | 0% | 0% | 0% | 0% | 6% | 22% | 24% |
+| (R8 alone) off | off | off | off | off | off | off | off | mix | 0.05 | 2% | 0% | 0% | 0% | 0% | 0% | 4% | 0% | 0% | 12% |
+| (R8 alone) off | off | off | off | off | off | off | off | > 1.0 x p99 | 0.00 | 1% | 0% | 0% | 0% | 6% | 0% | 0% | 0% | 6% | 0% |
+| (R8 alone) off | off | off | off | off | off | off | off | > 1.0 x p99 + mix | 0.05 | 3% | 0% | 0% | 0% | 6% | 0% | 4% | 0% | 6% | 12% |
+| (R8 alone) off | off | off | off | off | off | off | off | > 1.25 x p99 | 0.00 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| (R8 alone) off | off | off | off | off | off | off | off | > 1.25 x p99 + mix | 0.05 | 2% | 0% | 0% | 0% | 0% | 0% | 4% | 0% | 0% | 12% |
+| (R8 alone) off | off | off | off | off | off | off | off | > 1.5 x p99 | 0.00 | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
+| (R8 alone) off | off | off | off | off | off | off | off | > 1.5 x p99 + mix | 0.05 | 2% | 0% | 0% | 0% | 0% | 0% | 4% | 0% | 0% | 12% |
 
 ## Stage 1 (rules + ink, detector off; budget 0.25), top 8
 
-| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| off | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.25 | 21% | 26% | 35% | 26% | 26% | 0% | 6% | 27% |
-| off | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.05 | >= 4 px | 0.25 | 21% | 26% | 35% | 26% | 26% | 0% | 6% | 27% |
-| off | 700 | on | 2.0 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | off | 0.25 | 20% | 26% | 35% | 26% | 22% | 0% | 6% | 27% |
-| off | 700 | on | 2.0 / off | x1.2 | off | d_wall < 0.08 / ink < 0.05 | off | 0.25 | 20% | 26% | 35% | 26% | 22% | 0% | 6% | 27% |
-| off | 700 | on | 1.5 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.23 | 20% | 26% | 35% | 22% | 26% | 0% | 6% | 27% |
-| off | 700 | on | 1.5 / off | x1.5 | off | d_wall < 0.08 / ink < 0.05 | >= 4 px | 0.23 | 20% | 26% | 35% | 22% | 26% | 0% | 6% | 27% |
-| off | 700 | on | 1.5 / off | off | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.23 | 20% | 26% | 35% | 22% | 26% | 0% | 6% | 27% |
-| off | 700 | on | 1.5 / off | off | off | d_wall < 0.08 / ink < 0.05 | >= 4 px | 0.23 | 20% | 26% | 35% | 22% | 26% | 0% | 6% | 27% |
+| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | R8 merged room | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room | room (whole) | region |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| off | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.25 | 27% | 39% | 22% | 28% | 28% | 0% | 8% | 35% | 44% | 41% |
+| off | 400 | off | 2.0 / off | off | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.25 | 27% | 39% | 22% | 28% | 28% | 0% | 8% | 35% | 44% | 41% |
+| off | 700 | off | 3.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.25 | 27% | 33% | 22% | 28% | 28% | 0% | 8% | 35% | 39% | 47% |
+| off | 700 | off | 3.0 / off | off | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.25 | 27% | 33% | 22% | 28% | 28% | 0% | 8% | 35% | 39% | 47% |
+| off | 400 | off | 1.5 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.20 | 27% | 33% | 22% | 28% | 28% | 0% | 8% | 35% | 44% | 41% |
+| off | 400 | off | 1.5 / off | off | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.20 | 27% | 33% | 22% | 28% | 28% | 0% | 8% | 35% | 44% | 41% |
+| off | 700 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.20 | 27% | 33% | 22% | 28% | 28% | 0% | 8% | 35% | 44% | 41% |
+| off | 700 | off | 2.0 / off | off | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.20 | 27% | 33% | 22% | 28% | 28% | 0% | 8% | 35% | 44% | 41% |
 
 ## Stage 2 (detector added to the chosen rules; budget 0.4), top 8
 
-| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| v2 0.5 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 57% | 43% | 74% | 74% | 61% | 0% | 55% | 95% |
-| v2 0.6 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.33 | 57% | 43% | 74% | 74% | 61% | 0% | 55% | 95% |
-| v2 0.5 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.38 | 57% | 43% | 74% | 74% | 61% | 0% | 55% | 95% |
-| v2 0.6 / 40 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 57% | 43% | 70% | 74% | 61% | 0% | 55% | 95% |
-| v2 0.8 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 57% | 43% | 74% | 74% | 57% | 0% | 55% | 95% |
-| v2 0.7 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.33 | 57% | 43% | 74% | 74% | 57% | 0% | 55% | 95% |
-| v2 0.5 / 40 px + v3 0.6 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 56% | 39% | 70% | 74% | 61% | 0% | 55% | 95% |
-| v2 0.9 / 20 px + v3 0.5 / 20 px | 700 | on | 1.5 / off | x1.2 | off | d_wall < 0.08 / ink < 0.02 | >= 4 px | 0.30 | 56% | 43% | 70% | 74% | 57% | 0% | 55% | 95% |
+| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | R8 merged room | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room | room (whole) | region |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| v2 0.6 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.35 | 72% | 78% | 72% | 89% | 83% | 0% | 58% | 100% | 89% | 76% |
+| v2 0.5 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.40 | 72% | 78% | 72% | 89% | 83% | 0% | 58% | 100% | 89% | 76% |
+| v2 0.7 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.33 | 71% | 78% | 72% | 89% | 83% | 0% | 58% | 100% | 89% | 71% |
+| v2 0.5 / 40 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.30 | 71% | 78% | 72% | 89% | 83% | 0% | 54% | 100% | 89% | 71% |
+| v2 0.6 / 40 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.30 | 71% | 78% | 72% | 89% | 83% | 0% | 54% | 100% | 89% | 71% |
+| v2 0.8 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.30 | 70% | 78% | 72% | 89% | 83% | 0% | 58% | 100% | 89% | 65% |
+| v2 0.9 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.30 | 70% | 78% | 72% | 89% | 83% | 0% | 54% | 100% | 89% | 65% |
+| v2 0.95 / 20 px + v3 0.5 / 20 px | 400 | off | 2.0 / off | x1.5 | off | d_wall < 0.08 / ink < 0.02 | off | > 1.0 x p99 + mix | 0.30 | 70% | 78% | 72% | 89% | 83% | 0% | 54% | 100% | 89% | 65% |
 
 ## Detector alone (best within 0.15 / 0.25 / 0.35 false alarms)
 
-| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| v2 0.5 / 20 px | off | off | off | off | off | off | off | 0.12 | 11% | 0% | 9% | 17% | 4% | 0% | 13% | 36% |
-| v2 0.5 / 20 px | off | off | off | off | off | off | off | 0.12 | 11% | 0% | 9% | 17% | 4% | 0% | 13% | 36% |
-| v2 0.5 / 20 px | off | off | off | off | off | off | off | 0.12 | 11% | 0% | 9% | 17% | 4% | 0% | 13% | 36% |
+| detector (threshold / min blob) | C8 min area | R5 | ink: R5 pairs / other interior | R6 | R7 | window ink | wall ink | R8 merged room | false alarms / intact | mean recall | door (a) | door (b) | window | wall | railing | fixture | room | room (whole) | region |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| v2 0.5 / 20 px | off | off | off | off | off | off | off | off | 0.12 | 11% | 0% | 0% | 17% | 0% | 0% | 8% | 24% | 28% | 24% |
+| v2 0.5 / 20 px | off | off | off | off | off | off | off | off | 0.12 | 11% | 0% | 0% | 17% | 0% | 0% | 8% | 24% | 28% | 24% |
+| v2 0.5 / 20 px | off | off | off | off | off | off | off | off | 0.12 | 11% | 0% | 0% | 17% | 0% | 0% | 8% | 24% | 28% | 24% |

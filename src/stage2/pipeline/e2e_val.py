@@ -207,7 +207,7 @@ def pick(z, args, exclude=(), seed=20, plan=None):
             used.add(pid)
             got += 1
             cases.append({"pid": pid, "kind": kind, "img": o[0], "removed": o[1], "typ": o[2], "meta": o[4],
-                          "lbl": lbl})
+                          "lbl": lbl, "area": o[5]})
             if args.limit and len(cases) >= args.limit:
                 return cases
     return cases

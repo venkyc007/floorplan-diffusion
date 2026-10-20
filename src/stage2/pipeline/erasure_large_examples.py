@@ -54,7 +54,7 @@ def main():
             got += 1
             rows.append((pid, kind, img, o))
     fig, axes = plt.subplots(len(rows), 2, figsize=(14, 7 * len(rows)), squeeze=False)
-    for (pid, kind, img, (out, structure, _, _, meta)), (a, b) in zip(rows, axes):
+    for (pid, kind, img, (out, structure, _, _, meta, _)), (a, b) in zip(rows, axes):
         for ax, im, t in ((a, img, "original"), (b, out, "erased")):
             ax.imshow(im, cmap="gray", vmin=0, vmax=255)
             ax.contour(structure, levels=[0.5], colors="orange", linewidths=0.6)
