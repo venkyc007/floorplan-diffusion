@@ -1,0 +1,81 @@
+pid,group,kind,size_bin,size_pct,mode,strategy,found,region_flag,fixed,fix_iou,tol_parse,tol,valid_parse,valid,seconds
+high_quality_architectural-3691,batch 3,room (whole),large,9.072,manual,B1 big window,,,True,0.424,42.3,35.8,False,False,27.7
+high_quality_architectural-3691,batch 3,room (whole),large,9.072,manual,"B2 coarse, t0 150",,,False,0.23,42.3,22.4,False,False,53.3
+high_quality_architectural-3691,batch 3,room (whole),large,9.072,manual,"B2 coarse, t0 300",,,False,0.231,42.3,22.2,False,False,52.3
+high_quality_architectural-3691,batch 3,room (whole),large,9.072,manual,B3 tiled,,,True,0.405,42.3,30.7,False,False,18.6
+colorful-14935,batch 3,room (whole),large,7.86,manual,B1 big window,,,False,0.059,16.6,8.9,False,True,18.6
+colorful-14935,batch 3,room (whole),large,7.86,manual,"B2 coarse, t0 150",,,False,0.09,16.6,10.6,False,False,40.6
+colorful-14935,batch 3,room (whole),large,7.86,manual,"B2 coarse, t0 300",,,False,0.09,16.6,10.6,False,False,40.7
+colorful-14935,batch 3,room (whole),large,7.86,manual,B3 tiled,,,False,0.116,16.6,8.5,False,True,18.6
+high_quality_architectural-8154,batch 3,room (whole),medium,6.441,manual,B1 big window,,,False,0.0,22.6,8.7,False,False,18.6
+high_quality_architectural-8154,batch 3,room (whole),medium,6.441,manual,"B2 coarse, t0 150",,,False,0.0,22.6,8.8,False,False,37.8
+high_quality_architectural-8154,batch 3,room (whole),medium,6.441,manual,"B2 coarse, t0 300",,,False,0.0,22.6,8.8,False,False,37.8
+high_quality_architectural-8154,batch 3,room (whole),medium,6.441,manual,B3 tiled,,,False,0.0,22.6,8.5,False,False,18.6
+colorful-6226,batch 3,room (whole),large,14.473,manual,B1 big window,,,False,0.228,31.1,82.1,False,False,28.3
+colorful-6226,batch 3,room (whole),large,14.473,manual,"B2 coarse, t0 150",,,True,0.543,31.1,88.1,False,False,50.5
+colorful-6226,batch 3,room (whole),large,14.473,manual,"B2 coarse, t0 300",,,True,0.543,31.1,88.1,False,False,50.8
+colorful-6226,batch 3,room (whole),large,14.473,manual,B3 tiled,,,False,0.291,31.1,82.9,False,False,18.6
+high_quality_architectural-1376,batch 3,region,large,24.718,manual,B1 big window,,,False,0.245,9.0,18.5,False,False,28.0
+high_quality_architectural-1376,batch 3,region,large,24.718,manual,"B2 coarse, t0 150",,,True,0.368,9.0,19.0,False,False,50.7
+high_quality_architectural-1376,batch 3,region,large,24.718,manual,"B2 coarse, t0 300",,,True,0.367,9.0,19.3,False,False,50.7
+high_quality_architectural-1376,batch 3,region,large,24.718,manual,B3 tiled,,,False,0.254,9.0,20.4,False,False,18.6
+colorful-14938,batch 3,region,large,11.17,manual,B1 big window,,,True,0.349,46.5,56.7,False,False,18.6
+colorful-14938,batch 3,region,large,11.17,manual,"B2 coarse, t0 150",,,False,0.28,46.5,43.8,False,False,40.5
+colorful-14938,batch 3,region,large,11.17,manual,"B2 coarse, t0 300",,,False,0.28,46.5,43.1,False,False,40.9
+colorful-14938,batch 3,region,large,11.17,manual,B3 tiled,,,True,0.375,46.5,57.5,False,False,18.7
+colorful-6628,batch 3,region,large,13.917,manual,B1 big window,,,True,0.536,68.8,60.2,False,False,28.3
+colorful-6628,batch 3,region,large,13.917,manual,"B2 coarse, t0 150",,,False,0.074,68.8,31.7,False,False,50.7
+colorful-6628,batch 3,region,large,13.917,manual,"B2 coarse, t0 300",,,False,0.075,68.8,31.6,False,False,50.3
+colorful-6628,batch 3,region,large,13.917,manual,B3 tiled,,,True,0.507,68.8,48.2,False,False,18.7
+high_quality-9975,batch 3,region,large,19.228,manual,B1 big window,,,False,0.131,34.1,29.3,False,False,18.8
+high_quality-9975,batch 3,region,large,19.228,manual,"B2 coarse, t0 150",,,False,0.277,34.1,35.2,False,False,40.5
+high_quality-9975,batch 3,region,large,19.228,manual,"B2 coarse, t0 300",,,False,0.277,34.1,34.5,False,False,40.2
+high_quality-9975,batch 3,region,large,19.228,manual,B3 tiled,,,False,0.191,34.1,32.8,False,False,18.5
+high_quality-4773,new medium,region,medium,5.192,manual,B1 big window,,,False,0.132,16.4,15.6,False,True,18.3
+high_quality-4773,new medium,region,medium,5.192,manual,"B2 coarse, t0 150",,,False,0.154,16.4,16.5,False,False,37.4
+high_quality-4773,new medium,region,medium,5.192,manual,"B2 coarse, t0 300",,,False,0.154,16.4,16.5,False,False,37.4
+high_quality-4773,new medium,region,medium,5.192,manual,B3 tiled,,,False,0.132,16.4,15.7,False,True,18.3
+high_quality_architectural-4864,new medium,room (whole),medium,4.608,manual,B1 big window,,,False,0.171,6.7,22.5,False,False,18.3
+high_quality_architectural-4864,new medium,room (whole),medium,4.608,manual,"B2 coarse, t0 150",,,False,0.139,6.7,13.4,False,False,37.2
+high_quality_architectural-4864,new medium,room (whole),medium,4.608,manual,"B2 coarse, t0 300",,,False,0.142,6.7,13.9,False,False,37.0
+high_quality_architectural-4864,new medium,room (whole),medium,4.608,manual,B3 tiled,,,False,0.114,6.7,19.1,False,False,18.1
+high_quality-6732,new medium,region,medium,6.013,manual,B1 big window,,,False,0.179,15.1,12.8,False,False,18.1
+high_quality-6732,new medium,region,medium,6.013,manual,"B2 coarse, t0 150",,,False,0.168,15.1,11.6,False,False,37.0
+high_quality-6732,new medium,region,medium,6.013,manual,"B2 coarse, t0 300",,,False,0.169,15.1,12.3,False,False,37.0
+high_quality-6732,new medium,region,medium,6.013,manual,B3 tiled,,,False,0.179,15.1,12.4,False,False,18.3
+high_quality-4550,new medium,region,medium,5.593,manual,B1 big window,,,False,0.194,23.9,30.6,False,False,18.2
+high_quality-4550,new medium,region,medium,5.593,manual,"B2 coarse, t0 150",,,False,0.139,23.9,34.8,False,False,37.1
+high_quality-4550,new medium,region,medium,5.593,manual,"B2 coarse, t0 300",,,False,0.139,23.9,34.8,False,False,37.1
+high_quality-4550,new medium,region,medium,5.593,manual,B3 tiled,,,False,0.25,23.9,36.3,False,False,18.2
+high_quality_architectural-7864,new medium,region,medium,7.468,manual,B1 big window,,,False,0.291,39.6,100.0,False,False,17.6
+high_quality_architectural-7864,new medium,region,medium,7.468,manual,"B2 coarse, t0 150",,,False,0.226,39.6,98.7,False,False,37.0
+high_quality_architectural-7864,new medium,region,medium,7.468,manual,"B2 coarse, t0 300",,,False,0.226,39.6,98.7,False,False,37.2
+high_quality_architectural-7864,new medium,region,medium,7.468,manual,B3 tiled,,,False,0.291,39.6,100.0,False,False,18.4
+high_quality-7082,new medium,region,medium,5.227,manual,B1 big window,,,True,0.331,8.6,6.4,False,False,18.3
+high_quality-7082,new medium,region,medium,5.227,manual,"B2 coarse, t0 150",,,False,0.209,8.6,1.9,False,False,37.0
+high_quality-7082,new medium,region,medium,5.227,manual,"B2 coarse, t0 300",,,False,0.209,8.6,1.9,False,False,37.0
+high_quality-7082,new medium,region,medium,5.227,manual,B3 tiled,,,True,0.327,8.6,4.7,False,False,18.1
+colorful-14616,new large,room (whole),large,12.836,manual,B1 big window,,,False,0.16,27.4,27.6,False,False,18.1
+colorful-14616,new large,room (whole),large,12.836,manual,"B2 coarse, t0 150",,,False,0.178,27.4,19.9,False,False,39.7
+colorful-14616,new large,room (whole),large,12.836,manual,"B2 coarse, t0 300",,,False,0.178,27.4,19.4,False,False,39.8
+colorful-14616,new large,room (whole),large,12.836,manual,B3 tiled,,,False,0.142,27.4,22.8,False,False,18.0
+high_quality-5080,new large,room (whole),large,12.604,manual,B1 big window,,,False,0.155,6.9,4.2,False,True,18.0
+high_quality-5080,new large,room (whole),large,12.604,manual,"B2 coarse, t0 150",,,False,0.163,6.9,13.6,False,False,39.7
+high_quality-5080,new large,room (whole),large,12.604,manual,"B2 coarse, t0 300",,,False,0.163,6.9,13.4,False,True,39.8
+high_quality-5080,new large,room (whole),large,12.604,manual,B3 tiled,,,False,0.158,6.9,5.0,False,True,18.0
+high_quality_architectural-9438,new large,region,large,12.153,manual,B1 big window,,,False,0.171,69.6,79.2,False,False,27.8
+high_quality_architectural-9438,new large,region,large,12.153,manual,"B2 coarse, t0 150",,,False,0.195,69.6,85.2,False,False,49.7
+high_quality_architectural-9438,new large,region,large,12.153,manual,"B2 coarse, t0 300",,,False,0.195,69.6,85.3,False,False,49.8
+high_quality_architectural-9438,new large,region,large,12.153,manual,B3 tiled,,,False,0.098,69.6,87.6,False,False,18.0
+high_quality_architectural-2080,new large,region,large,14.294,manual,B1 big window,,,False,0.223,9.6,8.1,False,False,28.0
+high_quality_architectural-2080,new large,region,large,14.294,manual,"B2 coarse, t0 150",,,False,0.269,9.6,10.7,False,False,50.0
+high_quality_architectural-2080,new large,region,large,14.294,manual,"B2 coarse, t0 300",,,False,0.269,9.6,10.5,False,False,49.9
+high_quality_architectural-2080,new large,region,large,14.294,manual,B3 tiled,,,False,0.219,9.6,11.6,False,False,18.0
+high_quality_architectural-1324,new large,room (whole),large,13.864,manual,B1 big window,,,False,0.295,36.9,57.3,False,False,17.9
+high_quality_architectural-1324,new large,room (whole),large,13.864,manual,"B2 coarse, t0 150",,,True,0.365,36.9,47.8,False,False,39.8
+high_quality_architectural-1324,new large,room (whole),large,13.864,manual,"B2 coarse, t0 300",,,True,0.365,36.9,47.9,False,False,39.8
+high_quality_architectural-1324,new large,room (whole),large,13.864,manual,B3 tiled,,,True,0.338,36.9,53.4,False,False,17.8
+high_quality_architectural-8796,new large,room (whole),large,12.743,manual,B1 big window,,,True,0.324,25.7,25.3,False,False,18.2
+high_quality_architectural-8796,new large,room (whole),large,12.743,manual,"B2 coarse, t0 150",,,False,0.26,25.7,20.7,False,False,39.7
+high_quality_architectural-8796,new large,room (whole),large,12.743,manual,"B2 coarse, t0 300",,,False,0.26,25.7,20.7,False,False,39.8
+high_quality_architectural-8796,new large,room (whole),large,12.743,manual,B3 tiled,,,True,0.331,25.7,19.6,False,False,18.2

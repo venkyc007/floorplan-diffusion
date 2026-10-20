@@ -811,3 +811,12 @@ Own choices:
   doors that do not join two interior spaces. Pipeline: region flags and manual boxes > max_hole (100 px) go to
   fill.large_strategy (provisional: tiled); checkpoints.stage1_unet / stage1_diffusion added to pipeline.yaml.
   Smoke (1 case, manual): B1 runs on a 256 px window (attention fine at that size).
+- Part C results (kernels large-fill v1 (manual) and large-fill-auto v1, CPU; outputs/stage2/large_fill_compare*.md,
+  large_fill_compare.png): manual (hole given): fixed B1 5 / 20, B2 3 / 20 (t0 150 and 300), B3 6 / 20; tolerant
+  mIoU 27.9 -> 34.5 / 31.7 / 33.9; validity 15% / 0-5% / 15%; 21 / 42 / 18 s per hole. Auto: R8 fired on 0 / 20
+  (merged rooms stay under p99: 0.64 x on batch 3 #4), so all strategies are identical (fixed 2 / 20).
+  Own choices: the figure shows the first 2 cases of each group (no selection) and B2 at the t0 with the better
+  manual mean (150); fill.large_strategy stays "tiled" (most fixed, fastest). Medium cases come from
+  omission_mix.omit_in_bin (7 measured medium of 20).
+- Part D: none of B1-B3 is clearly good -> B4 plan (fine-tune at 256 px with large holes, ~4 GPU h) written in
+  outputs/stage2/large_fill_compare.md, not launched.
