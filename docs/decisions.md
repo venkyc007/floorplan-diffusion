@@ -652,3 +652,11 @@ Own choices:
   - Note for the report: in this setup x0 guidance is effectively off; the verifier (best-of-N) and the
     training-time constraints carry the constraint work. Guidance costs ~2.4x fill time on GPU (1.55 vs 0.64 s
     per hole).
+- End-to-end validation (kernel floorplan-stage2-eval-e2e, CPU, 10:04-10:11; outputs/stage2/e2e_val.*):
+  12 held-out val drawings minus the check set, fixed random order (seed 20), 2 per kind, one omission each
+  via image_eval.omit (erasure v2), run_pipeline(fast=True) with eta 0.1.
+  - Own choices: "fixed" = the added right-class pixels touching the omission (grown 3 px) have IoU >= 0.3
+    with it (room: its wall / door band vs added walls); mIoU / validity inside the omission box + 4 px at the
+    parsed map's scale, ground truth resized nearest; "before the fill" columns added so the fill's effect shows.
+  - Found 11 / 12, right type 9 / 12, fixed 3 / 12 (+3 where the parser had redrawn the omission), 2 false
+    additions, tolerant mIoU 56.8 -> 59.2, validity 33% -> 8%, 27 s per drawing.
