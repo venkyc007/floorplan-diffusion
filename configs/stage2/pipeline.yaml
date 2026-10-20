@@ -20,7 +20,8 @@ detect:
 fill:
   window: 128
   n_samples: 4                         # best-of-N for the demo (8 for evaluation)
-  eta_guidance: 0.1                    # tuned on 150 val holes (outputs/stage2/eta_tune.md); 0.1-3 give identical output
+  eta_guidance: 0                      # off (user, 2026-10-20): tuning (outputs/stage2/eta_tune.md) chose 0.1, but
+                                       # 0.1-3 change nothing measurable and are 2.4x slower
   ddim_steps: 50
   size_bins: [0.027, 0.077]            # hole area / building area: small / medium / large (Stage 1 bins)
   t0: [400, 600, 700]                  # per size bin (Stage 1 size-adaptive hybrid)

@@ -1,7 +1,9 @@
 """Quick end-to-end validation on 12 NEW held-out val drawings (user, 2026-10-20).
 
-    python -m src.stage2.pipeline.e2e_val --zip parser_val.zip [--limit N]
-        -> outputs/stage2/e2e_val.png (input | parse + flags | result | ground truth), e2e_val.md, e2e_val.csv
+    python -m src.stage2.pipeline.e2e_val --zip parser_val.zip [--limit N] [--tag _v2]
+        -> outputs/stage2/e2e_val{tag}.png (input | parse + flags | result | ground truth), .md, .csv
+    python -m src.stage2.pipeline.e2e_val --compare old.csv new.csv --tag _v2
+        -> appends an old vs new table (same drawings) to e2e_val{tag}.md (laptop, after the kernel)
 
 Drawings: the held-out val plans (configs/stage2/val_split/heldout_ids.txt; never used to choose a setting),
 minus the 12 check-set drawings and untyped plans, in a fixed random order (seed 20; no picking by hand).
@@ -14,14 +16,21 @@ fill (hybrid fast mode, t0 = 300, N = 2, eta from configs/stage2/pipeline.yaml, 
 
 Scores (completion scale; omission = the removed pixels resized to the parsed map):
   found        a flag (hole box) overlaps the omission (grown 3 px); right type = such a flag has its type
-  fixed        the added pixels of the right class that touch the omission (grown 3 px) have IoU >= 0.3 with
-               the omitted component (room: its walls / doors band, right class = wall)
-  false adds   added components (wall / door / window / railing / fixture) that do not touch the omission
+  fixed        (user, 2026-10-20) found AND the FINAL plan has the right class at the omission with IoU >= 0.3,
+               whoever drew it (fill, or the parser: "symbol missing in the drawing"). door / window / fixture:
+               the final plan's components of that class touching the omission (grown 3 px); wall / room
+               (class wall): the final plan's wall pixels within 3 px of the omission (walls are one network)
+  fixed by addition   the earlier definition: only the fill's added pixels of the right class count
+  false adds   added or marked ("symbol missing") components (wall / door / window / railing / fixture) that do
+               not touch the omission
   tolerant mIoU, validity   inside the omission region (its box + 4 px), final plan vs the ground truth
                (resized to the parsed map); validity = no more thresholded violations than the ground truth
                (Stage 1 rule; sampler.violation_breakdown on a 128 window). Also shown for the parse before
                the fill, so the fill's own effect is visible.
   time         seconds for the whole pipeline on the drawing (Kaggle CPU)
+  diagnosis    for drawings where the fill added violations: the violations per rule of the parse, the RAW hybrid
+               output (before the type restriction) and the final plan, so each added rule is attributed to the
+               hybrid itself or to the restriction
 """
 
 import argparse
@@ -64,13 +73,57 @@ def region_box(m, shape, pad=PAD):
             min(shape[1] - 1, xs.max() + pad))
 
 
-def violations(plan, box, win=128):
-    """Thresholded violations of `plan` inside `box` (a 128 window around it)."""
+def rule_violations(plan, box, win=128):
+    """{rule: thresholded violations} of `plan` inside `box` (a 128 window around it); zero rules left out."""
     w, _, hole = window_around(plan, box, win)
     lab = torch.from_numpy(w.astype(np.int64))[None]
     mask = torch.from_numpy(hole).float()[None, None]
     known = torch.nn.functional.one_hot(lab, C16.n).permute(0, 3, 1, 2).float() * (1 - mask)
-    return int(sum(v[0] for v in sampler.violation_breakdown(lab, mask, known).values()))
+    return {k: int(v[0]) for k, v in sampler.violation_breakdown(lab, mask, known).items() if v[0]}
+
+
+def violations(plan, box, win=128):
+    """Thresholded violations of `plan` inside `box` (a 128 window around it)."""
+    return sum(rule_violations(plan, box, win).values())
+
+
+def raw_plan(res):
+    """The plan with every hole's RAW hybrid output (before the type restriction) pasted back in order."""
+    plan = res["parsed"].copy()
+    for h in res["holes"]:
+        if "raw" in h:
+            oy, ox = h["raw"]["origin"]
+            hh, ww = h["raw"]["hybrid"].shape
+            plan[oy:oy + hh, ox:ox + ww] = h["raw"]["hybrid"]
+    return plan
+
+
+def diagnose(res, box, before, after):
+    """Rules with more violations after the fill than in the parse; each attributed to the hybrid (raw
+    output has them too) or to the type restriction (raw output does not)."""
+    raw = rule_violations(raw_plan(res), box)
+    out = []
+    for k in sorted(set(after) | set(before)):
+        if after.get(k, 0) > before.get(k, 0):
+            cause = "restriction" if raw.get(k, 0) <= before.get(k, 0) else "hybrid"
+            out.append(f"{k} {before.get(k, 0)}->{after[k]} (raw {raw.get(k, 0)}: {cause})")
+    return "; ".join(out)
+
+
+def right_class_iou(plan, cls, rm, rmg, local):
+    """IoU of the omitted component with the plan's pixels of class cls at it: whole components touching the
+    omission, or (local, walls) only the pixels within the grown omission."""
+    near = ((plan == cls) & rmg) if local else _whole(plan == cls, rmg)
+    return float((near & rm).sum() / max((near | rm).sum(), 1))
+
+
+def _whole(mask, seed):
+    """The components of mask that contain any seed pixel."""
+    out = np.zeros(mask.shape, bool)
+    for m in components(mask):
+        if (m & seed).any():
+            out |= m
+    return out
 
 
 def score(res, removed, lbl, typ):
@@ -84,19 +137,25 @@ def score(res, removed, lbl, typ):
     rmg = grown(rm, 3)
     over = [h for h in res["holes"] if rmg[h["box"][0]:h["box"][2] + 1, h["box"][1]:h["box"][3] + 1].any()]
     cls = I["wall"] if typ == "room" else I[typ]
-    added = (comp != parsed) & np.isin(comp, [I[c] for c in REAL])
+    marked = res.get("marked", np.zeros(rm.shape, bool))
+    added = ((comp != parsed) | marked) & np.isin(comp, [I[c] for c in REAL])
     near = np.zeros(rm.shape, bool)
-    for m in components(added & (comp == cls)):
+    for m in components((comp != parsed) & (comp == cls)):      # earlier definition: the fill's additions only
         if (m & rmg).any():
             near |= m
-    iou = float((near & rm).sum() / max((near | rm).sum(), 1))
+    iou_add = float((near & rm).sum() / max((near | rm).sum(), 1))
+    iou = right_class_iou(comp, cls, rm, rmg, local=cls == I["wall"])
     false = sum(1 for m in components(added) if not (m & rmg).any())
     box = region_box(rm, rm.shape)
     reg = np.zeros(rm.shape, bool)
     reg[box[0]:box[2] + 1, box[1]:box[3] + 1] = True
-    v_gt, v_after, v_before = violations(gt, box), violations(comp, box), violations(parsed, box)
+    r_gt, r_after, r_before = rule_violations(gt, box), rule_violations(comp, box), rule_violations(parsed, box)
+    v_gt, v_after, v_before = sum(r_gt.values()), sum(r_after.values()), sum(r_before.values())
     return {"found": bool(over), "right_type": any(h["type"] == typ for h in over), "fix_iou": round(iou, 3),
-            "fixed": iou >= FIX_IOU, "false_adds": false,
+            "fixed": bool(over) and iou >= FIX_IOU, "fix_iou_add": round(iou_add, 3), "fixed_add": iou_add >= FIX_IOU,
+            "marked_on_spot": bool((marked & rmg).any()), "false_adds": false,
+            "diagnosis": diagnose(res, box, r_before, r_after) if v_after > v_before else "",
+            "gap": "; ".join(f"{h['gap_len']} px" for h in over if "gap_len" in h),
             "tol_before": round(100 * hole_ious(parsed, gt, reg)[1], 1),
             "tol_after": round(100 * hole_ious(comp, gt, reg)[1], 1),
             "valid_before": v_before <= v_gt, "valid_after": v_after <= v_gt,
@@ -136,10 +195,13 @@ def pick(z, args):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--zip", required=True)
+    ap.add_argument("--zip")
     ap.add_argument("--limit", type=int, default=None, help="smoke test: only the first N drawings")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--compare", nargs=2, metavar=("OLD_CSV", "NEW_CSV"))
     args = ap.parse_args()
+    if args.compare:
+        return compare(*args.compare, args.tag)
     z = zipfile.ZipFile(args.zip)
     cases = pick(z, args)
     for c in cases:
@@ -165,18 +227,24 @@ def report(cases, tag):
          "One omission per drawing (erasure v2). Drawings: held-out val plans minus the check set, fixed random "
          "order (seed 20). Scores at the parsed map's scale; tolerant mIoU / validity inside the omission region "
          "(box + 4 px), before -> after the fill, vs the ground truth.", "",
+         "fixed = a flag there AND the final plan has the right class at the omission (IoU >= 0.3), whoever drew "
+         "it; fixed by addition = the earlier definition (the fill's own additions only). gap = the measured wall "
+         "break at a door flag (src/stage2/detect/flag_gap.py).", "",
          "| # | drawing | omission | location | position | size | flags (type + source) | found | right type | "
-         "fixed (IoU) | false adds | tol. mIoU before -> after | valid before -> after | s |",
-         "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+         "fixed (IoU) | fixed by addition (IoU) | false adds | gap | tol. mIoU before -> after | "
+         "valid before -> after | s |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, c in enumerate(cases):
         s, m = c["score"], c["meta"]
         L.append(f"| {i + 1} | {c['pid']} | {c['kind']} ({c['typ']}) | {m['location']} | {m['position']} | "
                  f"{m['size_bin']} ({m['size_pct']}%) | {s['flags']} | {yn(s['found'])} | {yn(s['right_type'])} | "
-                 f"{yn(s['fixed'])} ({s['fix_iou']:.2f}) | {s['false_adds']} | {s['tol_before']} -> {s['tol_after']} | "
+                 f"{yn(s['fixed'])} ({s['fix_iou']:.2f}) | {yn(s['fixed_add'])} ({s['fix_iou_add']:.2f}) | "
+                 f"{s['false_adds']} | {s['gap'] or '-'} | {s['tol_before']} -> {s['tol_after']} | "
                  f"{yn(s['valid_before'])} -> {yn(s['valid_after'])} | {c['seconds']:.0f} |")
     tot = lambda k: sum(bool(s[k]) for s in S)
     L += ["", f"**Total:** found {tot('found')} / {n}, right type {tot('right_type')} / {n}, fixed "
-              f"{tot('fixed')} / {n}, false additions {sum(s['false_adds'] for s in S)} "
+              f"{tot('fixed')} / {n} (by addition {tot('fixed_add')} / {n}), false additions "
+              f"{sum(s['false_adds'] for s in S)} "
               f"(on {sum(s['false_adds'] > 0 for s in S)} drawings); tolerant mIoU "
               f"{np.mean([s['tol_before'] for s in S]):.1f} -> {np.mean([s['tol_after'] for s in S]):.1f}; validity "
               f"{100 * np.mean([s['valid_before'] for s in S]):.0f}% -> {100 * np.mean([s['valid_after'] for s in S]):.0f}%; "
@@ -191,9 +259,16 @@ def report(cases, tag):
     L += ["", "## Messages per drawing", ""]
     for i, c in enumerate(cases):
         L.append(f"{i + 1}. {c['pid']} ({c['kind']}): " + ("; ".join(c["res"]["messages"]) or "nothing added"))
+    L += ["", "## Validity diagnosis: rules the fill added", "",
+          "Drawings with more violations after the fill than in the parse (omission region). Per rule: parse -> "
+          "final (raw hybrid output before the type restriction): hybrid = the raw output has it too, restriction "
+          "= only the restricted plan has it.", ""]
+    diag = [(i, c) for i, c in enumerate(cases) if c["score"]["diagnosis"]]
+    L += [f"- {i + 1}. {c['pid']} ({c['kind']}): {c['score']['diagnosis']}" for i, c in diag] or ["- none"]
     (OUT / f"e2e_val{tag}.md").write_text("\n".join(L) + "\n", encoding="utf-8")
-    keys = ["found", "right_type", "fix_iou", "fixed", "false_adds", "tol_before", "tol_after", "valid_before",
-            "valid_after", "viol_gt", "viol_before", "viol_after", "flags"]
+    keys = ["found", "right_type", "fix_iou", "fixed", "fix_iou_add", "fixed_add", "false_adds", "tol_before",
+            "tol_after", "valid_before", "valid_after", "viol_gt", "viol_before", "viol_after", "gap", "diagnosis",
+            "flags"]
     with open(OUT / f"e2e_val{tag}.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["pid", "kind", "expected", *FIELDS, "size_pct", "center_dist", *keys, "seconds"])
@@ -201,6 +276,37 @@ def report(cases, tag):
             m = c["meta"]
             w.writerow([c["pid"], c["kind"], c["typ"], *[m[k] for k in FIELDS], m["size_pct"], m["center_dist"],
                         *[c["score"][k] for k in keys], c["seconds"]])
+    print("\n".join(L))
+
+
+def compare(old_csv, new_csv, tag):
+    """Old vs new run on the same drawings (old 'fixed' = by addition, the only definition then)."""
+    rd = lambda f: list(csv.DictReader(open(f, encoding="utf-8")))
+    old, new = rd(old_csv), rd(new_csv)
+    yn = lambda v: "yes" if v == "True" else "no"
+    L = ["", "## Old vs new (same 12 drawings)", "",
+         "Old = before the 2026-10-20 fixes (eta 0.1; its 'fixed' counted only the fill's additions). New = eta 0, "
+         "symbol-already-in-parse, door at the flag point, wall-gap rule, one room type, door + adjacent walls.", "",
+         "| # | drawing | omission | old flags | new flags | old fixed by addition | new fixed by addition | "
+         "new fixed | old -> new false adds | old -> new tol. mIoU after | old -> new valid after |",
+         "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for i, (o, n) in enumerate(zip(old, new)):
+        assert o["pid"] == n["pid"], (o["pid"], n["pid"])
+        L.append(f"| {i + 1} | {n['pid']} | {n['kind']} | {o['flags']} | {n['flags']} | {yn(o['fixed'])} | "
+                 f"{yn(n['fixed_add'])} | {yn(n['fixed'])} | {o['false_adds']} -> {n['false_adds']} | "
+                 f"{o['tol_after']} -> {n['tol_after']} | {yn(o['valid_after'])} -> {yn(n['valid_after'])} |")
+    cnt = lambda rows, k: sum(r[k] == "True" for r in rows)
+    mean = lambda rows, k: np.mean([float(r[k]) for r in rows])
+    L += ["", "| totals | found | right type | fixed (new definition) | fixed by addition | false adds | "
+              "tol. mIoU after | validity after | s per drawing |", "|---|---|---|---|---|---|---|---|---|",
+          f"| old | {cnt(old, 'found')} | {cnt(old, 'right_type')} | - | {cnt(old, 'fixed')} | "
+          f"{sum(int(r['false_adds']) for r in old)} | {mean(old, 'tol_after'):.1f} | "
+          f"{100 * cnt(old, 'valid_after') / len(old):.0f}% | {mean(old, 'seconds'):.0f} |",
+          f"| new | {cnt(new, 'found')} | {cnt(new, 'right_type')} | {cnt(new, 'fixed')} | {cnt(new, 'fixed_add')} | "
+          f"{sum(int(r['false_adds']) for r in new)} | {mean(new, 'tol_after'):.1f} | "
+          f"{100 * cnt(new, 'valid_after') / len(new):.0f}% | {mean(new, 'seconds'):.0f} |"]
+    with open(OUT / f"e2e_val{tag}.md", "a", encoding="utf-8") as f:
+        f.write("\n".join(L) + "\n")
     print("\n".join(L))
 
 
@@ -228,7 +334,8 @@ def figure(cases, tag):
         b.contour(s["rm"], levels=[0.5], colors="orange", linewidths=0.8)
         b.set_title(f"parse + flags ({len(res['holes'])}); found {'yes' if s['found'] else 'no'}", fontsize=9)
         r.imshow(res["overlay"])
-        r.set_title(f"result: fixed {'yes' if s['fixed'] else 'no'} (IoU {s['fix_iou']:.2f}), "
+        r.set_title(f"result: fixed {'yes' if s['fixed'] else 'no'} (IoU {s['fix_iou']:.2f}; by addition "
+                    f"{s['fix_iou_add']:.2f}), "
                     f"false adds {s['false_adds']}", fontsize=9)
         r.text(0, res["overlay"].shape[0] * 1.02, "\n".join(res["messages"][:5]), fontsize=8, va="top")
         g.imshow(C16.colourise(s["gt"]), interpolation="nearest")

@@ -44,6 +44,7 @@ class Candidate:
     box: tuple
     rules: list = field(default_factory=list)
     score: float = 0.0
+    peak: tuple = None            # (y, x) where the flag points (detector heat peak), if known
 
 
 def load_thresholds(path=THRESHOLDS_FILE):
@@ -206,9 +207,10 @@ def merge(cands):
                 m.box = (min(m.box[0], c.box[0]), min(m.box[1], c.box[1]), max(m.box[2], c.box[2]), max(m.box[3], c.box[3]))
                 m.rules = sorted(set(m.rules) | set(c.rules))
                 m.score += c.score
+                m.peak = m.peak or c.peak
                 break
         else:
-            merged.append(Candidate(c.type, c.box, list(c.rules), c.score))
+            merged.append(Candidate(c.type, c.box, list(c.rules), c.score, c.peak))
     return merged
 
 

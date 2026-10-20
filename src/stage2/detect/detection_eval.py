@@ -63,7 +63,10 @@ def proposals(probs, th, min_blob):
         if m.sum() < min_blob:
             continue
         t = 1 + int(np.argmax(probs[1:, m].astype(np.float32).mean(1)))
-        out.append(R.Candidate(MISSING[t], R.box_of(m, m.shape), ["detector"], float(miss[m].max())))
+        ys, xs = np.nonzero(m)
+        k = int(np.argmax(miss[ys, xs]))                  # heat peak: where the flag points
+        out.append(R.Candidate(MISSING[t], R.box_of(m, m.shape), ["detector"], float(miss[m].max()),
+                               (int(ys[k]), int(xs[k]))))
     return out
 
 

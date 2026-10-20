@@ -660,3 +660,58 @@ Own choices:
     parsed map's scale, ground truth resized nearest; "before the fill" columns added so the fill's effect shows.
   - Found 11 / 12, right type 9 / 12, fixed 3 / 12 (+3 where the parser had redrawn the omission), 2 false
     additions, tolerant mIoU 56.8 -> 59.2, validity 33% -> 8%, 27 s per drawing.
+
+## 2026-10-20 (afternoon): fixes from the end-to-end figure
+
+- eta = 0 (user): guidance tested, no measurable effect at safe strengths (0.1-3 identical to 0), 2.4x slower.
+  configs/stage2/pipeline.yaml fill.eta_guidance = 0.
+- Symbol already in the parse (user; run.existing): a door / window / railing / fixture flag with a location
+  whose type the parse already has at the flag (>= half of the component inside the box + 2 px, or under the
+  flag point) -> "<type> symbol missing in the drawing -> added", drawn red on the overlay (result "marked"),
+  no fill. Own choices: C8-only flags (no location) and wall / room flags never use it; the nearest component
+  to the flag point is the one marked. Marked components count as additions for false adds.
+- "Fixed" (user): a flag overlaps the omission AND the final plan has the right class there with IoU >= 0.3,
+  whoever drew it. Own choices: door / window / fixture = whole components of that class touching the
+  omission (grown 3 px); wall / room (class wall) = only wall pixels within 3 px of the omission (walls are one
+  connected network, whole components would make IoU meaningless). The earlier definition stays as
+  "fixed by addition". The check set reports both: correct (old) and correct (new) = fixed and no false adds.
+- Door at the flag (user; sketch_prior.place_opening, run.restrict): flag point = detector heat peak (new
+  Candidate.peak, kept through merge), else box centre; none for C8-only flags (old rule kept). The prior
+  uses the wall line passing nearest the point, only its part nearest the point, centred on it; a gap on the
+  line -> the gap part nearest the point. The restriction keeps the new door / window nearest the point
+  (largest without a point).
+- Wall vs door gaps (user; src/stage2/detect/flag_gap.py): applied to door flags from R5 / INK / detector.
+  Own choices: (a) breaks shorter than Lmin_door also become "wall missing" (no door fits; same as R7);
+  (b) wall flags with a door-sized gap stay walls and room flags are not touched (else every 15 px
+  wall-piece omission in the check set would become a door, and fix 4 governs room flags); (c) measurement:
+  wall runs >= 5 px, closing over 2 x Lmax_door, break 2-6 px across the wall, within 3 px of the flag point,
+  length = longest run on one row / column (not the box: a diagonal wall gives a long box). A wall gap is
+  painted as wall into the sketch.
+  On the two drawings named: drawing 7's erased exterior wall was parsed as a 14 px WINDOW (no gap to measure;
+  the flag is a detector "room"); drawing 8's 15 px erased wall was mostly redrawn as wall by the parser,
+  leaving a 7 px door-sized break -> door. So the rule, as specified, cannot change either; wall pieces of
+  5 wall thicknesses (~15 px) are door-sized by construction.
+- Room holes (user): walls + at most one door (nearest the point, clipped) + ONE room type, the most common
+  among the hybrid's changed room pixels; other changed room pixels revert to the parse.
+- Validity diagnosis (user): e2e_val now lists, for drawings where the fill added violations, each added rule
+  and whether the raw hybrid output already had it (hybrid) or only the restricted plan (restriction).
+  Laptop check on the old run: drawing 2's extra violations (C7 slivers) came from the restriction: the
+  hybrid moved the wall line under its door, the restriction kept the door and reverted the wall. Simple fix
+  applied: a kept door also keeps the hybrid's new wall pixels within 2 px of it (run.door_walls; on drawing 2
+  13 -> 12 violations, raw 11: partial). Drawing 7's came from the hybrid itself (not changed).
+- Re-run: same 12 e2e drawings (tag _v2) + the 12-drawing check set (tag _v2), kernel floorplan-stage2-eval-e2e
+  v2 (CPU). Results below.
+- Run v2 (kernel version 2) had the gap rule BEFORE the existing-symbol check: on e2e drawing 4 the door the
+  parser had redrawn was measured with its surroundings as a 53 px gap and closed with wall (tol. mIoU 97 -> 58).
+  Own fix: the existing-symbol check runs first (a symbol already at the flag is never a gap); re-run v3.
+  Both kept: outputs/stage2/e2e_val_v2.*, check_set_v2.* (record) and *_v3.* (current).
+- Results v3 (same 12 e2e drawings; old -> new): found 11 -> 11, right type 9 -> 9, fixed by addition 3 -> 3,
+  fixed (new definition) 9 / 12, false adds 2 -> 2, tol. mIoU after 59.2 -> 60.7, validity after 8% -> 8%,
+  27 -> 15 s per drawing (eta 0 + no fill where the symbol is already parsed). Check set: correct (old
+  definition) 5 -> 5 / 12, correct (new definition) 6 / 12.
+  - Caveat on the new definition: e2e drawing 8 (wall erased) counts as fixed because the parser redrew most
+    of the wall (wall IoU 0.31), although the pipeline itself reports a false "door symbol missing" there.
+    Check-set case 7 drops from correct to not: its 4 marked ink doors away from the omission now count as
+    false additions (they were silently skipped before).
+  - Validity diagnosis v3: the rules the fill adds (drawings 1, 7, 10: C7, C9, C13, C14, C16) all come from the
+    raw hybrid output, none from the type restriction; nothing further to fix simply.

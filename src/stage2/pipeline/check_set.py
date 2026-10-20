@@ -18,6 +18,9 @@ Scoring (automatic, on the completion-scale map): found = a hole box overlaps th
 addition of the expected class overlaps it (door; window; wall; that fixture; wall for a room);
 extra = added components (wall/door/window/railing/fixture) away from it.
 Correct = restored and no extra; for the intact drawing, correct = nothing added.
+New definition (user, 2026-10-20; e2e_val.score): fixed = a flag there AND the final plan has the right class at the
+omission with IoU >= 0.3, whoever drew it (parser symbols reported "missing in the drawing" count); false adds =
+added or marked components away from it; correct (new) = fixed and no false adds (intact: nothing added or marked).
 """
 
 import argparse
@@ -35,6 +38,7 @@ from src.stage2.data.plan_stats import door_side_pair
 from src.stage2.detect import rules as R
 from src.stage2.detect.gaps import closed_pairs
 from src.stage2.detect.rules_diag import single_door_rooms
+from src.stage2.pipeline.e2e_val import score
 from src.stage2.pipeline.run import REAL, run_pipeline
 from src.utils import PROJECT_ROOT
 
@@ -139,7 +143,7 @@ def make_case(kind, img, lbl, bad, min_len=0):
     return out, m, expected, omission_meta(lbl, m, kind)
 
 
-def judge(res, removed, expected):
+def judge(res, removed, expected, kind=None, lbl=None):
     comp = res["completed"]
     H, W = comp.shape
     rm = cv2.resize(removed.astype(np.uint8), (W, H), interpolation=cv2.INTER_NEAREST) > 0
@@ -149,7 +153,16 @@ def judge(res, removed, expected):
     restored = bool(expected) and bool((added & (comp == I[expected]) & rm).any())
     extra = sum(1 for m in components(added) if not (m & rm).any())
     correct = (not added.any()) if expected is None else (restored and extra == 0)
-    return {"found": found, "restored": restored, "extra": extra, "correct": correct}
+    v = {"found": found, "restored": restored, "extra": extra, "correct": correct}
+    if expected is None:
+        marked = res.get("marked", np.zeros(comp.shape, bool))
+        v.update(fixed=False, fix_iou=0.0, false_adds=len(components(added | marked)),
+                 correct_new=not (added.any() or marked.any()))
+    elif lbl is not None:
+        s = score(res, removed, lbl, "room" if kind == "room" else expected)
+        v.update(fixed=s["fixed"], fix_iou=s["fix_iou"], false_adds=s["false_adds"],
+                 correct_new=s["fixed"] and s["false_adds"] == 0)
+    return v
 
 
 def main():
@@ -187,7 +200,7 @@ def main():
             t = time.time()
             res = run_pipeline(c[0], fast=True)
             res["seconds"] = time.time() - t
-            verdict = judge(res, c[1], c[2])
+            verdict = judge(res, c[1], c[2], kind, lbl)
             cases.append((n, kind, c, res, verdict))
             print(n, kind, f"{res['seconds']:.0f} s", verdict, res["messages"], flush=True)
     figure(cases, args.tag)
@@ -270,14 +283,23 @@ def figure(cases, tag):
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
     fig, axes = plt.subplots(len(cases), 3, figsize=(18, 6 * len(cases)))
-    score = sum(v["correct"] for *_, v in cases)
-    L = [f"# Check set{tag}: {score} / {len(cases)} correct (fast mode, CPU)", "",
-         "found = a hole overlaps the omission; restored = the expected class was added there; extra = added "
-         "components elsewhere; correct = restored and no extra (intact: nothing added).", "",
-         "| # | drawing | omission | found | restored | extra | correct | holes | s |", "|---|---|---|---|---|---|---|---|---|"]
+    n_ok = sum(v["correct"] for *_, v in cases)
+    n_new = sum(v.get("correct_new", False) for *_, v in cases)
+    L = [f"# Check set{tag}: {n_new} / {len(cases)} correct (new definition), {n_ok} / {len(cases)} (old) "
+         "(fast mode, CPU)", "",
+         "Old: found = a hole overlaps the omission; restored = the expected class was added there; extra = added "
+         "components elsewhere; correct = restored and no extra (intact: nothing added). New (user, 2026-10-20): "
+         "fixed = a flag there and the final plan has the right class at the omission with IoU >= 0.3, whoever "
+         "drew it; false adds = added or marked ('symbol missing in the drawing') components elsewhere; correct = "
+         "fixed and no false adds.", "",
+         "| # | drawing | omission | found | restored | extra | correct (old) | fixed (IoU) | false adds | "
+         "correct (new) | holes | s |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    yn = lambda b: "yes" if b else "no"
     for i, (n, kind, (white, removed, expected, *_), res, v) in enumerate(cases):
-        L.append(f"| {i + 1} | {n} | {kind} | {'yes' if v['found'] else 'no'} | {'yes' if v['restored'] else 'no'} | "
-                 f"{v['extra']} | {'**yes**' if v['correct'] else 'no'} | {len(res['holes'])} | {res['seconds']:.0f} |")
+        L.append(f"| {i + 1} | {n} | {kind} | {yn(v['found'])} | {yn(v['restored'])} | {v['extra']} | "
+                 f"{'**yes**' if v['correct'] else 'no'} | {yn(v.get('fixed'))} ({v.get('fix_iou', 0):.2f}) | "
+                 f"{v.get('false_adds', '-')} | {'**yes**' if v.get('correct_new') else 'no'} | {len(res['holes'])} | "
+                 f"{res['seconds']:.0f} |")
     for i, (n, kind, (white, removed, expected, *_), res, v) in enumerate(cases):
         a, b, c = axes[i]
         a.imshow(white, cmap="gray", vmin=0, vmax=255)

@@ -12,12 +12,18 @@ Steps
   CHECK   the learned detector (its input already includes the rule violation maps) at the chosen
           threshold / blob size, plus C8 "room without a door" if the final setting says so
           (configs/stage2/detector_threshold.yaml) -> holes with a type.
-  FILL    per hole, a 128 x 128 window: 16-class U-Net sketch -> re-noise to t0 (400 / 600 / 700 by hole
-          size, as in Stage 1) -> K1 constrained diffusion with x0 guidance -> best-of-N verifier.
+  GAP     a door flag (R5 / door-ink / detector) on a break in a wall line no door fits (shorter than Lmin_door
+          or longer than Lmax_door; src/stage2/detect/flag_gap.py) becomes "wall missing": the gap is closed.
+  EXISTS  a flag whose type (door / window / railing / fixture) is already in the parse at the flag: the parser
+          read the symbol, the drawing lacks it -> reported "<type> symbol missing in the drawing -> added" and
+          drawn in red; no fill (user, 2026-10-20).
+  FILL    per hole, a 128 x 128 window: 16-class U-Net sketch (+ the missing component painted in at the flag
+          point) -> re-noise to t0 -> K1 constrained diffusion -> best-of-N verifier -> type restriction.
   VERIFY  the verifier's violation counts are returned per hole.
 Returns a dict: completed (completion-scale label map), parsed (same scale, before filling), holes
-(with type, reason, box, t0, violations), additions (class -> mask), overlay (RGB drawing with the
-additions in red; doors drawn as gap + leaf + arc), messages (text list), timings (s per step).
+(with type, rules, box, point, t0, violations; "existing" / "gap_len" when those steps applied), additions
+(class -> mask), marked (bool: parsed components reported as added, EXISTS), overlay (RGB drawing with the
+additions and marked components in red; doors drawn as gap + leaf + arc), messages (text list), timings.
 """
 
 import time
@@ -38,6 +44,7 @@ from src.stage2.detect import rules as R
 from src.stage2.detect.detection_eval import detector_probs, load_detector, proposals
 from src.stage2.detect.detector_v3 import load_v3, v3_probs
 from src.stage2.detect.door_ink import ink_candidates
+from src.stage2.detect.flag_gap import flagged_gap, gap_verdict
 from src.stage2.detect.gaps import gap_candidates
 from src.stage2.detect.narrow_gaps import gap_candidates_narrow
 from src.stage2.detect.window_runs import window_candidates
@@ -180,9 +187,54 @@ def window_around(label, box, win):
     return out, (oy, ox), hole
 
 
-def fill_hole(label, box, fc, generator, fast=None, typ=None, rules=()):
+def flag_point(p):
+    """Where a flag points (y, x): the detector's heat peak, else the box centre; None for C8-only flags
+    (a whole room without a door: no location)."""
+    if set(p.rules) == {"C8"}:
+        return None
+    if p.peak is not None:
+        return tuple(p.peak)
+    y0, x0, y1, x1 = p.box
+    return ((y0 + y1) // 2, (x0 + x1) // 2)
+
+
+GAP_SOURCES = {"R5", "INK", "detector"}
+
+
+def gap_rule(label, h):
+    """Door flag on a wall break that no door fits -> wall hole on that gap (user, 2026-10-20)."""
+    if h["type"] != "door" or not GAP_SOURCES & set(h["rules"]):
+        return
+    g = flagged_gap(label, h["box"], h["point"])
+    if g is None:
+        return
+    h["gap_len"] = g["length"]
+    if gap_verdict(g["length"]) == "wall":
+        h["type"], h["gap"], h["box"] = "wall", g["mask"], R.box_of(g["mask"], label.shape, pad=2)
+
+
+MARKABLE = ["door", "window", "railing"] + list(C16.cfg["groups"]["F"])
+
+
+def existing(label, h):
+    """A component of the flag's type already in the map at the flag (>= half of it inside the box grown 2 px,
+    or under the flag point), nearest the point; None if there is none or the flag has no location."""
+    if h["type"] not in MARKABLE or h.get("point") is None:
+        return None
+    y0, x0, y1, x1 = h["box"]
+    inbox = np.zeros(label.shape, bool)
+    inbox[max(0, y0 - 2):y1 + 3, max(0, x0 - 2):x1 + 3] = True
+    py, px = h["point"]
+    found = [m for m in components(label == I[h["type"]]) if (m & inbox).sum() >= 0.5 * m.sum() or m[py, px]]
+    return pick_one(found, h["point"])
+
+
+def fill_hole(label, box, fc, generator, fast=None, typ=None, rules=(), point=None, gap=None):
+    """point: (y, x) map px where the flag points; gap: bool map mask of a wall gap to close."""
     m = models()
     win, origin, hole = window_around(label, box, fc["window"])
+    wpoint = None if point is None else (point[0] - origin[0], point[1] - origin[1])
+    wgap = None if gap is None else window_around(gap.astype(np.uint8), box, fc["window"])[0] == 1
     t = torch.from_numpy(win.astype(np.int64))[None]
     target = torch.nn.functional.one_hot(t, C16.n).permute(0, 3, 1, 2).float()
     mask = torch.from_numpy(hole).float()[None, None]
@@ -194,7 +246,7 @@ def fill_hole(label, box, fc, generator, fast=None, typ=None, rules=()):
     with torch.no_grad():
         sketch = m["unet"].predict(cond)
     if fc.get("sketch_prior") and typ:                   # type-guided fill: the missing component painted
-        sk = apply_prior(sketch[0].numpy().astype(np.uint8), hole > 0, typ, rules)   # into the sketch
+        sk = apply_prior(sketch[0].numpy().astype(np.uint8), hole > 0, typ, rules, wpoint, wgap)   # into the sketch
         sketch = torch.from_numpy(sk.astype(np.int64))[None]
     kw = {"n": fc["n_samples"]} if fast is None else {"n": fast["n_samples"], "steps_from_t0": fast["steps_from_t0"],
                                                          "guide_last": fast["guide_last"]}
@@ -243,27 +295,58 @@ def clip_door(door, length=None):
     return out
 
 
-def restrict(before, after, typ):
+def pick_one(comps, point=None):
+    """One component: the one nearest the flag point if there is one, else the largest (None if no component)."""
+    if not comps:
+        return None
+    if point is None:
+        return max(comps, key=lambda m: m.sum())
+    py, px = point
+    return min(comps, key=lambda m: (np.min((np.nonzero(m)[0] - py) ** 2 + (np.nonzero(m)[1] - px) ** 2), -m.sum()))
+
+
+DOOR_WALL_PX = 2
+
+
+def door_walls(changed, after, door, r=None):
+    """The hybrid's new wall pixels within r px (default DOOR_WALL_PX) of a kept door: the wall it drew the door
+    into (reverting them left the door floating beside the old wall line -> slivers, C7; user step 5, 2026-10-20)."""
+    r = DOOR_WALL_PX if r is None else r
+    near = cv2.dilate(door.astype(np.uint8), np.ones((2 * r + 1,) * 2, np.uint8)) > 0
+    return changed & near & (after == I["wall"])
+
+
+def restrict(before, after, typ, point=None):
     """Type-restricted fill (user, chunk 8): inside a detected hole keep ONLY the detected type and
     revert every other changed pixel to the map before the fill.
-      door / window / railing / a fixture  -> its largest new component only (one door per hole;
-                                              a door clipped to one wall line at median length)
+      door / window / railing / a fixture  -> one new component (door / window: nearest the flag point,
+                                              else the largest; a door clipped to one wall line at median
+                                              length, plus the new wall pixels next to it)
       wall                                 -> new wall pixels
-      room                                 -> new walls, doors and room types (its walls, type and door)
+      room                                 -> new walls + at most one door + ONE room type, the most common
+                                              among the changed room pixels (user, 2026-10-20)
       manual                               -> everything the model drew
     A fixture is dropped if the room it lands in is not compatible with it (C15 table)."""
     if typ == "manual":
         return after
     changed = after != before
     if typ == "room":
-        keep = changed & np.isin(after, [I["wall"], I["door"]] + C16.group("S"))
+        keep = changed & (after == I["wall"])
+        door = pick_one(components(changed & (after == I["door"])), point)
+        if door is not None:
+            door = clip_door(door)
+            keep |= door | door_walls(changed, after, door)
+        rooms = changed & np.isin(after, C16.group("S"))
+        if rooms.any():
+            keep |= rooms & (after == int(np.bincount(after[rooms]).argmax()))
     elif typ == "wall":
         keep = changed & (after == I["wall"])
     else:
-        comps = components(changed & (after == I[typ]))
-        keep = max(comps, key=lambda m: m.sum()) if comps else np.zeros(after.shape, bool)
+        one = pick_one(components(changed & (after == I[typ])), point if typ in ("door", "window") else None)
+        keep = one if one is not None else np.zeros(after.shape, bool)
         if typ == "door" and keep.any():
             keep = clip_door(keep)
+            keep = keep | door_walls(changed, after, keep)
         if typ in FIXTURES and keep.any():
             room = host_room(before, keep)
             if room not in R.CONST.get("fixture_rooms", {}).get(typ, []):
@@ -286,13 +369,13 @@ def describe_additions(before, after, holes):
         for d in components(changed & (after == I["door"])):
             names = [C16.names[p] for p in (door_side_pair(after, d, k) or [])]
             rooms = sorted({n for n in names if n in ROOM_ORDER}, key=ROOM_ORDER.index)
-            where = " / ".join(names) if names else "the"
+            where = f"the {' / '.join(names)} wall" if names else "a wall"
             if "C8" in rules and rooms:
-                lines.append(f"{rooms[0]} had no door -> door added on the {where} wall")
+                lines.append(f"{rooms[0]} had no door -> door added on {where}")
             elif "R5" in rules and len(names) == 2:
                 lines.append(f"open doorway between {names[0]} and {names[1]} had no door -> door added")
             else:
-                lines.append(f"door added on the {where} wall")
+                lines.append(f"door added on {where}")
         for c in REAL:
             if c == "door":
                 continue
@@ -300,10 +383,14 @@ def describe_additions(before, after, holes):
                 room = host_room(before, m) or "the plan"
                 where = {"wall": f"next to {room}", "window": f"on the {room} wall"}.get(c, f"in {room}")
                 lines.append(f"{c} added {where}")
+        if h.get("gap") is not None and any(m.startswith("wall added") for m in lines):
+            lines.insert(0, f"{h['gap_len']} px break in a wall line: no door fits -> wall missing, closed")
         if h["type"] == "room":
             created = [C16.names[c] for c in np.unique(after[changed]) if c in C16.group("S")]
             if created:
                 lines.append(f"missing room -> room drawn as {', '.join(created)}")
+        if h.get("existing") is not None:
+            lines = [f"{h['type']} symbol missing in the drawing -> added"]
         if not lines:
             what = f"{h['type']} missing ({'+'.join(sorted(rules))})" if rules else "manual box"
             lines.append(f"{what} -> nothing added (the model kept the drawing as it was)")
@@ -311,11 +398,13 @@ def describe_additions(before, after, holes):
     return msgs
 
 
-def overlay(image, before, after, scale):
-    """Additions in red on the original drawing; doors drawn as gap + leaf + quarter arc."""
+def overlay(image, before, after, scale, marked=None):
+    """Additions (and `marked` parsed components: symbols missing in the drawing) in red on the original
+    drawing; doors drawn as gap + leaf + quarter arc."""
     rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB).astype(np.float32)
     H, W = image.shape
-    added = (after != before) & ~np.isin(after, C16.group("S") + C16.group("OUT"))
+    added = (after != before) if marked is None else ((after != before) | marked)
+    added = added & ~np.isin(after, C16.group("S") + C16.group("OUT"))
     up = lambda m: cv2.resize(m.astype(np.uint8), (W, H), interpolation=cv2.INTER_NEAREST) > 0
     non_door = up(added & (after != I["door"]))
     rgb[non_door] = 0.3 * rgb[non_door] + 0.7 * np.array([220, 0, 0])
@@ -350,21 +439,34 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
     times["parse"] = time.time() - t
     t = time.time()
     if boxes is None:
-        holes = [{"type": p.type, "rules": p.rules, "box": p.box, "score": p.score} for p in detect_holes(parsed, image)]
+        holes = [{"type": p.type, "rules": p.rules, "box": p.box, "score": p.score, "point": flag_point(p)}
+                 for p in detect_holes(parsed, image)]
     else:
-        holes = [{"type": "manual", "rules": [], "box": tuple(int(round(v * scale)) for v in b)} for b in boxes]
+        holes = [{"type": "manual", "rules": [], "box": tuple(int(round(v * scale)) for v in b), "point": None}
+                 for b in boxes]
     mh = c["fill"]["max_hole"]
     for h in holes:                                              # keep holes window-sized
         y0, x0, y1, x1 = h["box"]
         cy, cx = (y0 + y1) // 2, (x0 + x1) // 2
         h["box"] = (max(cy - mh // 2, y0), max(cx - mh // 2, x0), min(cy + mh // 2, y1), min(cx + mh // 2, x1))
+        if h["point"] is not None:                               # the point stays inside the (cut) box
+            y0, x0, y1, x1 = h["box"]
+            h["point"] = (min(max(h["point"][0], y0), y1), min(max(h["point"][1], x0), x1))
     times["detect"] = time.time() - t
     t = time.time()
     g = torch.Generator().manual_seed(c["fill"]["seed"] if seed is None else seed)
     completed = parsed.copy()
+    marked = np.zeros(parsed.shape, bool)
     for h in holes:
-        new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None, h["type"], h["rules"])
-        kept = restrict(completed, new, h["type"])
+        ex = existing(completed, h)                              # first: a symbol already there is never a gap
+        if ex is not None:                                       # already in the parse: report, draw, no fill
+            h["existing"] = ex
+            marked |= ex
+            continue
+        gap_rule(completed, h)
+        new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None, h["type"], h["rules"],
+                              h["point"], h.get("gap"))
+        kept = restrict(completed, new, h["type"], h["point"])
         y0, x0, y1, x1 = h["box"]                                # debug record: map before, raw hybrid output and
         sl = (slice(max(0, y0 - 16), y1 + 17), slice(max(0, x0 - 16), x1 + 17))   # what the restriction kept
         h["raw"] = {"origin": (sl[0].start, sl[1].start), "before": completed[sl].copy(), "hybrid": new[sl].copy(),
@@ -373,6 +475,7 @@ def run_pipeline(image, boxes=None, seed=None, fast=False):
         h.update(info)
     times["fill"] = time.time() - t
     additions = {C16.names[k]: (completed != parsed) & (completed == k) for k in np.unique(completed[completed != parsed])}
-    return {"parsed": parsed, "completed": completed, "holes": holes, "additions": additions,
-            "overlay": overlay(image, parsed, completed, scale), "messages": describe_additions(parsed, completed, holes),
+    return {"parsed": parsed, "completed": completed, "holes": holes, "additions": additions, "marked": marked,
+            "overlay": overlay(image, parsed, completed, scale, marked),
+            "messages": describe_additions(parsed, completed, holes),
             "scale": scale, "parse_info": pinfo, "timings": {k: round(v, 1) for k, v in times.items()}}

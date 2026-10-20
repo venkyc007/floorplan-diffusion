@@ -1,0 +1,13 @@
+pid,kind,expected,type,location,position,size_bin,size_pct,center_dist,found,right_type,fix_iou,fixed,fix_iou_add,fixed_add,false_adds,tol_before,tol_after,valid_before,valid_after,viol_gt,viol_before,viol_after,gap,diagnosis,flags,seconds
+high_quality_architectural-3546,door (a),door,door (a),exterior,centre,small,0.217,0.279,True,True,0.582,True,0.582,True,1,23.2,51.7,True,False,0,0,1,,C9 0->1 (raw 1: hybrid),door (INK); door (detector),33.3
+high_quality_architectural-5625,door (a),door,door (a),interior,centre,small,0.081,0.483,True,True,0.25,False,0.0,False,0,65.2,65.2,True,True,18,11,11,,,door (INK),4.5
+high_quality_architectural-3872,door (b),door,door (b),interior,centre,small,0.159,0.143,True,True,1.0,True,0.0,False,0,99.6,99.6,False,False,2,5,5,,,door (INK),1.3
+high_quality_architectural-1328,door (b),door,door (b),interior,centre,small,0.045,0.241,True,True,0.7,True,0.0,False,0,97.2,97.2,False,False,2,12,12,,,door (detector),10.6
+high_quality_architectural-4900,window,window,window,exterior,edge,small,0.43,0.74,True,True,0.952,True,0.0,False,0,99.8,99.8,False,False,1,4,4,,,window (detector),2.5
+high_quality_architectural-6347,window,window,window,exterior,edge,large,7.882,0.567,True,True,0.718,True,0.0,False,0,49.4,49.4,False,False,3,16,16,,,window (detector),0.6
+high_quality-13852,wall,wall,wall,exterior,edge,small,0.194,0.716,True,False,0.174,False,0.235,False,0,55.5,52.7,True,False,1,0,3,,C13 0->1 (raw 1: hybrid); C14 0->1 (raw 1: hybrid); C7 0->1 (raw 1: hybrid),room (detector),25.2
+high_quality_architectural-6339,wall,wall,wall,interior,centre,small,0.283,0.236,True,False,0.312,True,0.0,False,0,45.2,45.2,False,False,0,10,10,,,door (INK),1.8
+high_quality_architectural-9237,fixture,appliance,fixture,interior,edge,small,0.588,0.72,False,False,0.0,False,0.0,False,0,53.0,53.0,False,False,2,9,9,,,none,0.8
+high_quality_architectural-1186,fixture,appliance,fixture,interior,centre,small,0.191,0.069,True,True,0.526,True,0.526,True,0,17.2,37.4,True,False,1,1,3,,C16 0->1 (raw 1: hybrid); C7 1->2 (raw 2: hybrid),appliance (detector),26.7
+high_quality_architectural-5559,room,room,room,exterior,centre,small,0.876,0.406,True,True,0.545,True,0.475,True,1,27.5,29.4,False,False,4,29,23,,,door (C8); room (detector),49.0
+colorful-3134,room,room,room,interior,centre,small,0.78,0.208,True,True,0.312,True,0.288,False,0,48.7,47.9,False,False,8,39,27,,,room (detector),24.2
