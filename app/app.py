@@ -477,7 +477,7 @@ def build_ui():
     about = (ROOT / "app" / "ABOUT.md").read_text(encoding="utf-8") if (ROOT / "app" / "ABOUT.md").exists() else ""
     with gr.Blocks(title="Floor plan completion · IE643") as page:
         gr.Markdown("# Diffusion-based reconstruction of missing floor plan components\n"
-                    "IE 643 course project · switch between the two stages with the tabs below. "
+                    "IE 643 course project · Team One Hot Mencoding · switch between the two stages with the tabs below. "
                     f"Running on **{REPAIRER.device.type.upper()}**.")
         with gr.Tabs():
             with gr.Tab("Stage 1 · plan + given region (ResPlan)"):

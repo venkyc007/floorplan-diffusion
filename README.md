@@ -1,6 +1,9 @@
 # Diffusion-Based Reconstruction of Missing Floor Plan Components
 
-IE 643 (Deep Learning: Theory and Practice), IIT Bombay — course project, 2026.
+IE 643 (Deep Learning: Theory and Practice), IIT Bombay — course project, 2026 · Team **One Hot Mencoding**.
+
+*Allotted task:* an engineer or architect may unknowingly miss a floor plan component while drawing; develop a
+diffusion-based reconstruction model to correct it.
 
 Floor plans in practice are often incomplete: a door is left out of a drawing, a wall segment is missing, a room
 was never finished. This project reconstructs such missing components with **diffusion models plus explicit
@@ -21,6 +24,20 @@ manual mode where you point at the missing region yourself.
 ![Stage 2 step by step: input, PARSE, CHECK, FILL + VERIFY, result](outputs/stage2/pipeline_steps.png)
 
 *Stage 2 on the first gallery drawing of each kind (held-out val, no picking): an erased door (found, fixed), an erased window (the parser had already redrawn it), a whole room erased (flagged only as a missing door, not fixed; manual mode does not fix it either), and an intact drawing (one false addition). Made by `python -m src.stage2.interface.make_step_figures`.*
+
+## Deliverables checklist (IE 643 allotment)
+
+| expected deliverable | where it is |
+|---|---|
+| 1. Floor plan dataset + controlled missing-component generation (walls, doors, windows, rooms, other elements) | Stage 1: ResPlan → 128 × 128 maps, near-duplicate-aware split (`src/stage1/data/`, `docs/data_notes.md`); corruption by **type** (door, window, wall segment, room, region), **location** (interior / exterior), **position** (centre / edge) and **size** (small / medium / large) with a mask that never reveals the shape (`src/stage1/data/corruptions.py`); fixed val / test benchmarks. Stage 2: CubiCasa5K drawings, 16 classes, omissions erased **on the drawing itself** — door (2 kinds), window, wall, railing, fixture, a room's walls, a whole room, a region — with the same metadata (`src/stage2/data/erasure*.py`, `omission_meta.py`) |
+| 2. Diffusion-based reconstruction that preserves the surrounding structure | Palette-style x0-prediction diffusion, the known region reset at every DDIM step; hybrid: U-Net sketch → re-noised to t₀ → diffusion (`src/stage1/models/diffusion.py`, `src/stage1/sampling_experiment.py`; 16-class version `src/stage2/complete/`) |
+| 3. Structure-aware reconstruction (wall connectivity, room boundaries, alignment, consistency) | constraint losses: soft clDice (connectivity) + room closure in Stage 1; library C1–C18 + rules R1–R4 in Stage 2 (connectivity, closure, openings in walls, wall alignment C5, door adjacency, …) used as training losses, detector inputs and the best-of-N verifier (`src/stage1/models/constraints.py`, `src/stage2/constraints/`, `docs/constraints_spec.md`); weights calibrated by gradient size |
+| 4. Component-level evaluation | per-class and tolerant IoU, **component detection precision / recall / F1** (Hungarian matching, IoU ≥ 0.5) for doors, windows, rooms, connectivity error, room leak, alignment, architectural validity (`src/stage1/eval/`); Stage 2: parser component F1, CHECK found / right type per component kind, end-to-end found / fixed / false additions (`docs/results.md`) |
+| 5. Robustness + ablation | results by type, location, position and hole size (`outputs/stage1/stage1_test.md`, `full_eval.md`; Stage 2 breakdowns in every evaluation and the final test); ablations: constrained vs control diffusion (Stage 1 `finetune_ablation.md`, `selection.md`; Stage 2 in the final test), U-Net vs hybrid, t₀, guidance, each CHECK part, large-hole models (`docs/results.md` §3) |
+| Trained models + code + documentation + dependencies | code and docs in this repo, `requirements.txt` (tested versions); checkpoints: see [Trained models](#trained-models) |
+| An interface to upload inputs and test the method | `python app/app.py`: Stage 1 (pick / draw / upload a plan, brush or random mask) and Stage 2 (pick or **upload any drawing**; every step shown; manual mode) — `docs/interface.md` |
+| A performance metric + qualitative results | the app scores every repair against the truth when it is known and shows the step pictures; the "How it works · results" tab lists the metrics; `docs/results.md`, `outputs/stage2/pipeline_steps.png` |
+| Stage-wise report (reasons, experiments, datasets, extraction, interface methodology) | written by the team; material mapped in `docs/report_guide.md`; every choice and its reason in `docs/decisions.md` |
 
 ## Results at a glance
 
@@ -118,7 +135,9 @@ Runs on a CPU (about 1–2 minutes per drawing on a laptop) or a GPU (`STAGE2_DE
 
 Checkpoints are not in git (1.6 GB). They are the outputs of the Kaggle kernels in `kaggle/kernels/` and are
 bundled, with the offline install files, in the Kaggle dataset `venkatesh007c/floorplan-stage2-final`
-(`python -m src.stage2.package_final` builds it). Paths expected by the code:
+(`python -m src.stage2.package_final` builds it; it is uploaded together with the final test run and shared with
+the instructor and TAs). To use them, download the dataset and copy its `checkpoints/` folder into the project
+folder: every file lands at the path the code expects. Paths expected by the code:
 
 | model | config | checkpoint path (local) |
 |---|---|---|

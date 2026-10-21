@@ -43,7 +43,7 @@ scope: real drawings, find what is missing, 10–15 component types, "every room
 
 ## Slides (max 18 + references) — a possible plan
 
-1 title (task, "IE 643 course project", team name, names, roll numbers) · 2 outline · 3 problem statement ·
+1 title (task, "IE 643 course project", team name **One Hot Mencoding**, names, roll numbers) · 2 outline · 3 problem statement ·
 4 workflow diagram · 5–6 before the prep review (Stage 1 method + test results) · 7 after the prep review (what
 changed and why) · 8–10 proposed approach (PARSE, CHECK, FILL + VERIFY) · 11 data and preprocessing ·
 12 experimental setup · 13–16 results (Stage 1 quantitative, Stage 2 per step, end to end, qualitative) ·

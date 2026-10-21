@@ -6,7 +6,9 @@ then `docs/decisions.md` (final configuration at the top, choices in date order)
 
 ## Project
 
-IIT Bombay IE643 course project, solo. **Diffusion-based reconstruction of missing floor plan components.**
+IIT Bombay IE643 course project, solo, team name **One Hot Mencoding**. **Diffusion-based reconstruction of missing
+floor plan components** (allotment: an engineer may unknowingly miss a component while drawing; reconstruct it with
+diffusion). The allotment's expected deliverables are mapped to the repo in `README.md` ("Deliverables checklist").
 Submission (report PDF, slides, code-walkthrough video, demo video) **Sun 25 Oct 2026 23:59 IST**; in-person
 presentation later. Favour simple, working solutions.
 
