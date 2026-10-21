@@ -1,0 +1,241 @@
+size,kind,arm,scale,hole_px,tol,fixed,valid_own,tol_own,fixed_own,seconds
+small,door,U-Net sketch,training,480,90.2,True,False,90.2,True,0.0
+small,door,final,training,480,89.7,True,True,89.7,True,22.3
+small,door,U-Net sketch,pipeline,480,67.3,True,False,97.3,True,0.0
+small,door,final,pipeline,480,67.1,True,True,96.8,True,21.5
+small,door,resampling ceiling,pipeline,480,73.3,True,,,,0.0
+small,room,U-Net sketch,training,1715,75.4,True,False,75.4,True,0.0
+small,room,final,training,1715,58.6,True,True,58.6,True,21.5
+small,room,U-Net sketch,pipeline,1715,54.7,True,False,69.6,True,0.0
+small,room,final,pipeline,1715,46.1,True,True,58.7,True,21.8
+small,room,resampling ceiling,pipeline,1715,74.7,True,,,,0.0
+small,door,U-Net sketch,training,420,94.1,True,False,94.1,True,0.0
+small,door,final,training,420,94.5,True,True,94.5,True,21.6
+small,door,U-Net sketch,pipeline,420,80.0,True,False,91.7,True,0.0
+small,door,final,pipeline,420,78.8,True,True,88.6,True,21.9
+small,door,resampling ceiling,pipeline,420,94.4,True,,,,0.0
+small,room,U-Net sketch,training,2915,87.0,True,False,87.0,True,0.0
+small,room,final,training,2915,91.0,True,False,91.0,True,21.9
+small,room,U-Net sketch,pipeline,2915,68.8,True,False,84.8,True,0.0
+small,room,final,pipeline,2915,65.1,True,False,80.8,True,21.6
+small,room,resampling ceiling,pipeline,2915,74.7,True,,,,0.0
+small,fixture,U-Net sketch,training,294,60.2,False,False,60.2,False,0.0
+small,fixture,final,training,294,57.8,False,False,57.8,False,21.6
+small,fixture,U-Net sketch,pipeline,294,48.5,False,False,57.7,False,0.0
+small,fixture,final,pipeline,294,48.1,False,True,56.5,False,21.6
+small,fixture,resampling ceiling,pipeline,294,79.7,True,,,,0.0
+small,door,U-Net sketch,training,180,95.5,True,True,95.5,True,0.0
+small,door,final,training,180,89.3,True,True,89.3,True,21.7
+small,door,U-Net sketch,pipeline,180,68.2,False,True,74.9,True,0.0
+small,door,final,pipeline,180,68.2,False,True,74.9,True,21.7
+small,door,resampling ceiling,pipeline,180,64.2,True,,,,0.0
+small,door,U-Net sketch,training,252,98.4,True,False,98.4,True,0.0
+small,door,final,training,252,100.0,True,True,100.0,True,21.7
+small,door,U-Net sketch,pipeline,252,76.5,False,True,100.0,True,0.0
+small,door,final,pipeline,252,76.5,False,True,100.0,True,21.6
+small,door,resampling ceiling,pipeline,252,79.2,False,,,,0.0
+small,room,U-Net sketch,training,1344,45.8,True,False,45.8,True,0.0
+small,room,final,training,1344,46.0,True,True,46.0,True,22.1
+small,room,U-Net sketch,pipeline,1344,30.3,True,False,46.3,True,0.0
+small,room,final,pipeline,1344,30.4,True,True,46.4,True,21.7
+small,room,resampling ceiling,pipeline,1344,68.6,True,,,,0.0
+small,fixture,U-Net sketch,training,204,19.7,False,False,19.7,False,0.0
+small,fixture,final,training,204,26.4,False,False,26.4,False,22.4
+small,fixture,U-Net sketch,pipeline,204,14.6,False,False,21.3,False,0.0
+small,fixture,final,pipeline,204,36.9,True,False,36.3,True,22.1
+small,fixture,resampling ceiling,pipeline,204,61.0,True,,,,0.0
+small,region,U-Net sketch,training,1392,76.3,True,False,76.3,True,0.0
+small,region,final,training,1392,76.2,True,False,76.2,True,22.1
+small,region,U-Net sketch,pipeline,1392,45.6,True,True,63.3,True,0.0
+small,region,final,pipeline,1392,44.5,True,True,63.2,True,22.5
+small,region,resampling ceiling,pipeline,1392,79.9,True,,,,0.0
+small,window,U-Net sketch,training,600,98.2,True,False,98.2,True,0.0
+small,window,final,training,600,100.0,True,True,100.0,True,22.9
+small,window,U-Net sketch,pipeline,600,76.0,True,False,100.0,True,0.0
+small,window,final,pipeline,600,77.5,True,True,100.0,True,22.4
+small,window,resampling ceiling,pipeline,600,77.5,True,,,,0.0
+small,railing,U-Net sketch,training,722,64.9,True,False,64.9,True,0.0
+small,railing,final,training,722,80.6,True,True,80.6,True,22.7
+small,railing,U-Net sketch,pipeline,722,84.8,True,False,92.4,True,0.0
+small,railing,final,pipeline,722,82.8,True,True,91.6,True,22.4
+small,railing,resampling ceiling,pipeline,722,83.2,True,,,,0.0
+small,wall,U-Net sketch,training,468,84.1,True,False,84.1,True,0.0
+small,wall,final,training,468,84.4,True,False,84.4,True,22.9
+small,wall,U-Net sketch,pipeline,468,69.7,True,False,92.8,True,0.0
+small,wall,final,pipeline,468,67.8,True,True,92.4,True,22.6
+small,wall,resampling ceiling,pipeline,468,83.3,True,,,,0.0
+small,region,U-Net sketch,training,1444,99.8,True,False,99.8,True,0.0
+small,region,final,training,1444,99.8,True,True,99.8,True,22.5
+small,region,U-Net sketch,pipeline,1444,80.1,True,False,84.8,True,0.0
+small,region,final,pipeline,1444,80.9,True,True,85.2,True,22.5
+small,region,resampling ceiling,pipeline,1444,95.7,True,,,,0.0
+small,railing,U-Net sketch,training,315,63.8,False,False,63.8,False,0.0
+small,railing,final,training,315,54.1,False,True,54.1,False,21.9
+small,railing,U-Net sketch,pipeline,315,65.7,True,False,58.6,False,0.0
+small,railing,final,pipeline,315,35.5,False,False,35.8,False,22.0
+small,railing,resampling ceiling,pipeline,315,86.3,True,,,,0.0
+small,railing,U-Net sketch,training,1480,51.3,False,True,51.3,False,0.0
+small,railing,final,training,1480,50.4,False,True,50.4,False,22.1
+small,railing,U-Net sketch,pipeline,1480,39.8,False,False,48.6,False,0.0
+small,railing,final,pipeline,1480,37.5,False,True,47.0,False,22.1
+small,railing,resampling ceiling,pipeline,1480,90.5,True,,,,0.0
+small,window,U-Net sketch,training,385,99.6,True,False,99.6,True,0.0
+small,window,final,training,385,96.0,True,True,96.0,True,21.7
+small,window,U-Net sketch,pipeline,385,68.6,True,False,99.8,True,0.0
+small,window,final,pipeline,385,68.9,True,True,100.0,True,21.8
+small,window,resampling ceiling,pipeline,385,68.8,True,,,,0.0
+small,fixture,U-Net sketch,training,132,78.3,False,True,78.3,False,0.0
+small,fixture,final,training,132,78.3,False,True,78.3,False,22.0
+small,fixture,U-Net sketch,pipeline,132,53.4,False,False,75.8,False,0.0
+small,fixture,final,pipeline,132,50.5,False,True,70.4,False,22.2
+small,fixture,resampling ceiling,pipeline,132,65.6,False,,,,0.0
+small,fixture,U-Net sketch,training,304,91.8,True,True,91.8,True,0.0
+small,fixture,final,training,304,92.3,True,True,92.3,True,21.7
+small,fixture,U-Net sketch,pipeline,304,79.2,True,False,92.6,True,0.0
+small,fixture,final,pipeline,304,77.4,True,True,92.3,True,22.3
+small,fixture,resampling ceiling,pipeline,304,77.0,True,,,,0.0
+small,wall,U-Net sketch,training,372,64.1,True,False,64.1,True,0.0
+small,wall,final,training,372,100.0,True,True,100.0,True,22.4
+small,wall,U-Net sketch,pipeline,372,66.4,True,False,73.1,True,0.0
+small,wall,final,pipeline,372,66.0,True,True,74.3,True,21.9
+small,wall,resampling ceiling,pipeline,372,85.1,True,,,,0.0
+small,window,U-Net sketch,training,242,79.9,True,False,79.9,True,0.0
+small,window,final,training,242,94.1,True,True,94.1,True,21.8
+small,window,U-Net sketch,pipeline,242,60.9,True,False,83.1,True,0.0
+small,window,final,pipeline,242,60.6,True,True,100.0,True,22.0
+small,window,resampling ceiling,pipeline,242,63.3,True,,,,0.0
+small,wall,U-Net sketch,training,560,99.2,True,False,99.2,True,0.0
+small,wall,final,training,560,99.2,True,False,99.2,True,22.1
+small,wall,U-Net sketch,pipeline,560,80.3,True,True,100.0,True,0.0
+small,wall,final,pipeline,560,81.0,True,False,99.1,True,21.9
+small,wall,resampling ceiling,pipeline,560,80.3,True,,,,0.0
+small,door,U-Net sketch,training,180,95.5,True,True,95.5,True,0.0
+small,door,final,training,180,95.5,True,True,95.5,True,21.8
+small,door,U-Net sketch,pipeline,180,82.1,True,False,94.9,True,0.0
+small,door,final,pipeline,180,82.1,True,True,94.9,True,21.7
+small,door,resampling ceiling,pipeline,180,82.1,True,,,,0.0
+small,fixture,U-Net sketch,training,143,48.3,False,True,48.3,False,0.0
+small,fixture,final,training,143,48.3,False,True,48.3,False,21.8
+small,fixture,U-Net sketch,pipeline,143,39.7,False,True,54.5,False,0.0
+small,fixture,final,pipeline,143,33.1,False,True,39.2,False,21.8
+small,fixture,resampling ceiling,pipeline,143,61.6,True,,,,0.0
+small,room,U-Net sketch,training,1769,36.4,True,False,36.4,True,0.0
+small,room,final,training,1769,36.6,True,True,36.6,True,21.5
+small,room,U-Net sketch,pipeline,1769,53.7,True,False,62.7,True,0.0
+small,room,final,pipeline,1769,45.9,True,False,56.2,True,21.3
+small,room,resampling ceiling,pipeline,1769,82.9,True,,,,0.0
+small,door,U-Net sketch,training,266,92.5,True,False,92.5,True,0.0
+small,door,final,training,266,88.6,True,True,88.6,True,21.6
+small,door,U-Net sketch,pipeline,266,61.5,True,False,92.1,True,0.0
+small,door,final,pipeline,266,57.1,True,False,92.5,True,21.5
+small,door,resampling ceiling,pipeline,266,57.5,True,,,,0.0
+small,door,U-Net sketch,training,204,98.7,True,False,98.7,True,0.0
+small,door,final,training,204,100.0,True,True,100.0,True,22.0
+small,door,U-Net sketch,pipeline,204,68.6,True,False,79.3,True,0.0
+small,door,final,pipeline,204,86.4,True,True,100.0,True,22.1
+small,door,resampling ceiling,pipeline,204,86.4,True,,,,0.0
+small,region,U-Net sketch,training,3248,71.0,True,False,71.0,True,0.0
+small,region,final,training,3248,69.5,True,False,69.5,True,22.1
+small,region,U-Net sketch,pipeline,3248,61.3,True,False,77.4,True,0.0
+small,region,final,pipeline,3248,64.3,True,False,84.0,True,21.8
+small,region,resampling ceiling,pipeline,3248,80.3,True,,,,0.0
+small,fixture,U-Net sketch,training,196,53.7,True,False,53.7,True,0.0
+small,fixture,final,training,196,75.3,True,True,75.3,True,21.5
+small,fixture,U-Net sketch,pipeline,196,45.6,False,True,44.0,False,0.0
+small,fixture,final,pipeline,196,47.6,False,True,47.4,False,21.9
+small,fixture,resampling ceiling,pipeline,196,65.9,True,,,,0.0
+small,wall,U-Net sketch,training,588,63.9,True,False,63.9,True,0.0
+small,wall,final,training,588,63.0,True,True,63.0,True,21.7
+small,wall,U-Net sketch,pipeline,588,41.0,True,False,73.0,True,0.0
+small,wall,final,pipeline,588,37.3,True,False,70.8,True,21.7
+small,wall,resampling ceiling,pipeline,588,58.6,True,,,,0.0
+large,region_large,final,training,4070,55.4,True,False,55.4,True,33.1
+large,region_large,final,pipeline,4070,45.9,False,False,56.9,True,21.4
+large,region_large,resampling ceiling,pipeline,4070,76.8,True,,,,0.0
+large,region_large,final,training,2100,38.8,True,True,38.8,True,21.6
+large,region_large,final,pipeline,2100,37.0,True,True,37.4,True,21.3
+large,region_large,resampling ceiling,pipeline,2100,71.9,True,,,,0.0
+large,room_whole,final,training,3536,71.3,True,True,71.3,True,33.3
+large,room_whole,final,pipeline,3536,60.9,True,True,71.1,True,21.9
+large,room_whole,resampling ceiling,pipeline,3536,78.4,True,,,,0.0
+large,region_large,final,training,3180,32.5,True,True,32.5,True,21.4
+large,region_large,final,pipeline,3180,27.2,False,True,28.6,False,21.7
+large,region_large,resampling ceiling,pipeline,3180,76.3,True,,,,0.0
+large,room_whole,final,training,3658,28.9,False,False,28.9,False,21.4
+large,room_whole,final,pipeline,3658,22.4,False,False,27.4,False,21.4
+large,room_whole,resampling ceiling,pipeline,3658,71.9,True,,,,0.0
+large,room_whole,final,training,4320,55.0,True,False,55.0,True,32.9
+large,room_whole,final,pipeline,4320,53.5,True,False,57.0,True,32.7
+large,room_whole,resampling ceiling,pipeline,4320,83.1,True,,,,0.0
+large,room_whole,final,training,3654,80.5,True,True,80.5,True,21.1
+large,room_whole,final,pipeline,3654,55.1,True,True,70.2,True,21.3
+large,room_whole,resampling ceiling,pipeline,3654,78.5,True,,,,0.0
+large,room_whole,final,training,1722,50.5,True,False,50.5,True,21.4
+large,room_whole,final,pipeline,1722,31.2,True,False,41.4,True,21.5
+large,room_whole,resampling ceiling,pipeline,1722,65.0,True,,,,0.0
+large,room_whole,final,training,810,31.0,True,True,31.0,True,21.5
+large,room_whole,final,pipeline,810,18.9,False,True,37.2,True,21.8
+large,room_whole,resampling ceiling,pipeline,810,57.5,True,,,,0.0
+large,region_large,final,training,2150,31.6,True,False,31.6,True,21.6
+large,region_large,final,pipeline,2150,31.3,True,False,37.0,True,21.5
+large,region_large,resampling ceiling,pipeline,2150,63.4,True,,,,0.0
+large,region_large,final,training,7446,23.6,True,True,23.6,True,50.2
+large,region_large,final,pipeline,7446,21.9,False,True,23.4,True,33.3
+large,region_large,resampling ceiling,pipeline,7446,76.5,True,,,,0.0
+large,room_whole,final,training,1892,53.5,True,False,53.5,True,20.7
+large,room_whole,final,pipeline,1892,47.0,True,False,52.1,True,20.7
+large,room_whole,resampling ceiling,pipeline,1892,75.3,True,,,,0.0
+large,room_whole,final,training,2430,54.3,True,True,54.3,True,20.8
+large,room_whole,final,pipeline,2430,34.4,True,True,54.7,True,21.6
+large,room_whole,resampling ceiling,pipeline,2430,71.4,True,,,,0.0
+large,room_whole,final,training,5986,51.5,True,False,51.5,True,33.7
+large,room_whole,final,pipeline,5986,33.3,True,False,45.8,True,33.9
+large,room_whole,resampling ceiling,pipeline,5986,73.1,True,,,,0.0
+large,room_whole,final,training,2000,30.9,True,False,30.9,True,21.0
+large,room_whole,final,pipeline,2000,27.5,True,False,39.9,True,21.1
+large,room_whole,resampling ceiling,pipeline,2000,71.3,True,,,,0.0
+large,room_whole,final,training,11830,32.9,True,False,32.9,True,69.1
+large,room_whole,final,pipeline,11830,27.9,True,False,32.8,True,46.8
+large,room_whole,resampling ceiling,pipeline,11830,84.8,True,,,,0.0
+large,room_whole,final,training,3520,39.2,True,False,39.2,True,31.9
+large,room_whole,final,pipeline,3520,30.6,True,False,45.3,True,31.8
+large,room_whole,resampling ceiling,pipeline,3520,71.0,True,,,,0.0
+large,room_whole,final,training,2280,37.1,True,True,37.1,True,20.7
+large,room_whole,final,pipeline,2280,36.5,True,True,57.5,True,20.7
+large,room_whole,resampling ceiling,pipeline,2280,65.4,True,,,,0.0
+large,region_large,final,training,4830,26.2,True,False,26.2,True,31.6
+large,region_large,final,pipeline,4830,20.3,False,False,23.7,True,20.8
+large,region_large,resampling ceiling,pipeline,4830,79.5,True,,,,0.0
+large,room_whole,final,training,1716,56.6,True,False,56.6,True,20.7
+large,room_whole,final,pipeline,1716,36.7,True,False,55.7,True,20.7
+large,room_whole,resampling ceiling,pipeline,1716,68.8,True,,,,0.0
+large,region_large,final,training,6225,62.7,True,True,62.7,True,31.4
+large,region_large,final,pipeline,6225,48.1,False,True,65.1,True,31.6
+large,region_large,resampling ceiling,pipeline,6225,75.6,True,,,,0.0
+large,region_large,final,training,4588,29.9,False,False,29.9,False,31.7
+large,region_large,final,pipeline,4588,24.3,False,False,36.5,True,20.7
+large,region_large,resampling ceiling,pipeline,4588,66.5,True,,,,0.0
+large,region_large,final,training,920,60.0,True,False,60.0,True,20.8
+large,region_large,final,pipeline,920,56.3,True,False,60.0,True,20.9
+large,region_large,resampling ceiling,pipeline,920,95.4,True,,,,0.0
+large,room_whole,final,training,1634,35.9,True,False,35.9,True,20.8
+large,room_whole,final,pipeline,1634,22.2,True,False,44.2,True,20.8
+large,room_whole,resampling ceiling,pipeline,1634,53.2,True,,,,0.0
+large,region_large,final,training,2989,37.3,True,False,37.3,True,20.8
+large,region_large,final,pipeline,2989,26.6,False,False,38.2,False,20.6
+large,region_large,resampling ceiling,pipeline,2989,59.0,False,,,,0.0
+large,region_large,final,training,14672,39.8,True,False,39.8,True,69.5
+large,region_large,final,pipeline,14672,22.1,False,False,31.4,True,47.2
+large,region_large,resampling ceiling,pipeline,14672,74.8,True,,,,0.0
+large,region_large,final,training,1116,57.5,True,False,57.5,True,21.1
+large,region_large,final,pipeline,1116,37.7,False,False,45.2,False,21.0
+large,region_large,resampling ceiling,pipeline,1116,85.4,True,,,,0.0
+large,room_whole,final,training,8383,87.3,True,False,87.3,True,46.8
+large,room_whole,final,pipeline,8383,70.8,True,False,83.4,True,31.6
+large,room_whole,resampling ceiling,pipeline,8383,87.5,True,,,,0.0
+large,region_large,final,training,4270,65.9,True,True,65.9,True,31.4
+large,region_large,final,pipeline,4270,52.3,True,True,56.5,True,20.8
+large,region_large,resampling ceiling,pipeline,4270,90.1,True,,,,0.0
+large,region_large,final,training,2450,41.4,True,False,41.4,True,20.9
+large,region_large,final,pipeline,2450,38.5,True,False,46.4,True,20.7
+large,region_large,resampling ceiling,pipeline,2450,74.9,True,,,,0.0

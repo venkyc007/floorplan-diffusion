@@ -27,5 +27,6 @@ All kernels belong to the Kaggle account `venkatesh007c` and are private.
 | `stage1/full_eval`, `stage1/arch_eval`, `stage1/selection`, `stage1/sampling`, `stage1/diagnostic`, `stage1/timing` | GPU | Stage 1 predictions of every setting on val (scored on the laptop) |
 | `stage1/stage1_test`, `stage1/stage1_test_score` | GPU / CPU | the one Stage 1 test run |
 | `stage2/stage2_gates`, `stage2/stage2_eta` | GPU | constraint gates G2–G4; guidance strength |
+| `stage2/stage2_scale_diag` | CPU | what the ~0.84x scale mismatch costs the FILL (`outputs/stage2/scale_diag.md`) |
 | `stage2/stage2_eval_*`, `stage2/stage2_large_fill*`, `stage2/stage2_b4_val`, `stage2/stage2_judge` | CPU | Stage 2 val evaluations (CHECK tuning, held-out detection, end-to-end batches, large holes, B4 validation) |
 | `notebooks/stage2_final_test` | GPU (T4 × 2) | **the one Stage 2 test run** (prepared, run once at the end: `docs/final_test_notebook.md`) |

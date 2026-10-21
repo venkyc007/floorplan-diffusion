@@ -19,6 +19,7 @@ in that file; **L** = label maps / data statistics (no drawings); **fig** = illu
 | `e2e_val_v5.md`, `e2e_val_batch2_v2.md`, `e2e_val_batch3_v2.md` | END TO END re-check after the 2026-10-21 audit fixes (old vs new tables at the end) | H |
 | `large_fill_compare_v2*.md` / `.png` | large omissions: three fills with the B4 models, box given (manual) and automatic | H\* |
 | `data_stats.md`, `data_overlay.png` | dataset: class shares, scales, the 16 classes | L |
+| `scale_diag.md` / `.csv` | what the ~0.84x scale mismatch costs the FILL (hole given, 30 + 30 holes at both scales): small, -2.0 / +0.1 points | H\* (val windows) |
 | `pipeline_steps.png`, `pipeline_steps/` | the four step pictures of the final system on the first gallery drawing of each kind (2026-10-21, after the audit fixes) | H, fig |
 
 ## Supporting files

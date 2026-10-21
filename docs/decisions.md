@@ -986,3 +986,27 @@ assessment), the final test fully prepared but NOT run, and a new Gradio app wit
 - Final test smoke run on the VAL zips (laptop CPU, `--smoke`: 2 cases per section and size bin): all sections ran,
   0 errors, report complete (31 min on the CPU; the GPU run is far faster). Stage 1 baselines re-run on val
   (`outputs/stage1/baseline_results_val.md`; nearest fill tolerant mIoU 0.489, as in the selection table).
+
+## 2026-10-22: scale-mismatch measurement (user: run on Kaggle CPU)
+
+- Question: how much does the ~0.84x scale mismatch (pipeline maps vs the fill models' training scale) cost the
+  FILL? Script `src/stage2/complete/scale_diag.py`, kernel `kaggle/kernels/stage2/stage2_scale_diag` (CPU, code
+  version "final 8e4cdcf + scale_diag.py", uncommitted at upload; launched 2026-10-22 00:51 IST).
+- Own choices: the same val plan and hole filled at the training scale and after resizing the whole plan by
+  R = 8 / 9.55 = 0.838 (nearest neighbour, as run_pipeline's maps); ground-truth labels so parse errors play no part;
+  30 small (128 px window, K2a sketch alone and the final hybrid, t0 300) + 30 large holes (256 px, B4 + big window),
+  completion_val plans, seed 91, window centred on the hole, fast settings, generator seed 0. Two scorings, because
+  each leans one way: A = each fill against the truth at its own scale (tolerant mIoU leans towards the smaller
+  scale, whose 1 px tolerance is relatively larger, so "fixed" and validity are the fairer columns); B = both at the
+  training scale with the pipeline result resized back (includes the resizing loss itself, shown by a no-model
+  ceiling: the truth resized and back). A 1-hole-per-size code check ran on the laptop first (not the measurement).
+- Decision rule (set before the result): consider the CPU fix (FILL gets its own map at the training scale) only if
+  the final arm loses >= 5 points in A's tolerant mIoU or >= 3 of 30 holes in A's "fixed" at the pipeline scale;
+  otherwise document the mismatch and move on.
+- Result (kernel floorplan-stage2-scale-diag v1, Kaggle CPU, 00:51 -> 02:22; `outputs/stage2/scale_diag.md`):
+  A (own scale): small holes, final fill 77.8 -> 75.8 tolerant mIoU (-2.0 [-5.9, +1.7]), fixed 80% -> 80%, valid 77% ->
+  73%; large holes (B4) 46.6 -> 46.7 (+0.1 [-2.3, +2.6]), fixed 28/30 -> 26/30, valid 33% -> 33%. B (training scale,
+  resized back): -17.8 / -10.0, but the no-model resizing ceiling alone loses -23.9 / -25.9, so B's drop is resizing,
+  not the model. **Decision by the pre-set rule: no fix** (neither >= 5 points nor >= 3 holes lost in A). The scale
+  mismatch costs the fill at most ~2 points; it does not explain why B4's val gain did not carry over to real
+  drawings (the noisier parse remains the likely cause). Documented in docs/results.md.

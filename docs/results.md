@@ -152,8 +152,9 @@ window 0.898, wall 0.924, region 0.784, room 0.675. Every metric of every method
 10. **Small samples**: 12 drawings per end-to-end batch, 30 holes per fill comparison.
 11. **Scale mismatch found in the final audit**: the rasteriser draws polygons 1 px thicker (walls 4 px / 9 px instead
     of 3 / 8) and the pipeline's wall-thickness estimate reads 9.55 px, so Stage 2 maps are ~0.84× the scale the
-    fill models were trained at. The detectors were trained at the pipeline's scale, so a consistent fix needs them
-    retrained; documented, not changed.
+    fill models were trained at (the detectors were trained at the pipeline's scale). **Measured, small**: the same
+    val holes filled at both scales (`outputs/stage2/scale_diag.md`) differ by −2.0 tolerant mIoU points for small
+    holes (95% CI −5.9 to +1.7; fixed 80% at both) and +0.1 for large holes (fixed 28 vs 26 of 30). Not changed.
 12. **Stage 1 validity rewards leaving the hole empty** (a background fill scores 46% validity on 400 val cases): it
     measures "no wrong structure", so it is always read together with tolerant mIoU and F1.
 
