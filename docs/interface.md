@@ -4,8 +4,40 @@ This document describes the interactive interface (`app/app.py`) for the report'
 interface-methodology section: how input is turned into a model input, how the
 region to repair is chosen, which methods are offered, and what is reported.
 
+```bash
+python -m src.stage1.interface.make_gallery     # once: 24 Stage 1 val cases -> data/app/val_gallery.npz
+python -m src.stage2.interface.make_gallery     # once: 18 Stage 2 val drawings -> data/app/stage2_gallery/
+python app/app.py                               # http://127.0.0.1:7860
+```
+
+## 0. One app, two stages (2026-10-21)
+
+The page has three tabs: **Stage 1** (sections 1–7 below), **Stage 2**, and **How it works · results**
+(`app/ABOUT.md`). The UI is only in `app/app.py`; all logic is in `src/stage1/interface/` and
+`src/stage2/interface/`.
+
+**Stage 1 tab** — as below, plus **Random mask**: one door, window, wall segment, room or region is removed from the
+complete plan with the benchmark's own corruption rules (`src/stage1/interface/random_mask.py` →
+`src/stage1/data/corruptions.corrupt`), so the true plan stays known and the repair is scored.
+
+**Stage 2 tab** (`src/stage2/interface/demo.py`, settings `configs/stage2/app.yaml`):
+
+| part | what it does |
+|---|---|
+| input | the gallery (18 held-out **val** drawings in the validation's fixed order, one part erased each by the validation's own eraser, 2 intact; never test) or **any uploaded image**: colour → grey, transparency → paper, white-on-black inverted, 64–6,000 px per side (`demo.to_grey`) |
+| 2a automatic | `run_pipeline(drawing)`: PARSE → CHECK → FILL → VERIFY |
+| 2b manual | the user brushes the missing region (orange) on the drawing; each separate brushed region becomes one box (`demo.mask_boxes`) → `run_pipeline(drawing, boxes)`: PARSE + FILL only (CHECK skipped) — for when CHECK misses something |
+| step pictures | PARSE: the 16-class map; CHECK: the map with every flag (red: type + which rule / detector; blue: the user's boxes); FILL + VERIFY: the completed map, changes outlined; the result on the drawing (additions in red, doors as gap + leaf + arc) |
+| text | the pipeline's messages ("bedroom had no door → door added …"), a table per hole (type, source, t₀, verifier violations), timings |
+| scoring | gallery cases only: found / fixed / false additions / tolerant mIoU with the validation's own definitions (`e2e_val.score`) |
+| settings | the pipeline's frozen settings; "fast" (N = 2, 15 steps, as validated) by default, a switch for the evaluation settings |
+
+Laptop CPU timing (first run includes loading the Stage 2 models, ~1.5 GB): about 90 s automatic, 60–120 s manual.
+Tests: `tests/stage2/test_interface.py` (input conversion, mask → boxes, random mask); the handlers were exercised
+by calling them in Python (the laptop is short on RAM for long browser sessions).
+
 **Settings are frozen.** Every model and sampling setting in the app is the one
-selected on the val benchmark before the app was built (`outputs/selection.md`,
+selected on the val benchmark before the app was built (`outputs/stage1/selection.md`,
 Day 7). Nothing was tuned on what the app shows. The gallery uses only **val**
 plans; the test set stays untouched for the final numbers.
 
@@ -14,18 +46,18 @@ plans; the test set stays untouched for the final numbers.
 | part | file | job |
 |---|---|---|
 | page | `app/app.py` | layout and event handlers only |
-| settings | `configs/app.yaml` | checkpoint paths, frozen sampling settings, input limits |
-| input pipeline | `src/interface/plan_io.py` | colours → classes, framing, file loading, validation |
-| models | `src/interface/inference.py` | runs the 5 methods; loads each checkpoint on first use and keeps it |
-| suggestions | `src/interface/suggest.py` | proposes masks around rule violations |
-| metrics | `src/interface/report.py` | validity rules, and scores against the true plan |
-| pictures | `src/interface/render.py` | plan ↔ screen images, mask layer, difference overlay |
-| gallery | `src/interface/make_gallery.py` | 24 val cases, saved to `data/app/val_gallery.npz` |
-| timing | `src/interface/time_methods.py` | one repair per method and hole size → `outputs/interface/cpu_timing.md` |
-| TA figures | `src/interface/make_ta_figures.py` | input / U-Net sketch / hybrid / truth grids → `outputs/interface/hybrid_samples{,_large}.png` |
+| settings | `configs/stage1/app.yaml` | checkpoint paths, frozen sampling settings, input limits |
+| input pipeline | `src/stage1/interface/plan_io.py` | colours → classes, framing, file loading, validation |
+| models | `src/stage1/interface/inference.py` | runs the 5 methods; loads each checkpoint on first use and keeps it |
+| suggestions | `src/stage1/interface/suggest.py` | proposes masks around rule violations |
+| metrics | `src/stage1/interface/report.py` | validity rules, and scores against the true plan |
+| pictures | `src/stage1/interface/render.py` | plan ↔ screen images, mask layer, difference overlay |
+| gallery | `src/stage1/interface/make_gallery.py` | 24 val cases, saved to `data/app/val_gallery.npz` |
+| timing | `src/stage1/interface/time_methods.py` | one repair per method and hole size → `outputs/stage1/interface/cpu_timing.md` |
+| TA figures | `src/stage1/interface/make_ta_figures.py` | input / U-Net sketch / hybrid / truth grids → `outputs/stage1/interface/hybrid_samples{,_large}.png` |
 
 The app runs on the CPU and uses a GPU if one is available. If a checkpoint named in
-`configs/app.yaml` is missing, start-up stops with a message naming the missing file
+`configs/stage1/app.yaml` is missing, start-up stops with a message naming the missing file
 and where to get it.
 
 **Lazy loading.** At start-up the app only checks that both checkpoint files exist. A network is
@@ -87,7 +119,7 @@ bounding box plus 2–6 px of padding, or a random rectangle. Brushed masks can 
 which is outside the training distribution. The benchmark masks of the samples are rectangles.
 
 **Suggest suspicious areas (assistive).** The button runs four of our architectural rules
-(`src/eval/arch_metrics.py`) on the whole plan:
+(`src/stage1/eval/arch_metrics.py`) on the whole plan:
 - unreachable rooms;
 - dead-end walls;
 - floating wall fragments;
@@ -101,7 +133,7 @@ exhaustive, for two reasons:
 
 ## 4. Methods (step 3)
 
-| method (dropdown) | what it does | val result (`outputs/selection.md`) |
+| method (dropdown) | what it does | val result (`outputs/stage1/selection.md`) |
 |---|---|---|
 | **Size-adaptive hybrid** (default) | matched U-Net draft → one-hot → noised to t₀ → constraint fine-tune finishes it (stochastic DDIM, eta 1, known-region reset); t₀ = 400 / 600 / 700 for small / medium / large holes | tol. mIoU 0.842, validity 88.0% |
 | Hybrid, t₀ = 600 | the same with t₀ = 600 for every hole | 0.842, 87.4% |
@@ -133,7 +165,7 @@ Three pictures:
   - amber: other class changes where the input was known.
 
 **Architectural rules.** The 6 validity rules from the evaluation are counted inside the repaired
-region (the mask grown by 3 px, as in `src/arch_eval.py`):
+region (the mask grown by 3 px, as in `src/stage1/arch_eval.py`):
 1. no dead-end walls;
 2. no floating wall fragments;
 3. doors and windows bridge two wall ends;
@@ -146,7 +178,7 @@ How a rule passes:
 - **without a true plan:** only 0 violations count as a pass. The page notes that real plans also break some rules.
 
 **Against the true plan (samples only):** tolerant mIoU and door/window/room component F1 inside the
-mask, computed with the evaluation code (`src/eval/metrics.py`). "n/a" means the class is absent
+mask, computed with the evaluation code (`src/stage1/eval/metrics.py`). "n/a" means the class is absent
 from both the repair and the truth inside the mask.
 
 **Runtime** of the repair is shown under the method name.
@@ -156,7 +188,7 @@ from both the repair and the truth inside the mask.
 One repair per method and hole size, on the development laptop:
 - cases: the first small, medium and large gallery case, seed 0, after a warm-up;
 - machine: Intel CPU, 10 threads, PyTorch 2.14 (CPU), fp32;
-- made with `python -m src.interface.time_methods` → `outputs/interface/cpu_timing.md`.
+- made with `python -m src.stage1.interface.time_methods` → `outputs/stage1/interface/cpu_timing.md`.
 
 | method | small hole | medium hole | large hole |
 |---|---|---|---|
@@ -179,7 +211,7 @@ No speed-up that would change the results was used (`docs/decisions.md`).
 
 ## 7. Testing
 
-**Unit tests.** `tests/test_interface.py` runs as part of `python -m pytest tests/` and needs no
+**Unit tests.** `tests/stage1/test_interface.py` runs as part of `python -m pytest tests/` and needs no
 models or data. It covers:
 - framing and colour snapping;
 - PNG and `.npy` round trips;
@@ -212,7 +244,7 @@ through a browser. 37 of 37 checks passed:
   empty editor, no file).
 
 **Browser check.** The page was opened in Chrome. A large-hole sample was repaired with the
-size-adaptive hybrid (t₀ = 700, 50 s, 6/6 rules pass). The screenshots are in `outputs/interface/`.
+size-adaptive hybrid (t₀ = 700, 50 s, 6/6 rules pass). The screenshots are in `outputs/stage1/interface/`.
 
 ## 8. Limitations
 

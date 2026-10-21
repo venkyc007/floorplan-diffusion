@@ -1,7 +1,7 @@
 """Visual check set (user, chunk 8): 12 val drawings with one known omission each, run end to end after
 every fix from now on.
 
-    python -m src.stage2.pipeline.check_set --zip parser_val.zip   -> outputs/stage2/check_set.png + .md
+    python -m src.stage2.pipeline.check_set --zip parser_val.zip   -> outputs/stage2/history/check_set.png + .md
 
 Cases (12): 2 door (a) "opening forgotten", 2 door (b) "gap left, no door", 2 window, 2 wall, 2 fixture,
 1 missing room, 1 intact. Drawings are taken in file order (no cherry-picking): for each case kind, the

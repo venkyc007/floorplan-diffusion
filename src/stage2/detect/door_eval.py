@@ -20,7 +20,7 @@ import yaml
 
 from src.stage2.data.classes16 import C16
 from src.stage2.detect import rules as R
-from src.stage2.detect.detection_eval import (CHOICE, OUT, build_cases, build_heldout_cases, detector_probs, hit,
+from src.stage2.detect.detection_eval import (CHOICE, OUT, write_choice, build_cases, build_heldout_cases, detector_probs, hit,
                                               load_detector, proposals)
 from src.stage2.detect.gaps import gap_candidates
 
@@ -112,7 +112,7 @@ def main():
         choice["extra_rules"] = sorted(set(choice.get("extra_rules", [])) | {"R5"})
         choice["gap_rule"] = {"open_rate": v[1], "skip": list(v[2]), "source": "door_eval.py, tuning split, budget "
                               f"{args.budget} false alarms per intact plan"}
-        CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
+        write_choice(choice)
     print("\n".join(L))
 
 

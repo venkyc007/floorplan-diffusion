@@ -1,4 +1,4 @@
-"""Setup for the Stage 2 CPU evaluation kernels (kaggle/kernels/stage2_eval_*/run.py).
+"""Setup for the Stage 2 CPU evaluation kernels (kaggle/kernels/stage2/stage2_eval_*/run.py).
 
     from src.stage2.kaggle_cpu import setup, finish
     data = setup()          # packages, val zips into /tmp/s2data, checkpoints where configs/stage2/pipeline.yaml expects them

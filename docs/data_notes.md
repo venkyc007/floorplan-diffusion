@@ -1,18 +1,18 @@
 # Data notes
 
 How the ResPlan dataset is turned into our training data, and why.
-Code: `src/data/` · settings: `configs/data.yaml` · rebuild: `python -m src.data.build_dataset` · checks/figures: `python -m src.data.checks`.
+Code: `src/stage1/data/` · settings: `configs/stage1/data.yaml` · rebuild: `python -m src.stage1.data.build_dataset` · checks/figures: `python -m src.stage1.data.checks`.
 
 ## Source
 
 - **ResPlan** (github.com/m-agour/ResPlan, data CC BY 4.0 — credit it in the report): 17,000 residential unit plans, one pickle (`ResPlan.pkl`), a list of dicts of shapely shapes.
 - Coordinates are **not metres** (the README says otherwise): every plan is rescaled to ~256 units on its long side. Only `area` (m², from the listing) is metric.
 - ~775 geometries are invalid (self-intersecting). We rasterize by drawing coordinates with OpenCV, which works on invalid shapes; avoid shapely boolean ops on raw data.
-- The pickle is loaded with an allow-listed unpickler (`src/data/resplan.py`), because pickles can run code.
+- The pickle is loaded with an allow-listed unpickler (`src/stage1/data/resplan.py`), because pickles can run code.
 
 ## Representation
 
-128×128 image, 6 one-hot channels (exactly one class per pixel), defined in `src/data/classes.py`:
+128×128 image, 6 one-hot channels (exactly one class per pixel), defined in `src/stage1/data/classes.py`:
 
 | Channel | ResPlan fields |
 |---|---|
@@ -41,7 +41,7 @@ Consequence: tall or wide plans have empty margin on two sides; when the plan ha
 
 ## Data problems found and how they are handled
 
-1. **ResPlan "augmented" plans are broken → excluded (683 plans).** `split.json["augmented"]` lists rotated/flipped/scaled copies (ids ≥ 100,000). ResPlan's augmentation never transformed `inner`, `land`, `garden`, `parking` or `neighbor` (untransformed in 239/239 detectable cases), so their outdoor areas sit in the wrong place and their real scale is wrong. They are copies of plans already in the dataset anyway. Figure: `outputs/raw_vs_processed.png` (rows 1–2).
+1. **ResPlan "augmented" plans are broken → excluded (683 plans).** `split.json["augmented"]` lists rotated/flipped/scaled copies (ids ≥ 100,000). ResPlan's augmentation never transformed `inner`, `land`, `garden`, `parking` or `neighbor` (untransformed in 239/239 detectable cases), so their outdoor areas sit in the wrong place and their real scale is wrong. They are copies of plans already in the dataset anyway. Figure: `outputs/stage1/raw_vs_processed.png` (rows 1–2).
 2. **Open-air areas labelled as rooms → clipped (~86 plans).** Some plans have room polygons outside the walls (e.g. plan 2093: a room covering the whole plot). Room pixels outside `inner` (+1 px) become outdoor. Normal plans change by ≤ 0.14% of room pixels.
 3. **Known leftovers (not fixed, single plans):** 12117 has an oversized `land` shape; 4476 has an unusually large door polygon.
 
@@ -49,7 +49,7 @@ Frame-consistency check (original plans): median 100% of wall area lies inside `
 
 ## Near-duplicates and split
 
-Listings are re-posted, so near-identical plans exist. Two stages (`src/data/dedup.py`):
+Listings are re-posted, so near-identical plans exist. Two stages (`src/stage1/data/dedup.py`):
 
 1. **Candidates:** structure (wall+door+window) shrunk to 32×32, cosine similarity over all 8 rotations/flips, ≥ 0.75.
 2. **Confirm:** **tolerant mean per-class IoU** on the full 128×128 maps (wall, door, window, room, outdoor; a pixel matches if the other plan has the same class within 1 px). Plain IoU was rejected: 2-px walls traced 1 px apart lose ~half their IoU, so near-identical re-posts scored ~0.8.
@@ -67,7 +67,7 @@ A plan is **removed only if its tolerant IoU ≥ 0.90 with a kept plan** (direct
 
 Doors: median 27 px per component, windows 30 px; < 0.1% are under 6 px.
 
-Outdoor anomaly scan on the final 15,558 plans (pixel heuristics; they mostly flag legitimate yards, see `outputs/anomalies.png`): outdoor > 1.5× indoor: 3 · outdoor pixels > 10 px from any wall: 12,786 · outdoor box overlapping the indoor box < 10%: 248.
+Outdoor anomaly scan on the final 15,558 plans (pixel heuristics; they mostly flag legitimate yards, see `outputs/stage1/anomalies.png`): outdoor > 1.5× indoor: 3 · outdoor pixels > 10 px from any wall: 12,786 · outdoor box overlapping the indoor box < 10%: 248.
 
 ## Outputs
 
@@ -77,7 +77,7 @@ Figures in `outputs/`: `samples.png`, `opening_sizes.png`, `duplicate_pairs.png`
 
 ## Corruptions (Day 2)
 
-Task = **mask-given inpainting**: the model gets the plan with a region blanked out plus a mask of that region, and redraws what is inside. Code: `src/data/corruptions.py`, settings: `configs/corruption.yaml`, every choice explained in `docs/decisions.md`.
+Task = **mask-given inpainting**: the model gets the plan with a region blanked out plus a mask of that region, and redraws what is inside. Code: `src/stage1/data/corruptions.py`, settings: `configs/stage1/corruption.yaml`, every choice explained in `docs/decisions.md`.
 
 | Type | What is removed | Mask |
 |---|---|---|
@@ -94,11 +94,11 @@ The mask is never the exact shape of what was removed, so it hints where to look
 
 ## Training dataset
 
-`src/data/dataset.py` → `CorruptionDataset(train.npz)`: every request draws a random rotation/flip (8 variants) and then a fresh corruption — 80% one part (type probabilities 0.2 each), 20% 2–3 parts at once (union of masks). Returns float tensors `(input 7×128×128, target 6×128×128, mask 1×128×128)`. Speed (Windows laptop): ~1,060 samples/s in one process, ~1,210 samples/s with 4 DataLoader workers.
+`src/stage1/data/dataset.py` → `CorruptionDataset(train.npz)`: every request draws a random rotation/flip (8 variants) and then a fresh corruption — 80% one part (type probabilities 0.2 each), 20% 2–3 parts at once (union of masks). Returns float tensors `(input 7×128×128, target 6×128×128, mask 1×128×128)`. Speed (Windows laptop): ~1,060 samples/s in one process, ~1,210 samples/s with 4 DataLoader workers.
 
 ## Benchmarks
 
-`python -m src.data.make_benchmark` → `data/benchmarks/{test,val}_benchmark.npz` + `.csv`: for every plan, one corruption of each type with seed (2026, plan id, type). Arrays: `inputs` (corrupted label maps, 255 = masked), `targets`, `masks`, `plan_ids`; `corruptions.to_model_input()` gives the 7-channel input.
+`python -m src.stage1.data.make_benchmark` → `data/benchmarks/{test,val}_benchmark.npz` + `.csv`: for every plan, one corruption of each type with seed (2026, plan id, type). Arrays: `inputs` (corrupted label maps, 255 = masked), `targets`, `masks`, `plan_ids`; `corruptions.to_model_input()` gives the 7-channel input.
 
 | | test | val |
 |---|---|---|
@@ -111,4 +111,4 @@ The mask is never the exact shape of what was removed, so it hints where to look
 
 Per type (test), the categories are uneven by nature: windows are 99% exterior (they sit in outer walls) and rooms 97% exterior (most rooms have an outer wall); doors are mostly small, rooms almost all large. Breakdowns by location therefore mostly reflect doors, walls and regions.
 
-Evaluation: `src/eval/metrics.py` (definitions in `docs/decisions.md`; strict + tolerant IoU, enclosed-region room count), baselines `python -m src.eval.baselines` → `outputs/baseline_results.md`.
+Evaluation: `src/stage1/eval/metrics.py` (definitions in `docs/decisions.md`; strict + tolerant IoU, enclosed-region room count), baselines `python -m src.stage1.eval.baselines` → `outputs/stage1/baseline_results.md`.

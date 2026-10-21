@@ -18,7 +18,7 @@ import zipfile
 import numpy as np
 import pandas as pd
 
-from src.data.dataset import load_labels
+from src.stage1.data.dataset import load_labels
 from src.utils import PROJECT_ROOT, load_config, project_path
 
 KAGGLE_USER = "venkatesh007c"
@@ -34,7 +34,7 @@ def write_metadata(folder, slug, title, license_name):
 def prepare_data():
     folder = OUT / DATASETS["data"]
     folder.mkdir(parents=True, exist_ok=True)
-    proc = project_path(load_config("data")["paths"]["processed_dir"])
+    proc = project_path(load_config("stage1/data")["paths"]["processed_dir"])
     for split in ("train", "val"):
         labels = load_labels(proc / f"{split}.npz")
         plan_ids = np.load(proc / f"{split}.npz")["plan_ids"]
@@ -47,16 +47,31 @@ def prepare_data():
     return folder
 
 
+def code_version():
+    """'<branch> <commit>' of the code being packed, plus a note if src/ or configs/ have uncommitted changes."""
+    import subprocess
+    run = lambda *a: subprocess.run(["git", *a], cwd=PROJECT_ROOT, capture_output=True, text=True,
+                                    encoding="utf-8").stdout.strip()
+    head = run("rev-parse", "--short", "HEAD") or "no-git"
+    dirty = run("status", "--porcelain", "--", "src", "configs")
+    return f"{run('rev-parse', '--abbrev-ref', 'HEAD')} {head}" + (" + uncommitted changes" if dirty else "")
+
+
 def prepare_code():
     folder = OUT / DATASETS["code"]
     folder.mkdir(parents=True, exist_ok=True)
     files = [p for d in ("src", "configs") for p in (PROJECT_ROOT / d).rglob("*")
              if p.is_file() and "__pycache__" not in p.parts]
     files.append(PROJECT_ROOT / "requirements.txt")
+    version = code_version()
     with zipfile.ZipFile(folder / "code.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for p in files:
             z.write(p, p.relative_to(PROJECT_ROOT).as_posix())
-    print(f"code.zip: {len(files)} files")
+        z.writestr("code_version.txt", version + "\n")       # read by e.g. src/stage2/final_test.py --report
+    print(f"code.zip: {len(files)} files; version {version}")
+    if "uncommitted" in version:
+        print("WARNING: the working tree has uncommitted changes; commit before uploading a code version that "
+              "produces reported numbers (the final test)")
     write_metadata(folder, DATASETS["code"], "floorplan-code", "other")
     return folder
 

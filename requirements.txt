@@ -1,32 +1,32 @@
-# Python packages this project needs.
+# Python packages this project needs (Python 3.11).
 # Install with:  pip install -r requirements.txt
-# (On Kaggle, torch/torchvision are already installed — skip them there.)
+# The versions after "#" are the ones the project was tested with on the laptop (2026-10-21).
+# On Kaggle, torch / torchvision are preinstalled - do not reinstall them there.
 
 # --- Deep learning ---
-torch>=2.2            # neural networks (CPU build locally, GPU on Kaggle)
-torchvision>=0.17     # image utilities for PyTorch
-diffusers>=0.27       # ready-made diffusion building blocks (UNet, noise schedulers)
-segmentation-models-pytorch==0.3.4  # Stage 2 parser: U-Net with an ImageNet ResNet-34 encoder
+torch>=2.2                          # tested 2.14.1 (CPU build locally, GPU on Kaggle)
+torchvision>=0.17                   # tested 0.29.1
+diffusers>=0.27                     # tested 0.41.0 (Kaggle test notebook: 0.30.3); UNet2DModel + DDIM scheduler
+segmentation-models-pytorch==0.3.4  # Stage 2 parser and detector v3: U-Net with an ImageNet ResNet-34 encoder
+timm==0.9.7                         # pinned by segmentation-models-pytorch 0.3.4
 
 # --- Data handling ---
-numpy>=1.26           # arrays / math
-pandas>=2.1           # tables of plan info, metrics and results
-shapely>=2.0          # geometry (polygons/lines of walls, rooms, doors)
-opencv-python-headless>=4.9  # drawing geometry into 128x128 images, image ops
-scikit-image>=0.22    # connected components, morphology (for structural metrics)
-scipy>=1.11           # scientific helpers (e.g. matching components)
-pillow>=10.0          # loading/saving images
+numpy>=1.26                         # tested 2.4.6
+pandas>=2.1                         # tested 3.0.6
+shapely>=2.0                        # tested 2.1.2 (polygon geometry of plans)
+opencv-python-headless>=4.9         # tested 5.0.0 (rasterising, image operations)
+scikit-image>=0.22                  # tested 0.26.0 (morphology, connected components)
+scipy>=1.11                         # tested 1.17.1 (Hungarian matching)
+pillow>=10.0                        # tested 12.3.0
 
 # --- Config, logging, utilities ---
-pyyaml>=6.0           # reading configs/*.yaml
-tqdm>=4.66            # progress bars
+pyyaml>=6.0                         # tested 6.0.3 (configs/*.yaml)
+kaggle>=1.6                         # tested 2.2.4 (Kaggle CLI: uploads, launches, downloads)
 
 # --- Visualisation & interface ---
-matplotlib>=3.8       # plots and figures for the report
-gradio>=4.0           # the web demo in app/
+matplotlib>=3.8                     # tested 3.11.2 (figures)
+gradio>=5.0                         # tested 6.29.1 (the app in app/)
 
-# --- Testing ---
-pytest>=8              # runs the unit tests in tests/
-
-# --- Notebooks ---
-ipykernel>=6.29       # lets Jupyter / VS Code notebooks use this conda env
+# --- Testing / notebooks ---
+pytest>=8                           # tested 9.1.1 (python -m pytest tests/)
+ipykernel>=6.29                     # tested 7.4.0 (Jupyter / VS Code notebooks)

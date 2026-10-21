@@ -127,14 +127,22 @@ def parse_at(image, scale, max_side):
 
 
 def parse(image, pc):
+    """PARSE: label map at completion scale, the overall image -> map scale, and parse info.
+    Parse at scale 1 (capped at max_side); if the walls are not ~wall_px thick, parse again at the configured
+    scale closest to the one that would give wall_px walls, and keep that second parse only if its walls are
+    closer to wall_px (audit 2026-10-21, parse F5 / F6). Note: wall_thickness() reads the 9-px rasterised walls
+    of the training drawings as ~9.55 px, so maps end up at ~0.84x the completion set's scale (documented in
+    docs/decisions.md; a consistent fix needs the detectors retrained)."""
     lab, s = parse_at(image, 1.0, pc["max_side"])
     t = wall_thickness(lab)
     if np.isfinite(t) and abs(t - pc["wall_px"]) > 1.5:
-        want = pc["wall_px"] / t
+        want = s * pc["wall_px"] / t                     # relative to the ORIGINAL image (s < 1 if capped)
         best = min(pc["scales"], key=lambda x: abs(np.log(x / want)))
-        if best != 1.0:
-            lab, s = parse_at(image, best, pc["max_side"])
-            t = wall_thickness(lab)
+        if abs(min(best, pc["max_side"] / max(image.shape)) - s) > 1e-6:
+            lab2, s2 = parse_at(image, best, pc["max_side"])
+            t2 = wall_thickness(lab2)
+            if np.isfinite(t2) and abs(t2 - pc["wall_px"]) < abs(t - pc["wall_px"]):
+                lab, s, t = lab2, s2, t2
     f = pc["completion_wall_px"] / t if np.isfinite(t) and t > 0 else 3 / 8
     comp = cv2.resize(lab, (max(8, int(round(lab.shape[1] * f))), max(8, int(round(lab.shape[0] * f)))),
                       interpolation=cv2.INTER_NEAREST)
@@ -178,11 +186,11 @@ def detect_parts(label, image=None, choice=None):
         parts["R6"] = window_candidates(label, wr["thresholds"], wr["need_area"], SIZES["window"][1],
                                         choice.get("r6_scale", 1.0))
     if "R7" in extra:                                    # wall break narrower than any door -> wall missing
-        parts["R7"] = gap_candidates_narrow(label, min_width=choice.get("r7_min_width", 1))
+        parts["R7"] = gap_candidates_narrow(label, min_width=choice.get("r7_min_width") or 1)
     if "WINK" in extra and image is not None:            # parsed window without a window symbol in the drawing
         parts["WINK"] = window_ink_candidates(image, label, choice["window_ink_dmax"], choice["window_gap_ink"])
     if "WALLINK" in extra and image is not None:         # parsed wall with no ink under it
-        parts["WALLINK"] = wall_ink_candidates(image, label, choice["wall_ink_min_len"])
+        parts["WALLINK"] = wall_ink_candidates(image, label, choice.get("wall_ink_min_len") or 4)
     if "R8" in extra:                                    # oversized / merged room -> region missing
         parts["R8"] = merged_room_candidates(label, choice.get("r8_k_type") or np.inf, choice.get("r8_k_all") or np.inf,
                                              bool(choice.get("r8_mix")), skip_open=bool(choice.get("r8_skip_open")))
@@ -435,7 +443,9 @@ def describe_additions(before, after, holes):
         if not lines:
             what = f"{h['type']} missing ({'+'.join(sorted(rules))})" if rules else "manual box"
             lines.append(f"{what} -> nothing added (the model kept the drawing as it was)")
-        msgs += [m for m in lines if m not in msgs]
+        for m in lines:                                   # no duplicates, also within one hole
+            if m not in msgs:
+                msgs.append(m)
     return msgs
 
 

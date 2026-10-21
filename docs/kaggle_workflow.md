@@ -10,15 +10,15 @@ How training runs on Kaggle's free GPUs. All commands run from the project folde
 |---|---|---|
 | Data (private dataset) | `venkatesh007c/floorplan-data` | `python -m src.kaggle_prep data` → `data/kaggle_upload/floorplan-data/` (train + val label maps, metadata; no test data) |
 | Code (private dataset) | `venkatesh007c/floorplan-code` | `python -m src.kaggle_prep code` → `data/kaggle_upload/floorplan-code/code.zip` (src/, configs/, requirements.txt) |
-| Timing kernel | `venkatesh007c/floorplan-timing` | `kaggle/kernels/timing/` |
-| U-Net training kernel | `venkatesh007c/floorplan-unet` | `kaggle/kernels/unet/` |
-| Diffusion training kernel (training only, no full-val evaluation) | `venkatesh007c/floorplan-diffusion` | `kaggle/kernels/diffusion/` |
-| Stage 2 data (CPU; CubiCasa5K → parser + completion sets) | `venkatesh007c/floorplan-stage2-data` | `kaggle/kernels/stage2_data/` (input: public `qmarva/cubicasa5k`). Later kernels attach it via `kernel_sources`. Download only the reports: `kaggle kernels output venkatesh007c/floorplan-stage2-data -p outputs/kaggle/stage2_data --file-pattern "report/"` |
+| Timing kernel | `venkatesh007c/floorplan-timing` | `kaggle/kernels/stage1/timing/` |
+| U-Net training kernel | `venkatesh007c/floorplan-unet` | `kaggle/kernels/stage1/unet/` |
+| Diffusion training kernel (training only, no full-val evaluation) | `venkatesh007c/floorplan-diffusion` | `kaggle/kernels/stage1/diffusion/` |
+| Stage 2 data (CPU; CubiCasa5K → parser + completion sets) | `venkatesh007c/floorplan-stage2-data` | `kaggle/kernels/stage2/stage2_data/` (input: public `qmarva/cubicasa5k`). Later kernels attach it via `kernel_sources`. Download only the reports: `kaggle kernels output venkatesh007c/floorplan-stage2-data -p outputs/kaggle/stage2_data --file-pattern "report/"` |
 
 Kernels are private Python scripts (`run.py` + `kernel-metadata.json`) with GPU and internet on. Each one:
 1. copies the code and data from `/kaggle/input` into `/tmp/code`;
 2. installs missing packages (e.g. diffusers);
-3. rebuilds the val benchmark from its seed and checks it against `configs/benchmark_checksums.json`, stopping if it differs;
+3. rebuilds the val benchmark from its seed and checks it against `configs/stage1/benchmark_checksums.json`, stopping if it differs;
 4. runs the project commands. Anything written to `/kaggle/working` becomes the kernel's output.
 
 The setup logic lives in `src/kaggle_kernel.py`, inside the code bundle; each `run.py` only copies the code and imports it. Training goes through `kaggle_kernel.train()`, which uses `torchrun` with one process per GPU when Kaggle provides more than one (T4 ×2), and logs every GPU's utilisation to `gpu_usage.csv`.
@@ -45,7 +45,7 @@ New kernel runs use the latest version automatically. Data changes work the same
 
 ```bash
 kaggle quota                                                   # enough GPU hours left?
-cd kaggle/kernels/unet          # or kaggle/kernels/timing
+cd kaggle/kernels/stage1/unet          # or kaggle/kernels/stage1/timing
 kaggle kernels push -p . --accelerator NvidiaTeslaT4
 cd ../../..
 ```
@@ -78,7 +78,7 @@ This downloads everything the kernel wrote to `/kaggle/working`, plus its log, t
 Training resumes automatically when `runs/unet/checkpoints/last.pt` exists in its output folder. On Kaggle, each new session starts empty, so the previous output must be attached as an input:
 
 1. On the finished kernel's page, use **Output → "New Dataset"** (or "Add to dataset"), creating a private dataset, e.g. `venkatesh007c/floorplan-unet-run1`.
-2. Add it to `dataset_sources` in `kaggle/kernels/unet/kernel-metadata.json`.
-3. Push the kernel again. `run.py` finds `runs/unet/checkpoints/last.pt` among the inputs, copies the run folder to `/kaggle/working`, and `src.train` continues from that step, with the best score, logs and cumulative hours carried over.
+2. Add it to `dataset_sources` in `kaggle/kernels/stage1/unet/kernel-metadata.json`.
+3. Push the kernel again. `run.py` finds `runs/unet/checkpoints/last.pt` among the inputs, copies the run folder to `/kaggle/working`, and `src.stage1.train` continues from that step, with the best score, logs and cumulative hours carried over.
 
 **Keep `max_steps` (and the batch size) unchanged when resuming.** The learning-rate schedule is computed from `max_steps`.

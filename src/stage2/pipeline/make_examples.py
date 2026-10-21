@@ -1,6 +1,6 @@
 """Pipeline examples: 3 val drawings with one component whitened out of the IMAGE, run end to end.
 
-    python -m src.stage2.pipeline.make_examples --zip parser_val.zip  -> outputs/stage2/pipeline_examples.png (+ .md)
+    python -m src.stage2.pipeline.make_examples --zip parser_val.zip  -> outputs/stage2/history/pipeline_examples.png (+ .md)
 
 Plans are taken in file order (no cherry-picking): the first val drawings whose labels contain the
 component kind needed (a door, then a window, then a fixture), one example each. The component's box

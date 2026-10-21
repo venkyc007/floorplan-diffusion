@@ -27,6 +27,7 @@ import numpy as np
 from src.stage2.constraints.rules import components, room_instances
 from src.stage2.data.classes16 import C16
 from src.stage2.data.erasure import LONG, clear_zone, draw_wall, erase, erase_symbol, grown, open_gap
+from src.stage2.data.plan_stats import door_side_pair
 
 I = C16.index
 WALL_PX = 8
@@ -55,7 +56,13 @@ def _erase_parts(img, lbl, walls, doors, windows, symbols, outer, filler, wall_p
         lw[w] = I["wall"]                               # now drawn as wall: part of the outer wall
     inner_doors = []
     for d in doors:
-        if (grown(d, 2 * wall_px) & np.isin(lbl, C16.group("OUT"))).any():
+        # exterior = one of the door's two faces is outdoor / background. The earlier test (anything outside
+        # within 2 wall thicknesses) also caught interior doors close to the facade and left a wall stub inside
+        # the erased room (audit 2026-10-21, data F3). Faces unknown -> the earlier test.
+        pair = door_side_pair(lbl, d, wall_px + 2)
+        exterior = (any(c in C16.group("OUT") for c in pair) if pair else
+                    (grown(d, 2 * wall_px) & np.isin(lbl, C16.group("OUT"))).any())
+        if exterior:
             out = draw_wall(out, d, lw, wall_px)        # exterior door: the outer wall closed
             lw[d] = I["wall"]
         else:

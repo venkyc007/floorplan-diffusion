@@ -1,6 +1,6 @@
 """16-class FILL models: Palette-style x0-prediction diffusion and a one-pass U-Net.
 
-Same design as Stage 1 (src/models/diffusion.py, unet_baseline.py), generalised to 16
+Same design as Stage 1 (src/stage1/models/diffusion.py, unet_baseline.py), generalised to 16
 classes, with the Stage 2 constraint losses (src/stage2/constraints) built in:
 
     L = L_rec + g(t) * ramp(step) * sum_i w_i * L_i          (spec section 2)
@@ -20,7 +20,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from diffusers import DDIMScheduler, DDPMScheduler
 
-from src.models.backbone import build_unet
+from src.stage1.models.backbone import build_unet
 from src.stage2.constraints.constraints import Ctx, constraint_loss, load_constants
 from src.stage2.data.classes16 import C16
 

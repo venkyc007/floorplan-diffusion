@@ -1,6 +1,20 @@
 # Decisions log
 
 Choices made without asking (or decided by the user, marked), each with a one-line reason. Newest at the bottom of each section.
+The log is chronological: Stage 1 (Days 1-8), then "# Stage 2" (from 2026-10-17), then the final delivery
+(2026-10-21 evening, at the end).
+
+## Final configuration (as shipped, 2026-10-21)
+
+| part | final setting | where |
+|---|---|---|
+| Stage 1 | size-adaptive hybrid: matched U-Net sketch -> noised to t0 = 400 / 600 / 700 (small / medium / large hole) -> constraint fine-tuned diffusion (clDice 0.01 + closure 0.03), stochastic DDIM 50 | `configs/stage1/app.yaml` |
+| PARSE | parser v2B (ResNet-34 U-Net, constraint fine-tune, text erased on 50% of crops); parse at ~8 px walls, maps at ~3 px | `configs/stage2/pipeline.yaml` `parse` |
+| CHECK | detector v2 (p >= 0.6, blobs >= 20 px) + detector v3 (p >= 0.5, >= 20 px) + C8 (room >= 700 px cut off) + R5 (forced on) + door ink 1.5 (R5 pairs only) + R6 x1.5 + window ink (d_wall < 0.08 / ink < 0.02) + R8 fixture mix only; R7, wall ink, judge, door-ink tier 2 off; railings manual only; merged flags take their type by evidence (region > detector room > rule > detector) | `configs/stage2/detector_threshold.yaml` |
+| FILL small holes | K2a 16-class U-Net sketch + sketch prior -> t0 300 -> K1 constrained diffusion -> type restriction | `pipeline.yaml` `fill` |
+| FILL large holes | B4 U-Net + B4 diffusion on one big window (<= 384 px, else tiled), region restriction | `pipeline.yaml` `large_strategy`, `large_models` |
+| VERIFY | best-of-N by fewest thresholded violations; x0 guidance off (eta 0) | `pipeline.yaml` |
+| sampling | live / validation: fast (N = 2, 15 DDIM steps from t0; effective t0 one step lower, 300 -> 280); the test uses the same fast settings | `pipeline.yaml` `fast`, `src/stage2/final_test.py` |
 
 ## Data (Day 1)
 
@@ -43,7 +57,7 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 
 - **One sample per (plan, type); the random seed is derived from (2026, plan id, type index)** — each sample is reproducible on its own, independent of processing order.
 - **Saved as label maps (`inputs` = corrupted map with 255 in the mask, `targets`, `masks`), not 7-channel float arrays** — 7,774 × 7 × 128 × 128 floats would be ~3.5 GB; `corruptions.to_model_input()` rebuilds the 7-channel input exactly.
-- **Stored in `data/benchmarks/` (git-ignored)** — fully reproducible from the seed with `python -m src.data.make_benchmark`.
+- **Stored in `data/benchmarks/` (git-ignored)** — fully reproducible from the seed with `python -m src.stage1.data.make_benchmark`.
 
 ## Metrics (Day 2)
 
@@ -93,7 +107,7 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **Validation: 256 val-benchmark cases chosen by a seeded random draw (seed 1234), every 2,000 steps, diffusion noise seeded (0) so successive validations are comparable; best checkpoint by tolerant mIoU** — tolerant mIoU is the headline metric least sensitive to 1-px wall offsets.
 - **Sample grids show 8 fixed val cases (input | prediction composited with known pixels | ground truth)** — the same cases each time make progress visible.
 - **Logs as CSV (`train_log.csv` every 100 steps, `val_log.csv`), hours cumulative over sessions** — readable without extra tools.
-- **`src/evaluate.py` added (not requested)** — scores any checkpoint on the full val/test benchmark with all metrics; needed to compare models next.
+- **`src/stage1/evaluate.py` added (not requested)** — scores any checkpoint on the full val/test benchmark with all metrics; needed to compare models next.
 
 ## Checks (Day 3)
 
@@ -105,7 +119,7 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **Data uploaded as compact label maps (uint8, compressed): train + val 3.2 MB, plus train/val metadata; no test data** — 6× smaller than one-hot; `load_labels` reads both formats. The dataset is licensed CC-BY-4.0, like ResPlan.
 - **Code shipped as a separate private dataset (`code.zip`; Kaggle unpacks it into folders)** — code can change without re-uploading data; the kernels handle both the unpacked and the zipped form.
 - **Kernels are scripts that copy code + data into `/tmp/code` and write only results to `/kaggle/working`** — keeps the kernel output to the run folder.
-- **The val benchmark is rebuilt on Kaggle from its seed and checked against `configs/benchmark_checksums.json` (SHA-256); the kernel stops on mismatch** — guarantees Kaggle scores use the same val cases as local ones (matched on the T4 run).
+- **The val benchmark is rebuilt on Kaggle from its seed and checked against `configs/stage1/benchmark_checksums.json` (SHA-256); the kernel stops on mismatch** — guarantees Kaggle scores use the same val cases as local ones (matched on the T4 run).
 - **Batch size 32 for both models** — measured on a T4 (15.6 GB): 32 fits (10.9–11.0 GB peak), 64 runs out of memory.
 - **U-Net run: `max_steps` 8,000, fixed** — 1.196 steps/s measured, so about 1.86 h of training plus about 6 min overhead, which makes the requested ~2 h run.
 - **U-Net logging: loss every 50 steps; validation every 2,000 steps or 25 min, whichever comes first (`val_minutes`)** — to catch loss spikes like the overfit test's; U-Net validation costs only about 3 s.
@@ -125,7 +139,7 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 - **On resume with several processes, each re-seeds with `seed + rank + step`; the saved RNG state is used only in single-process runs** — the checkpoint stores rank 0's RNG state only.
 - **The logged loss is averaged over processes; `train_log.csv` also records samples/s (training time only) and the GPU count** — makes the speed-up directly visible.
 - **The Kaggle kernels log `nvidia-smi` utilisation of every GPU every 30 s to `gpu_usage.csv`** — direct evidence that both GPUs are busy.
-- **Validation during training uses `val_ddim_steps: 20`; final evaluation (`src/evaluate.py`) uses `ddim_steps: 50`** (user decision) — validation becomes about 2.5× cheaper.
+- **Validation during training uses `val_ddim_steps: 20`; final evaluation (`src/stage1/evaluate.py`) uses `ddim_steps: 50`** (user decision) — validation becomes about 2.5× cheaper.
 - **Tested locally: single-process smoke + resume (identical numbers to before), and a real 2-process DDP run on CPU (gloo backend), including resume and a synchronised time-limit stop** — `torchrun`'s own launcher fails on Windows (rendezvous store), so the two processes were started by hand with the same environment variables `torchrun` sets; on Kaggle (Linux) `torchrun` is used.
 - **The U-Net baseline was not re-run on 2 GPUs** (user decision) — the single-GPU run had finished and the 2-GPU timing run already proved the speed-up (2.0×, both GPUs at about 90% utilisation).
 - **Validation step counting starts from the last validation (`step - last_val_step >= val_every`)** — in the U-Net run, a time-triggered validation at step 1,833 was followed by a step-triggered one at 2,000; for diffusion each duplicate would waste about 1 minute.
@@ -135,15 +149,15 @@ Choices made without asking (or decided by the user, marked), each with a one-li
 
 - **U-Net baseline: 8,000 steps × 32 samples (256,000 samples) on 1 T4, 1.83 h; full-val tolerant mIoU 0.775 (strict 0.708) against nearest fill's 0.489 (0.437)** — it had not plateaued: validation tolerant mIoU was still rising at the end (0.782 → 0.794 over the last 2,000 steps, while the learning rate decayed to 0). It beats nearest fill on every metric except connectivity error (0.178 against 0.066): the sample grids show speckled stray wall pixels on large masks.
 - **TODO (fairness): after the diffusion results, retrain the U-Net baseline with the same number of training samples as the diffusion run (31,500 × 64 ≈ 2.0 M, about 7.9× the first run), on 2 GPUs** (user decision) — otherwise diffusion would be compared against a much shorter-trained baseline.
-- **U-Net run summaries committed in `outputs/unet_baseline/` (logs, evaluation tables, sample grids; no checkpoints)** — small report artefacts; the 400 MB of checkpoints stay in the git-ignored `outputs/kaggle/`.
+- **U-Net run summaries committed in `outputs/stage1/unet_baseline/` (logs, evaluation tables, sample grids; no checkpoints)** — small report artefacts; the 400 MB of checkpoints stay in the git-ignored `outputs/kaggle/`.
 
 - **Diffusion run 1: 30,490 steps × 64 (1.95 M samples, 7.6× the U-Net's 256,000) on 2 T4s, stopped by the 8.5 h limit 1,000 steps short of `max_steps` 31,500** — it ran at 66 samples/s instead of the 75 measured in the 300-step timing run. Validation (20 DDIM steps) tolerant mIoU 0.698, below the U-Net's 0.794 on the same 256 cases; mostly plateaued.
 - **Planning speed for long runs: about 66 samples/s on 2 T4s, not the short timing runs' 75** — the T4s throttle to about 705 MHz (of 1,590) at about 77 °C within about 2 minutes of full load (`gpu_usage.csv` of the diagnostic).
 - **GPU log extended with SM clock, max SM clock, temperature and power** (user request) — to see throttling; the throttle-reasons field was left out because its name differs between `nvidia-smi` versions.
-- **Diagnostic of run 1 (`outputs/diffusion_run1_diagnostic.md`): the denoiser is excellent (tolerant mIoU ≥ 0.99 up to t = 600), its one-shot prediction at t = T equals the U-Net (0.792 against 0.793), and stochastic sampling (DDIM 50 eta 1, or DDPM 250) is the best sampler (0.753)** — the gap to the U-Net comes from samples committing to one plausible layout, which pixel IoU penalises against the per-pixel best guess; the samplers win on structure (connectivity error ≈ 0 against 0.133; speckles 0.04 against 0.24, the ground truth itself has 0.05).
+- **Diagnostic of run 1 (`outputs/stage1/diffusion_run1_diagnostic.md`): the denoiser is excellent (tolerant mIoU ≥ 0.99 up to t = 600), its one-shot prediction at t = T equals the U-Net (0.792 against 0.793), and stochastic sampling (DDIM 50 eta 1, or DDPM 250) is the best sampler (0.753)** — the gap to the U-Net comes from samples committing to one plausible layout, which pixel IoU penalises against the per-pixel best guess; the samplers win on structure (connectivity error ≈ 0 against 0.133; speckles 0.04 against 0.24, the ground truth itself has 0.05).
 - **Diagnostic interpretation of "one-shot with the known region filled in": a clean known plan outside the mask in the noisy target at t = T** — the literal reading of "noised to t = T" would be pure noise again. It scores badly (0.528): the model never saw clean values at t = T.
 - **The diagnostic ran on the 256 fixed val cases only; the full-val 50-step evaluation was not run** (user decision) — it is deferred until the sampling setting is chosen.
-- **Run-1 summaries committed in `outputs/diffusion_run1/` (logs, config, GPU logs, diagnostic table, last sample grid; no checkpoints)** — same reasoning as `outputs/unet_baseline/`.
+- **Run-1 summaries committed in `outputs/stage1/diffusion_run1/` (logs, config, GPU logs, diagnostic table, last sample grid; no checkpoints)** — same reasoning as `outputs/stage1/unet_baseline/`.
 
 ## Sampling (Day 5)
 
@@ -189,80 +203,80 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 
 ## Fine-tunes (Day 5)
 
-- **Two fine-tunes from run 1's `best.pt` (EMA weights, loaded with the new `--init`; ignored when resuming from `last.pt`): `finetune_constraints` (constraints on) and `finetune_control` (off), identical otherwise (enforced by `tests/test_finetune_configs.py`)** (user decision) — a fair ablation: same start, data order, seed, schedule and steps.
+- **Two fine-tunes from run 1's `best.pt` (EMA weights, loaded with the new `--init`; ignored when resuming from `last.pt`): `finetune_constraints` (constraints on) and `finetune_control` (off), identical otherwise (enforced by `tests/stage1/test_finetune_configs.py`)** (user decision) — a fair ablation: same start, data order, seed, schedule and steps.
 - **Learning rate 2e-5 (user spec), 200 warm-up steps, cosine to 0 over 26,000 steps × 64 (2 T4s × 32)** — about 7.2 h of training at about 64 samples/s (the measured 66 with 3% constraint overhead), plus about 0.4 h of setup and validation: about 7.6 h, under the 8.5 h safety stop.
 - **Both fine-tunes run at the same time, as two separate kernels** — they then finish before the 05:30 IST quota reset (about 02:30 if launched at 19:00) and use about 15.2 h of the 18.8 h left; running two GPU kernels at once worked earlier (the 2-GPU timing run ran alongside the U-Net run).
 - **The control computes no constraint losses, so it runs slightly faster; it still stops at the same step** — equal training, not equal wall time.
 
 ## Fine-tune results (Day 5 night)
 
-- **Constraint fine-tune vs control: no measurable difference on the 256 val cases (tolerant mIoU 0.7512 vs 0.7511 at 26,000 steps; structural metrics within noise)** — reported as a null ablation result in `outputs/finetune_ablation.md`; the full-val evaluation decides. Interpretation: at a strength that doesn't damage reconstruction, training-time constraints don't change the (already structurally clean) diffusion samples.
-- **Fine-tune summaries committed in `outputs/finetune_runs/` (logs, configs, GPU logs, last sample grid; no checkpoints)** — same reasoning as `outputs/unet_baseline/`.
+- **Constraint fine-tune vs control: no measurable difference on the 256 val cases (tolerant mIoU 0.7512 vs 0.7511 at 26,000 steps; structural metrics within noise)** — reported as a null ablation result in `outputs/stage1/finetune_ablation.md`; the full-val evaluation decides. Interpretation: at a strength that doesn't damage reconstruction, training-time constraints don't change the (already structurally clean) diffusion samples.
+- **Fine-tune summaries committed in `outputs/stage1/finetune_runs/` (logs, configs, GPU logs, last sample grid; no checkpoints)** — same reasoning as `outputs/stage1/unet_baseline/`.
 
 ## Full val-benchmark evaluation (Day 6)
 
-- **All 7,772 val cases, all metrics, broken down by type/location/position/size (`outputs/full_eval.md`, kernel `floorplan-full-eval`): fine-tune + refine-from-one-shot t = 600 is the best method — tolerant mIoU 0.801 (U-Net 0.775, run 1 refine 0.786, run 1 DDIM 50 0.740, nearest fill 0.489)** — it also has the best door/window/room F1 (0.693 / 0.684 / 0.953) and much cleaner structure than the U-Net (connectivity error 0.039 vs 0.178, room leak 0.026 vs 0.065, room count error 0.202 vs 0.301), and beats the U-Net on every type and size. The U-Net keeps a slight edge only on room/outdoor pixel IoU and is ~35× faster (0.010 vs 0.35 s per case).
+- **All 7,772 val cases, all metrics, broken down by type/location/position/size (`outputs/stage1/full_eval.md`, kernel `floorplan-full-eval`): fine-tune + refine-from-one-shot t = 600 is the best method — tolerant mIoU 0.801 (U-Net 0.775, run 1 refine 0.786, run 1 DDIM 50 0.740, nearest fill 0.489)** — it also has the best door/window/room F1 (0.693 / 0.684 / 0.953) and much cleaner structure than the U-Net (connectivity error 0.039 vs 0.178, room leak 0.026 vs 0.065, room count error 0.202 vs 0.301), and beats the U-Net on every type and size. The U-Net keeps a slight edge only on room/outdoor pixel IoU and is ~35× faster (0.010 vs 0.35 s per case).
 - **Constraint fine-tune vs control on the full benchmark: identical overlap (0.801 both); structure slightly favours the constraints (room count error 0.202 vs 0.215, connectivity 0.039 vs 0.045; large holes 0.556 vs 0.592 and 0.112 vs 0.131)** — consistent but small; not yet tested for statistical significance (a paired bootstrap over cases would settle it).
 - **Plain DDIM 50 gives the cleanest structure (connectivity error 0.005, room leak 0.005) but the lowest diffusion overlap** — it commits to one plausible layout; reported as the structure-first option.
 - **Evaluation predictions are kept in the kernel's temporary storage; scoring runs on the CPU cores in parallel** — the predicted maps (~127 MB per setting) aren't needed afterwards, and CPU scoring outside the GPU processes keeps GPU time short.
-- **The large-hole figure (`outputs/full_eval_large_holes.png`) re-samples 8 cases locally from the evaluated checkpoints** — the scored predictions weren't kept; the figure is labelled accordingly.
+- **The large-hole figure (`outputs/stage1/full_eval_large_holes.png`) re-samples 8 cases locally from the evaluated checkpoints** — the scored predictions weren't kept; the figure is labelled accordingly.
 
 ## Day 6: matched U-Net, architectural metrics, post-processing, statistics
 
 **A. Matched-sample U-Net**
-- **`configs/train_unet_matched.yaml` = the original U-Net config with only `max_steps` changed (30,000 × 64 on 2 T4s = 1.92 M samples, 98.4% of diffusion's 1.95 M); a test enforces "only max_steps differs"** (user decision: same architecture, data, augmentation, loss, mask weighting) — learning rate kept at 2e-4 although the batch per step doubled (as for the diffusion DDP runs).
+- **`configs/stage1/train_unet_matched.yaml` = the original U-Net config with only `max_steps` changed (30,000 × 64 on 2 T4s = 1.92 M samples, 98.4% of diffusion's 1.95 M); a test enforces "only max_steps differs"** (user decision: same architecture, data, augmentation, loss, mask weighting) — learning rate kept at 2e-4 although the batch per step doubled (as for the diffusion DDP runs).
 - **Length from the original U-Net speed scaled to 2 GPUs with the observed long-run throttling: about 70 samples/s → 30,000 steps ≈ 7.6 h (10.6% margin under the 8.5 h stop; still under it at 66 samples/s)** — 30,490 steps (exact match) would leave only about 7% margin.
 - **The kernel evaluates `best.pt` on the full val benchmark and saves its per-case predictions (`preds/unet_matched.npz`)** (user request) — so new metrics and statistics need no GPU.
 
-**B.1 Architectural metrics (`src/eval/arch_metrics.py`)**
+**B.1 Architectural metrics (`src/stage1/eval/arch_metrics.py`)**
 - **Every rule counts only items touching the mask grown by 3 px and is always reported next to the ground truth's own count on the same cases; a case is "valid" if, for rules 1–6, it has no more violations than the ground truth** (user spec).
 - **Dead ends use the wall skeleton with spurs shorter than 3 px ignored, and an end is legitimate if a door, window, outdoor or background pixel lies within 3 px** — skeletonisation creates tiny spurs at corners; walls legitimately end at openings and at the outside.
 - **Validated on 500 real ground-truth plans (val cases with their masks); rules that flagged many real plans were fixed:**
   - **Opening fit flagged 72.6% of real plans.** Cause: the wall-thickness probe right next to an opening's end crossed the perpendicular wall at corners/T-junctions. Fixed by probing 1–4 px beyond each end and using the narrowest cross-section, then by comparing thickness with the NARROWER end wall and requiring alignment only as "both end walls cover the opening's thickness span, at least one matching it". Real openings now pass bridges 98.1%, thickness 90.1%, alignment 81.6% — but still **27.8% of real plans fail the full opening-fit rule, so only its "bridges" check counts towards validity (2.8% of real plans flagged); thickness/alignment are reported as diagnostics.**
   - **Doors connecting two spaces flagged 8.8% of real plans: real front doors open onto background (the outside of the plot). Background now counts as an outside space → 1.6% flagged.** (Departs from the spec's "not wall/background"; only wall on a side is a failure.)
   - Final real-plan flag rates of the validity rules: dead ends 11.0% (kept: real open passages leave free-standing stubs, and validity compares with the ground truth per case), fragments 0.0%, opening bridges 2.8%, door spaces 1.6%, windows facing outside 0.6%, unreachable rooms 1.2%.
-- **Sliver thresholds = 1st percentiles over 74,699 training room components: area < 72 px or inscribed width < 7.64 px** (`configs/arch_metrics.yaml`, `python -m src.eval.arch_metrics`).
+- **Sliver thresholds = 1st percentiles over 74,699 training room components: area < 72 px or inscribed width < 7.64 px** (`configs/stage1/arch_metrics.yaml`, `python -m src.stage1.eval.arch_metrics`).
 - **Rectangularity = room area / bounding-box area, reported as a mean next to the ground truth's mean (0.863 on 500 real plans); the figure marks rooms below 0.6** — it describes shape, not a defect, so it isn't in the validity score.
 - **Room reachability: rooms = enclosed regions; open gaps already merge regions; doors link the regions they touch (within 2 px); the outside (edge-touching areas) is one node; rooms outside the main group (the one with the outside, else the largest) are unreachable.**
 
-**B.2 Post-processing (`src/postprocess.py`)**
+**B.2 Post-processing (`src/stage1/postprocess.py`)**
 - **Dead-end stubs inside the mask are first EXTENDED to a wall straight ahead within 4 px, otherwise REMOVED if shorter than N px; removed pixels take the most common non-wall class around them; pixels outside the mask never change** (user spec).
 - **N is chosen by the highest architectural validity among the N that alter at most 1% of REAL plans** — applied to 500 real plans, the clean-up changed 0.2% (N = 4), 1.0% (N = 6) and 2.2% (N = 8) of them: larger N also deletes legitimate short stubs, so validity on predictions alone would favour the most damaging setting.
 
 **B.3/B.4 Evaluation**
-- **One Kaggle kernel (`floorplan-arch-eval`) only generates and SAVES per-case predictions for the GPU methods; all scoring (Day 2 + architectural metrics, post-processing, sweep plot, figures) runs locally on the CPU (`src/arch_eval.py`)** — iterating on metrics costs no GPU quota. Its predictions are new samples, so its numbers may differ slightly from `full_eval.md` (sampling noise).
+- **One Kaggle kernel (`floorplan-arch-eval`) only generates and SAVES per-case predictions for the GPU methods; all scoring (Day 2 + architectural metrics, post-processing, sweep plot, figures) runs locally on the CPU (`src/stage1/arch_eval.py`)** — iterating on metrics costs no GPU quota. Its predictions are new samples, so its numbers may differ slightly from `full_eval.md` (sampling noise).
 - **The violation figure shows, for each violation type, a case where the prediction breaks the rule and the ground truth doesn't** (sources: U-Net, then the constraint fine-tune, then run 1).
 
-**C. Statistics (`src/stats.py`)**
+**C. Statistics (`src/stage1/stats.py`)**
 - **Paired bootstrap: 1,000 resamples of the val cases (seed 0); both methods scored on the same resampled cases with the reports' exact definitions (means for tolerant mIoU / connectivity / room count; pooled ratio for room leak; % valid for validity); 95% percentile intervals; "statistically clear" = interval excludes 0** (user spec).
 - **"Best diffusion" = constraint fine-tune + refine-from-one-shot t = 600** — the best tolerant mIoU in the full evaluation (tied with the control at 0.801).
 
-**Day 6 results (full val, 7,772 cases; `outputs/arch_eval.md`, `outputs/stats.md`)**
+**Day 6 results (full val, 7,772 cases; `outputs/stage1/arch_eval.md`, `outputs/stage1/stats.md`)**
 - **Matched U-Net (30,000 × 64, 7.06 h, all steps done): tolerant mIoU 0.846, clearly above the best diffusion (0.801) and the original U-Net (0.775).** The original U-Net comparison was unfair (8,000 × 32 = 0.26 M samples against 1.95 M): with equal samples the U-Net wins on pixel overlap and room count error, while diffusion keeps clearly better structure (connectivity error 0.039 vs 0.092, room leak 0.026 vs 0.039, validity 83.6% vs 80.4%; all paired-bootstrap clear).
 - **Constraint fine-tune vs control: same tolerant mIoU and validity (no clear difference), but clearly lower connectivity error, room leak and room count error** (overall, room holes and large holes) — the first statistically supported effect of the structural constraints.
 - **Post-processing: N = 6 chosen (alters 0.86% of real plans; N = 8 alters 1.85%, over the 1% limit).** It never changes tolerant mIoU by more than 0.001; it helps most where stubs are common (U-Net connectivity error 0.178 → 0.128, matched U-Net 0.092 → 0.070); for diffusion the gain is small (validity +0.3 points).
 - **Refine sweep: t₀ = 200–600 give the same accuracy (0.801–0.803); t₀ = 800 trades 0.009 tolerant mIoU for 5× lower connectivity error (0.008) and +2.7 points validity; full DDIM 50 loses 0.04 more for little extra structure.** t₀ = 600 stays the main setting (it was chosen on the sampling experiment); t₀ = 800 is the "structure-first" option.
 - **Remaining gap to real plans: unreachable rooms (0.08 per case for diffusion vs 0.012 in the ground truth) and dead ends (0.20 vs 0.13)** — room holes and large holes remain the hard cases (validity ~57–60% vs 95%+ for doors/windows/walls).
 - **Violation figure: `violation_locations` now also draws unreachable rooms (the count is unchanged: `unreachable_rooms` = number of those masks), and every row uses a different case.**
-- **Per-case results (`outputs/arch_eval/per_case/*.csv.gz`, 9 MB) are committed so the statistics can be re-run without predictions; the predictions themselves (`outputs/kaggle/*/preds/`, ~1.5 MB per method) stay local / in the Kaggle outputs.**
+- **Per-case results (`outputs/stage1/arch_eval/per_case/*.csv.gz`, 9 MB) are committed so the statistics can be re-run without predictions; the predictions themselves (`outputs/kaggle/*/preds/`, ~1.5 MB per method) stay local / in the Kaggle outputs.**
 
 ## Day 7: final selection experiment (no training)
 
-- **Hybrid = the matched U-Net's SAVED full-val prediction (`unet_matched.npz`, the exact predictions already scored) → one-hot → noised to t₀ → stochastic DDIM 50 (eta 1, steps ≤ t₀) with the constraint fine-tune and the known-region reset** (user spec; `hybrid_refineT` in `src/full_eval.py`, `--sketch`). Re-using the saved predictions makes the sketch identical to the scored U-Net, so differences come only from the diffusion finish.
-- **Diffusion curve filled in with refine-from-own-one-shot at t₀ = 700 and 900** (user spec). One Kaggle kernel (`floorplan-selection`) only saves predictions; scoring, plots and statistics run locally (`src/selection.py`), like Day 6.
+- **Hybrid = the matched U-Net's SAVED full-val prediction (`unet_matched.npz`, the exact predictions already scored) → one-hot → noised to t₀ → stochastic DDIM 50 (eta 1, steps ≤ t₀) with the constraint fine-tune and the known-region reset** (user spec; `hybrid_refineT` in `src/stage1/full_eval.py`, `--sketch`). Re-using the saved predictions makes the sketch identical to the scored U-Net, so differences come only from the diffusion finish.
+- **Diffusion curve filled in with refine-from-own-one-shot at t₀ = 700 and 900** (user spec). One Kaggle kernel (`floorplan-selection`) only saves predictions; scoring, plots and statistics run locally (`src/stage1/selection.py`), like Day 6.
 - **Candidates: both U-Nets, all diffusion settings (run 1 + control at t₀ = 600; constraint fine-tune at t₀ = 200–900 and DDIM 50), all hybrids. Post-processed variants are left out** (post-processing changes tolerant mIoU by ≤ 0.001 and is an optional add-on to any setting).
 - **Pareto front on (tolerant mIoU, validity), both maximised; a point is dominated only if another is ≥ on both and > on one (ties stay on the front). Knee = front point with the largest perpendicular distance to the chord between the front's end points, both axes min-max normalised over ALL plotted candidates; with fewer than 3 front points (no interior point) the front point with the largest normalised sum is used** (user spec for the main rule; the fallback is ours).
 - **"Best hybrid" = the hybrid with the largest normalised tolerant mIoU + validity** (equal weight, same normalisation as the knee) — the user did not define "best"; this uses both selection axes like the knee does.
 - **Size-adaptive option: the knee of each size bin's own front is used for that bin's cases; the combined per-case results are scored and bootstrapped like any setting.** The size bin is computable at inference (mask area relative to the building, both visible in the input).
 - **All selection happens on val, so the chosen setting's val numbers are slightly optimistic; the test benchmark gives the final numbers.**
-- **Results (`outputs/selection.md`, `pareto*.png`): the overall Pareto front is the matched U-Net + hybrids t₀ = 400–800; all 9 pure diffusion settings are dominated by a hybrid. Knees: hybrid t₀ = 400 overall (tolerant mIoU 0.844, validity 86.3%), t₀ = 700 for room holes and for large holes; per size bin: small 400, medium 600, large 700.**
+- **Results (`outputs/stage1/selection.md`, `pareto*.png`): the overall Pareto front is the matched U-Net + hybrids t₀ = 400–800; all 9 pure diffusion settings are dominated by a hybrid. Knees: hybrid t₀ = 400 overall (tolerant mIoU 0.844, validity 86.3%), t₀ = 700 for room holes and for large holes; per size bin: small 400, medium 600, large 700.**
 - **Recommended final configuration: the size-adaptive hybrid (matched U-Net sketch → constraint fine-tune, t₀ = 400 / 600 / 700 for small / medium / large holes): tolerant mIoU 0.842, validity 88.0%, connectivity error 0.011, room leak 0.013, room count error 0.126** — against the matched U-Net: −0.004 tolerant mIoU (clear but tiny) for +7.6 validity points, 8× lower connectivity error, 3× lower room leak, lower room count error (all clear). Single-setting alternative: hybrid t₀ = 600 (0.842, 87.4%, 0.023).
 - **Decision rule for size-adaptive vs the single knee: size-adaptive if it is clearly better (bootstrap) on validity AND connectivity error and loses < 0.005 tolerant mIoU (half a point). This tolerance is a judgement call set AFTER seeing the results** (it loses 0.002, so the choice is not sensitive to the exact value between 0.003 and any larger tolerance).
 
 ## Day 8: Gradio interface (`app/app.py`, design in `docs/interface.md`)
 
-- **Settings frozen: the app uses exactly the Day 7 selection (size-adaptive hybrid t₀ 400/600/700, hybrid 600, matched U-Net, refine-600, nearest fill; DDIM 50 schedule, eta 1, known-region reset), read from `configs/app.yaml`; nothing was tuned on app output. The gallery holds only val cases** (user spec).
-- **UI only in `app/app.py`; all logic in `src/interface/` (testable without a browser)** — `app/` cannot hold an importable `app` package next to `app/app.py` without a name clash.
+- **Settings frozen: the app uses exactly the Day 7 selection (size-adaptive hybrid t₀ 400/600/700, hybrid 600, matched U-Net, refine-600, nearest fill; DDIM 50 schedule, eta 1, known-region reset), read from `configs/stage1/app.yaml`; nothing was tuned on app output. The gallery holds only val cases** (user spec).
+- **UI only in `app/app.py`; all logic in `src/stage1/interface/` (testable without a browser)** — `app/` cannot hold an importable `app` package next to `app/app.py` without a name clash.
 - **Hole size at inference = mask area as % of the building measured on the U-Net-completed plan** (the clean plan is unknown in the app). On all 7,772 val cases it reproduces the benchmark size bin in 7,771 (99.99%), against 99.55% for "known building pixels + mask". Chosen on val before any app use; it changes no model or sampling setting.
 - **Gallery: 24 val-benchmark cases, 8 per size bin, cycling through the corruption types that occur in that bin (a single door or window is never a large hole), seed 0; saved to `data/app/val_gallery.npz` and NOT committed** (dataset-derived, like all of `data/`); the app works without it (editor and uploads).
 - **Upload pipeline = the data pipeline's framing** (structure bounding box → 120 px long side, centred, nearest neighbour, crop / background fill), after snapping every pixel to the nearest class colour. Our own choices: transparent → background; grey (within 12 RGB units) → unknown and always repaired; refuse if > 10% of pixels are > 60 RGB units from every class colour; 128 × 128 inputs whose structure already spans 112–124 px are kept unframed (re-sampling would distort 2-px walls); ≥ 100 wall pixels; sides 16–4,096 px; `.npy` loaded with `allow_pickle=False`.
@@ -273,7 +287,7 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **No speed-up that changes the computation**: on the laptop CPU one forward pass takes ~1.5 s for 4, 8, 10 or 16 threads, with or without `channels_last`; lower precision (bf16) would change the outputs of frozen settings, so the app runs in fp32 and shows per-step progress instead.
 - **Checkpoints load lazily: a network is loaded on the first use of a method that needs it, then kept; start-up only checks that the files exist; at most the 2 networks are in memory** (user request, to save RAM on the 16 GB laptop). The load time (< 1 s each) is not counted in the per-repair runtime shown in the app.
 - **The app was tested by calling its event handlers directly in Python, plus one short browser check with 2 screenshots** (user request, to save memory).
-- **TA-meeting figures (`src/interface/make_ta_figures.py`) use the frozen app settings, seed 0, and val-gallery cases only, taken in file order (first 2 per size bin; first 4 large holes) — no cherry-picking** (user spec). A failure case is therefore shown as it comes: on the 29.5% room hole the hybrid leaves out a window and an inner wall.
+- **TA-meeting figures (`src/stage1/interface/make_ta_figures.py`) use the frozen app settings, seed 0, and val-gallery cases only, taken in file order (first 2 per size bin; first 4 large holes) — no cherry-picking** (user spec). A failure case is therefore shown as it comes: on the 29.5% room hole the hybrid leaves out a window and an inner wall.
 - **Config override via the environment variable `FLOORPLAN_APP_CONFIG`** (used to test the missing-checkpoint message without touching real files).
 
 ## Tooling
@@ -397,7 +411,7 @@ Diffusion-only overfit on one fixed batch of 8 (tiny model, Adam 3e-3, 400 steps
 - **R5 cut-offs on the tuning plans only (`detect/gap_tune.py`, `outputs/stage2/gap_rule.md`): p25 bedroom = 1514 px, p25 other_room = 460 px (completion scale); shortest firing gap raised from 5 to 11 px to fit the budget.** Own budget reading: the tuning split's detector alone is already at 0.50 false alarms per intact plan (it was chosen at <= 0.5), so "total <= 0.4" cannot be met on tuning plans; instead R5 may add at most 0.4 - 0.31 (the reported held-out detector + C8 rate) = 0.09 per intact plan, measured on the tuning intact plans with R5 counted on its own (conservative). Result on tuning: 0.09 false alarms, door (b) recall 33% (6/18; the size condition alone gave 44%, the pair rule alone 72% at 0.23 false alarms).
 - **Known limitation: on a drawing R5 depends on the parser's room types** (a bedroom parsed as living or hallway makes its open doorway look open-plan).
 - **Check-set door (b) cases are doors R5 is meant for: closed pair with a bedroom or bathroom on one side, doorway >= the R5 minimum length** (own choice: tests R5's scope, not the parser's area estimates).
-- **All evaluations run as Kaggle CPU kernels** (user: the laptop keeps running out of memory): `floorplan-stage2-eval-{doors,checkset,text}` (`kaggle/kernels/stage2_eval_*`, shared setup `src/stage2/kaggle_cpu.py`; checkpoints copied from the parser-v1, k2a and k1 kernel outputs to the paths in `configs/stage2/pipeline.yaml`). Laptop: unit tests + smoke tests on <= 3 items only.
+- **All evaluations run as Kaggle CPU kernels** (user: the laptop keeps running out of memory): `floorplan-stage2-eval-{doors,checkset,text}` (`kaggle/kernels/stage2/stage2_eval_*`, shared setup `src/stage2/kaggle_cpu.py`; checkpoints copied from the parser-v1, k2a and k1 kernel outputs to the paths in `configs/stage2/pipeline.yaml`). Laptop: unit tests + smoke tests on <= 3 items only.
 - **Held-out detection on drawings (`detect/image_eval.py`): the 159 held-out val plans; 59 intact drawings for false alarms, the other 100 each get two separate omissions, kinds in turn over door (a), door (b), window, wall, railing, fixture, room (seed 5; random component of that kind; a kind the plan lacks -> the next).** Own choices: image level (erase on the drawing, then the pipeline's PARSE + CHECK, no fill), so parser errors count; door (a)/(b) use ANY door (not only those in C8's / R5's scope), with the in-scope subsets reported separately; a wall omission = a piece 5 wall thicknesses long of a straight run; a room omission = the walls and doors between a room (>= 2000 px) and its main neighbour.
 - **Check set (`pipeline/check_set.py`): automatic scoring (found / restored / extra additions) plus my own verdict after looking at the figure.** Drawings in file order, first that fit each case kind. A wall piece = the middle 5 wall thicknesses of the first long straight run.
 - **Text erasure for the text-dependence test (`parse/text_dependence.py`): dark (< 128) 8-connected pieces with bounding box <= 32 px per side (4 wall thicknesses), <= 400 px, >= 3 px on one side, not touching walls/openings/railings/fixtures (grown 2 px), inpainted.** Seen in the smoke test: room names are removed; the dashes of dashed lines go too (character-sized); text touching a wall stays. Parser at scale 1 (the parser set is already ~8 px walls), IoU pooled over drawings.
@@ -571,16 +585,16 @@ Own choices:
 
 ## Overnight 2026-10-19/20: Stage 1 final test run (task 1)
 
-- The one Stage 1 test run, frozen Day 7 configurations (configs/app.yaml); the TA's new scope replaced the
+- The one Stage 1 test run, frozen Day 7 configurations (configs/stage1/app.yaml); the TA's new scope replaced the
   approval step (logged earlier).
-  - src/full_eval.py and src/arch_eval.py got `--benchmark val|test` (default val).
-  - src/selection.py `--benchmark test` (test_main) scores the saved test predictions with the same metrics, builds
+  - src/stage1/full_eval.py and src/stage1/arch_eval.py got `--benchmark val|test` (default val).
+  - src/stage1/selection.py `--benchmark test` (test_main) scores the saved test predictions with the same metrics, builds
     the FROZEN size-adaptive hybrid (each size bin's cases from the fixed t0 400 / 600 / 700 hybrid, no
     re-selection), runs the paired bootstrap against matched U-Net, refine-600 and hybrid 600, and writes
-    outputs/stage1_test.md with a val-vs-test table.
+    outputs/stage1/stage1_test.md with a val-vs-test table.
 - Own choices:
   - The test benchmark was uploaded as a separate small private dataset, floorplan-test-benchmark (3 MB); the
-    kernel checks its sha256 against configs/benchmark_checksums.json.
+    kernel checks its sha256 against configs/stage1/benchmark_checksums.json.
   - Sampling (GPU kernel floorplan-stage1-test, launched 23:24) is separate from scoring (CPU kernel
     afterwards), so the GPUs don't idle while CPU scoring runs.
   - Seeds per setting as in full_eval (100 + position in the --only list).
@@ -615,14 +629,14 @@ Own choices:
   doors, where it mostly repeats the ink check).
 - Decision (user rule): the current final stays; generous + judge is logged as a tried ablation (use_judge off).
 - Note: the generous flagger alone reaches 70% at 1.46 false alarms, a possible "high-recall mode" for the app.
-- Stage 1 test run result (outputs/stage1_test.md).
+- Stage 1 test run result (outputs/stage1/stage1_test.md).
   - Test, size-adaptive hybrid: tolerant mIoU 0.846, validity 88.0%, connectivity error 0.011.
   - Test, matched U-Net: 0.850, 81.0%, 0.085.
   - No metric of any method differs from val by more than 2 points.
   - Paired bootstrap conclusions as on val: size-adaptive vs matched U-Net better on connectivity and validity,
     worse on tolerant mIoU; vs refine-600 better on all three.
   - First launch stopped at its own safety check: the kernel compared the npz FILE hash, but
-    configs/benchmark_checksums.json holds make_benchmark's ARRAY checksum. Fixed and relaunched; no GPU work was
+    configs/stage1/benchmark_checksums.json holds make_benchmark's ARRAY checksum. Fixed and relaunched; no GPU work was
     done by the first attempt.
   - GPU session ~1.5 h (sampling) + CPU scoring kernel.
 
@@ -631,7 +645,7 @@ Own choices:
 - Omission metadata (deliverable 5; src/stage2/data/omission_meta.py): every image-level omission
   (image_eval.omit, check_set.make_case, hence check_tune / check_curve / judge / e2e) records type, location,
   position, size bin, size %, centre distance.
-  - Stage 1 constants read from configs/corruption.yaml (edge cutoff 0.55; size bins 2.7 / 7.7 %), not copied.
+  - Stage 1 constants read from configs/stage1/corruption.yaml (edge cutoff 0.55; size bins 2.7 / 7.7 %), not copied.
   - Own choices: building = every pixel that is not outdoor / background (Stage 1: wall + door + window + room);
     size = the omitted component's own pixels (Stage 1 used the padded mask box); "touches" = 4-neighbour.
   - The label-level simulator (omissions.simulate_one, older bins 0.5 / 2 %) is left as it was: its tables are
@@ -803,7 +817,7 @@ Own choices:
   ink < 2.0, R6 x1.5, window ink 0.08 / 0.02, R8 > 1.0 x p99 + mix: 0.35 false alarms / intact tuning drawing,
   72% mean recall (room (whole) 89%, region 76%). R8 adds +1.1 points for +0.05 (alone it finds 12% of regions,
   6% of whole rooms). The window-ink decision (held-out cost) is still the user's.
-- Part B, src/stage2/complete/large_fill.py: B1 big window, B2 coarse-to-fine (frozen Stage 1 hybrid, configs/app.yaml
+- Part B, src/stage2/complete/large_fill.py: B1 big window, B2 coarse-to-fine (frozen Stage 1 hybrid, configs/stage1/app.yaml
   settings, then 16-class refinement at t0 150 / 300), B3 tiled (128 px, 32 px overlap, most-known-context first).
   Own choices: B1 / B3 use the Stage 1 size-adaptive t0 (400 / 600 / 700 by the hole's share), not t0_fixed 300
   (chosen on small holes); 16 -> 6 mapping: railing -> wall, fixtures -> room; Stage 1 hole = its frame pixels
@@ -819,7 +833,7 @@ Own choices:
   manual mean (150); fill.large_strategy stays "tiled" (most fixed, fastest). Medium cases come from
   omission_mix.omit_in_bin (7 measured medium of 20).
 - Part D: none of B1-B3 is clearly good -> B4 plan (fine-tune at 256 px with large holes, ~4 GPU h) written in
-  outputs/stage2/large_fill_compare.md, not launched.
+  outputs/stage2/history/large_fill_compare.md, not launched.
 
 ## 2026-10-21: R5 forced on, R8 v2, B4 launched, final test notebook
 
@@ -875,3 +889,100 @@ Own choices:
     25% -> 17% (one drawing, #9, from the re-tuned CHECK; small holes still use the current models).
 - GPU used this week (estimate): ~3.4 h by B4; about 0.9 GPU h left until the Saturday reset (estimate; the Kaggle
   settings page has the exact figure).
+
+## 2026-10-21 (evening): final delivery - audit, fixes, reorganisation, combined app, final test prep
+
+User request (2026-10-21, evening): audit the whole project, cheap CPU-only fixes, an illustrated explainer of the
+final system and its metrics, a full reorganisation for external readers and the code walkthrough (IE643 intensive
+assessment), the final test fully prepared but NOT run, and a new Gradio app with Stage 1 and Stage 2 together;
+"ask minimally, make reasonable choices, log them". Own choices below.
+
+- Kaggle quota checked with `kaggle quota` (2026-10-21 22:00 IST): 24.95 h used, **5.05 GPU h left**, reset
+  2026-10-24 00:00 (UTC). The earlier estimate of ~0.9 h left was wrong.
+- **R8 stays "fixture mix only" (false-alarm budget 0.4 kept).** The strict size variant (> 4 x type / 5 x all,
+  living / hallway skipped) costs 0.30 false alarms per intact tuning drawing on its own (total about 0.6, not
+  measured together) for region flags on ~50% of whole-room and ~35% of region omissions. Small flags already
+  overlap 89% / 76% of those omissions ("found"), so R8 would mainly change which fill runs, and even with the box
+  given B4 fixes 6 / 20 real drawings: expected gain ~1-3 fixed per 20 large omissions against a whole room
+  repainted on about one intact drawing in three, plus a new tuning round before the test. Large omissions are
+  reported as a limitation and handled in manual mode (box given).
+- Work happens on a new branch `final` in the main folder (created from `stage2` at 5b37914); the stage2 worktree is
+  left untouched (removing it is the user's call). Its git-ignored data (checkpoints, CubiCasa val zips, benchmarks,
+  Kaggle outputs) were COPIED into the main folder with no-clobber (only differing file: the regenerated
+  data/kaggle_upload/floorplan-code/code.zip; the main folder's copy kept).
+- Stage 2 app gallery (src/stage2/interface/make_gallery.py, configs/stage2/app.yaml): 18 held-out VAL drawings
+  (never test), taken in the end-to-end validation's fixed order (seed 20, check set left out; no picking by hand),
+  2 each of door (a), door (b), window, wall, fixture, room, room (whole), region, plus 2 intact drawings so false
+  alarms are visible; erasure = the validation's own image_eval.omit with seed 30; files in data/app/stage2_gallery
+  (git-ignored, CubiCasa5K is CC BY-NC: not redistributed in the repo).
+- Combined app (app/app.py): tabs Stage 1 / Stage 2 / How it works. Stage 1 keeps the Day 8 tab and adds
+  "Random mask" (src/stage1/interface/random_mask.py: src/stage1/data/corruptions.corrupt with configs/stage1/corruption.yaml on the
+  complete plan - the true plan stays known, so scores are shown). Stage 2: gallery or any upload
+  (src/stage2/interface/demo.to_grey: colour -> grey, transparency -> paper, white-on-black inverted, 64-6000 px);
+  automatic mode = run_pipeline (PARSE -> CHECK -> FILL -> VERIFY) with every step shown; manual mode = the user
+  brushes the missing region, each connected brushed region (5 px closing) becomes one box -> run_pipeline(boxes)
+  = PARSE + FILL only. Default = the pipeline's `fast` settings (the ones the end-to-end validation used), with a
+  switch to the evaluation settings. Gallery runs are scored with the validation's own e2e_val.score.
+- Repository reorganised for external readers and the code walkthrough: Stage 1 code / configs / tests / results
+  moved into `src/stage1/`, `configs/stage1/`, `tests/stage1/`, `outputs/stage1/`; kernels grouped in
+  `kaggle/kernels/stage1/` and `stage2/`; superseded Stage 2 results (check set v1-v3, e2e batch 1 v1-v3, the first
+  large-hole comparison, the first pipeline examples) in `outputs/stage2/history/`; the two overnight reports in
+  `docs/logs/`. Every import, command, config path and doc link was rewritten by one script (git mv, so history is
+  kept); the full test suite, every checkpoint load and the app were checked afterwards. Against the audit's advice
+  (it rated the Stage 1 move high-risk) because the user asked for a full reorganisation; the risk was covered by the
+  tests. Checkpoint folders (`outputs/kaggle/`, `outputs/runs/`) stay where they are (git-ignored, paths in configs).
+- Audit (2026-10-21 night, 9 read-only reviewers + independent checks of the high-severity claims; 104 findings).
+  Fixed now (cheap, CPU only):
+  - CHECK merge: a merged flag took the type of the highest raw score, but scores are in different units (room area
+    for C8, gap length for R5, probability for the detector), so detector "room" flags became "door" and R8 "region"
+    flags lost to C8 / R5 (confirmed independently). Now: region > detector room > strongest rule > detector
+    (`rules.merged_type`); boxes, found and false-alarm counts unchanged. Tests: tests/stage2/test_merge_types.py.
+  - PARSE: the re-parse scale ignored the first parse's max-side cap (uploads > 2048 px), and a re-parse was kept even
+    when its walls were further from 8 px; both fixed in `run.parse` (eval drawings are <= 2048 px and rarely
+    re-parse).
+  - Large-hole fill: the big window had no size cap (a huge manual box could exhaust memory); > 384 px now tiles.
+  - Large erasure (room (whole) / region): an interior door near the facade was treated as exterior and left a wall
+    stub inside the erased room; now exterior = one of the door's faces is outdoor / background. Changes the test's
+    large omissions (not yet run) and the val batch-3 drawings.
+  - Five legacy tuning scripts silently overwrote the final CHECK setting; they now write
+    outputs/stage2/detector_threshold_proposed.yaml unless STAGE2_WRITE_CHOICE=1 (check_tune keeps its --write).
+  - Duplicate messages within one hole; R7 / wall-ink switches crashed on null settings; stale notes in
+    detector_threshold.yaml; Stage 1 single-GPU resume (RNG state moved to the GPU); config loader without UTF-8.
+  - Final test (`src/stage2/final_test.py`, notebook, package): the offline wheels could not install smp 0.3.4 (it
+    pins timm 0.9.7; two dependencies were source-only) -> fixed and dry-run checked; the FILL section now also
+    tests the U-Net sketch alone and the SHIPPED large-hole method (B4 + big window), next to the constrained vs
+    control ablation; t0 from the case's size bin; one failing case no longer kills a shard (error rows, planned vs
+    done in the report, cut-off jsonl lines skipped); the notebook has a SMOKE switch on the VAL zips, version
+    checks, thread limits and a loud warning on a failed shard; the code bundle records its git version.
+  - **Test sampling = the validated fast settings** (N = 2, 15 steps), not full mode: every val number that drove a
+    choice (t0, eta, B4 routing, e2e batches) was measured in fast mode, so the test measures the validated
+    configuration; full mode stays available (--full). Also ~3x cheaper (well under 1 GPU h).
+  Documented, not changed (would need retraining or would change validated numbers without a re-tune):
+  - Scale: the rasteriser draws every polygon 1 px thicker (walls 4 px at completion scale, 9 px at parser scale),
+    and wall_thickness() reads parser-scale walls as 9.55 px, so pipeline maps are ~0.84x the completion set's scale.
+    Detectors v2 / v3 were trained on maps made the same way (consistent with the pipeline); the fill models and the
+    size constants are not. A consistent fix needs a regenerated parsed set and detector retraining (GPU).
+  - Fast mode starts one DDIM step below the nominal t0 (300 -> 280, 600 -> 560, 700 -> 630).
+  - Stage 1: validity rewards an empty hole (a background fill scores 46% on 400 val cases vs nearest fill 36%), so
+    validity is read with tolerant mIoU / F1; the Day-2 baselines (do-nothing, nearest fill) and the room_count_err
+    redesign looked at the TEST benchmark (no model or setting was chosen on it); the size-adaptive benchmark run
+    routed by the ground-truth size bin while the app uses the U-Net-completed plan.
+  - Evaluation validity: CHECK numbers on tuning drawings are optimistic (about 10.7k settings searched on 40 intact
+    + 160 omissions; held-out false alarms 0.59 vs 0.30); "found" is type-agnostic box overlap (lenient for large
+    omissions); the held-out val drawings informed some choices (t0, B4 routing, parser v2B, two CHECK decisions), so
+    the e2e "held-out" batches are validation, not test. The Stage 2 test is the only unbiased number.
+  - Stage 2 uses the official CubiCasa split without a near-duplicate check (~5% near-duplicate pairs across
+    train / val by the auditor's estimate).
+  - Constraint effects: one training run per arm (no seed variance); Stage 1 constrained = control; Stage 2 only in
+    training validation until the test's paired ablation.
+- Val re-check after the fixes (laptop CPU, fast settings, same drawings and seeds): see "Val re-check" below.
+- **Val re-check after the audit fixes** (laptop CPU, fast settings, the same drawings and seeds; tables "old vs new"
+  at the end of each file): batch 1 (`e2e_val_v5.md` vs v4) found 11/12, fixed 9 (by addition 3), false additions 3:
+  unchanged, tolerant mIoU 60.9 -> 61.6; batch 2 (`e2e_val_batch2_v2.md` vs batch2_b4) identical (found 9, fixed 8,
+  by addition 2, false additions 5, tolerant mIoU 74.4); batch 3 (`e2e_val_batch3_v2.md` vs batch3) found 7 -> 6,
+  fixed 2 -> 2, false additions 10 -> 10: the one change is region case 5, whose erased DRAWING changed with the
+  large-erasure fix (the detector's room flag no longer fires there), not a pipeline effect. The fixes are kept.
+  Laptop CPU: 27-45 s per drawing (Kaggle CPU 14-18 s).
+- Final test smoke run on the VAL zips (laptop CPU, `--smoke`: 2 cases per section and size bin): all sections ran,
+  0 errors, report complete (31 min on the CPU; the GPU run is far faster). Stage 1 baselines re-run on val
+  (`outputs/stage1/baseline_results_val.md`; nearest fill tolerant mIoU 0.489, as in the selection table).

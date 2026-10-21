@@ -1,6 +1,6 @@
 # Final Stage 2 test evaluation (not run yet; user, 2026-10-20).
 # The test omissions are size-balanced: roughly a third each of small / medium / large (Stage 1 size bins,
-# % of the building: < 2.7 / < 7.7 / larger; configs/corruption.yaml). Generator: src/stage2/detect/omission_mix.py
+# % of the building: < 2.7 / < 7.7 / larger; configs/stage1/corruption.yaml). Generator: src/stage2/detect/omission_mix.py
 # (plan_bins + omit_balanced). Small = the image_eval kinds; medium / large = room (whole) and region
 # (src/stage2/data/erasure_large.py) with their size ranges cut to the bin.
 size_mix:

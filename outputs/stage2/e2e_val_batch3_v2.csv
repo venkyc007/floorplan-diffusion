@@ -1,0 +1,13 @@
+pid,kind,expected,type,location,position,size_bin,size_pct,center_dist,found,right_type,fix_iou,fixed,fix_iou_add,fixed_add,false_adds,tol_before,tol_after,valid_before,valid_after,viol_gt,viol_before,viol_after,gap,diagnosis,flags,seconds
+high_quality_architectural-3691,room (whole),room,room (whole),exterior,edge,large,9.072,0.667,True,True,0.139,False,0.061,False,0,54.6,55.3,False,False,23,77,76,,,window (WINK+detector); room (detector); room (INK+detector),115.0
+colorful-14935,room (whole),room,room (whole),interior,centre,large,7.86,0.524,True,False,0.034,False,0.0,False,0,37.8,37.4,False,False,11,16,17,,C16 0->1 (raw 0: restriction),sink (detector),66.4
+high_quality_architectural-8154,room (whole),room,room (whole),interior,edge,medium,6.441,0.632,False,False,0.0,False,0.0,False,0,38.8,38.8,False,False,3,12,12,,,none,3.5
+colorful-6226,room (whole),room,room (whole),exterior,edge,large,14.473,0.587,True,True,0.456,True,0.318,True,0,47.8,49.3,False,False,0,28,21,,,room (detector),70.7
+high_quality_architectural-1376,region,room,region,interior,centre,large,24.718,0.244,False,False,0.004,False,0.0,False,1,8.2,8.2,False,False,14,32,32,,,door (R5),65.8
+colorful-14938,region,room,region,exterior,centre,large,11.17,0.204,True,False,0.024,False,0.0,False,1,32.6,32.6,False,False,8,31,31,,,window (detector); sink (detector),127.2
+colorful-6628,region,room,region,exterior,centre,large,13.917,0.277,False,False,0.0,False,0.0,False,1,33.6,33.6,False,False,3,10,10,,,door (INK),9.2
+high_quality-9975,region,room,region,exterior,centre,large,19.228,0.252,True,False,0.01,False,0.0,False,1,36.6,36.6,False,False,12,30,30,,,door (INK),3.5
+high_quality_architectural-1654,wall,wall,wall,interior,centre,small,0.313,0.345,False,False,0.194,False,0.0,False,1,50.5,50.5,False,False,3,11,11,,,sink (detector),58.8
+high_quality_architectural-1916,room,room,room,interior,centre,small,0.302,0.444,False,False,0.0,False,0.0,False,1,62.3,62.3,False,False,5,11,11,,,window (WINK),5.9
+high_quality_architectural-1067,window,window,window,exterior,edge,small,0.82,0.806,True,True,0.738,True,0.0,False,1,95.3,95.3,False,False,0,1,1,,,door (INK); window (detector),6.1
+high_quality_architectural-1359,door (b),door,door (b),exterior,centre,small,0.297,0.333,False,False,0.544,False,0.0,False,3,38.9,38.9,False,False,1,16,16,,,window (WINK); window (WINK); window (WINK),4.9

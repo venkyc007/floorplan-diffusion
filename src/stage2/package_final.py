@@ -7,8 +7,8 @@ Contents (everything the notebook needs besides the code dataset and the test da
   checkpoints/<path>   every checkpoint named in configs/stage2/pipeline.yaml (parser v2B, detectors v2 / v3,
                        16-class U-Net, constrained + control diffusion, B4 U-Net + diffusion, frozen Stage 1 U-Net +
                        diffusion), each at the same relative path the config uses (best.pt only)
-  wheels/              pip wheels of segmentation-models-pytorch 0.3.4 (+ its pure-python dependencies) and
-                       diffusers, so the notebook installs them offline (no internet needed)
+  wheels/              pip wheels of segmentation-models-pytorch 0.3.4, timm 0.9.7 (its pin), its pure-python
+                       dependencies (built locally) and diffusers, so the notebook installs them offline
   dataset-metadata.json  id venkatesh007c/floorplan-stage2-final, private
 """
 
@@ -22,7 +22,8 @@ import yaml
 from src.utils import PROJECT_ROOT
 
 OUT = PROJECT_ROOT / "data" / "kaggle_upload" / "floorplan-stage2-final"
-WHEELS = ["segmentation-models-pytorch==0.3.4", "diffusers==0.30.3"]
+WHEELS = ["segmentation-models-pytorch==0.3.4", "diffusers==0.30.3", "timm==0.9.7"]
+PURE = ["pretrainedmodels==0.7.4", "efficientnet-pytorch==0.7.1", "munch"]
 
 
 def main():
@@ -41,15 +42,12 @@ def main():
         print(f"{name:18s} {src.stat().st_size / 1e6:7.1f} MB  {rel}")
     wheels = OUT / "wheels"
     wheels.mkdir(exist_ok=True)
-    r = subprocess.run([sys.executable, "-m", "pip", "download", "--dest", str(wheels), "--only-binary=:all:",
-                        "--platform", "manylinux2014_x86_64", "--python-version", "3.10", "--no-deps", *WHEELS,
-                        "pretrainedmodels==0.7.4", "efficientnet-pytorch==0.7.1", "timm==0.9.2", "munch"],
-                       capture_output=True, text=True)
-    if r.returncode:                                    # sdists (pretrainedmodels / efficientnet) have no wheel
-        subprocess.run([sys.executable, "-m", "pip", "download", "--dest", str(wheels), "--no-deps",
-                        "pretrainedmodels==0.7.4", "efficientnet-pytorch==0.7.1"], check=False)
-        subprocess.run([sys.executable, "-m", "pip", "download", "--dest", str(wheels), "--no-deps",
-                        "--only-binary=:all:", *WHEELS, "timm==0.9.2", "munch"], check=False)
+    # binary wheels of the exact versions (smp 0.3.4 pins timm 0.9.7; audit 2026-10-21, S2FT-1 / INF-1)
+    subprocess.run([sys.executable, "-m", "pip", "download", "--dest", str(wheels), "--only-binary=:all:",
+                    "--platform", "manylinux2014_x86_64", "--python-version", "3.10", "--no-deps", *WHEELS], check=True)
+    # pure-python packages published only as source archives: built into wheels HERE, because building them on
+    # Kaggle with --no-index would need setuptools from an index (pip build isolation)
+    subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--wheel-dir", str(wheels), *PURE], check=True)
     (OUT / "dataset-metadata.json").write_text(json.dumps(
         {"title": "floorplan-stage2-final", "id": "venkatesh007c/floorplan-stage2-final",
          "licenses": [{"name": "other"}]}, indent=2), encoding="utf-8")

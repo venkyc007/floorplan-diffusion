@@ -32,7 +32,21 @@ from src.stage2.detect.train_detector import build_model, features, rule_maps
 from src.utils import PROJECT_ROOT
 
 OUT = PROJECT_ROOT / "outputs" / "stage2"
-CHOICE = PROJECT_ROOT / "configs" / "stage2" / "detector_threshold.yaml"
+CHOICE = PROJECT_ROOT / "configs" / "stage2" / "detector_threshold.yaml"   # the FINAL CHECK setting (read)
+PROPOSED = OUT / "detector_threshold_proposed.yaml"
+
+
+def write_choice(choice):
+    """Legacy tuning scripts (this file, door_eval, gap_tune) write their choice to outputs/stage2/
+    detector_threshold_proposed.yaml, NOT over the final setting, unless STAGE2_WRITE_CHOICE=1 is set: re-running an
+    old table must never change the final pipeline silently (audit 2026-10-21, CHK-3). The final setting comes
+    from check_tune.py --write."""
+    import os
+    path = CHOICE if os.environ.get("STAGE2_WRITE_CHOICE") == "1" else PROPOSED
+    path.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
+    print("setting written to", path)
+
+
 STRONG_RULES = ("C8", "C17", "C6", "C12")
 THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
 MIN_BLOBS = [5, 10, 20, 40, 80]
@@ -138,9 +152,9 @@ def main():
     ok = [s for s in sweep if s[2] <= 0.5]
     best = max(ok, key=lambda s: s[3]) if ok else min(sweep, key=lambda s: s[2])
     th, mb = best[0], best[1]
-    CHOICE.write_text(yaml.safe_dump({"threshold": th, "min_blob": mb, "strong_rules": list(STRONG_RULES),
-                                      "source": "detection_eval.py: best mean recall with <= 0.5 false alarms per "
-                                                "intact val plan (300 val plans)"}), encoding="utf-8")
+    write_choice({"threshold": th, "min_blob": mb, "strong_rules": list(STRONG_RULES),
+                  "source": "detection_eval.py: best mean recall with <= 0.5 false alarms per intact val plan "
+                            "(300 val plans)"})
     det = lambda c: proposals(c["probs"], th, mb)
     both = lambda c: R.merge(det(c) + rules_strong(c))
     res = {name: evaluate(cases, f) for name, f in
@@ -307,7 +321,7 @@ def per_type(args):
     choice["per_type_min_blob"] = MIN_BLOB_TYPE
     choice["per_type_source"] = (f"greedy on the tuning split (300 plans), budget {args.budget} false alarms per intact plan "
                                  f"incl. C8; weights door 2, railing/fixture 0.5")
-    CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
+    write_choice(choice)
     L = ["", "## Per-type detector thresholds (user, chunk 7)", "",
          f"Tuned greedily on the tuning split within {args.budget} false alarms per intact plan (incl. C8), doors weighted "
          "x2, railing and fixtures x0.5 (blobs of each type's own probability; min blob 40 px, fixtures 15 px). "
@@ -378,7 +392,7 @@ def heldout(args):
         f.write("\n".join(L) + "\n")
     choice["final"] = final
     choice["extra_rules"] = ["C8"] if final == "detector + C8" else []
-    CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
+    write_choice(choice)
     print("\n".join(L))
 
 

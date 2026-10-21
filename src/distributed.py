@@ -4,12 +4,12 @@ With DDP, one process runs per GPU. Each process trains on its own share of
 the data; after every backward pass the gradients are averaged across the
 processes, so all model copies stay identical. Started with torchrun:
 
-    torchrun --standalone --nproc_per_node=2 -m src.train --config ... --out ...
+    torchrun --standalone --nproc_per_node=2 -m src.stage1.train --config ... --out ...
 
-Without torchrun (plain `python -m src.train`) everything runs as a single
+Without torchrun (plain `python -m src.stage1.train`) everything runs as a single
 process on one GPU or the CPU, exactly as before.
 
-Rules used in src/train.py:
+Rules used in src/stage1/train.py:
   - only the MAIN process (rank 0) writes files, logs and checkpoints;
   - decisions based on the clock (validate now? save? stop?) are made by the
     main process and broadcast, so all processes always agree; otherwise

@@ -1,5 +1,5 @@
 # Stage 2 data: CubiCasa5K rasterised from its SVGs (src/stage2/data/build_cubicasa.py).
-# Runs on Kaggle (kernel kaggle/kernels/stage2_data); the dataset never comes to the laptop.
+# Runs on Kaggle (kernel kaggle/kernels/stage2/stage2_data); the dataset never comes to the laptop.
 
 source:
   kaggle_dataset: qmarva/cubicasa5k   # complete public mirror of Zenodo record 2613548 (5,000 plans + split lists)

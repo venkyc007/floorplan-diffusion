@@ -1,0 +1,61 @@
+# Fine-tune of diffusion run 1 (CONTROL: constraints OFF).
+# Starts from run 1's best.pt (EMA weights) via --init. The two fine-tune
+# configs (finetune_constraints.yaml / finetune_control.yaml) are IDENTICAL
+# except `constraints.enabled` (checked by tests/stage1/test_finetune_configs.py),
+# so the ablation is fair.
+#     python -m src.stage1.train --config configs/stage1/finetune_control.yaml --out OUT --init RUN1/best.pt
+# Reasons for the choices: docs/decisions.md (Day 5).
+
+model:
+  kind: diffusion
+  block_out_channels: [64, 128, 256, 256]  # U-Net widths at 128, 64, 32, 16 px
+  layers_per_block: 2
+  attention_from_level: 3                  # self-attention at level 3 (16x16) + the middle block
+  attention_head_dim: 32
+  num_train_timesteps: 1000
+  beta_schedule: squaredcos_cap_v2         # cosine schedule
+  ddim_steps: 50                           # sampling steps for final evaluation (src/stage1/evaluate.py)
+  ddim_eta: 1.0                            # 1 = stochastic DDIM (best in the run-1 diagnostic), 0 = deterministic
+  mask_weight: 5.0                         # loss weight of pixels inside the mask (outside = 1)
+  constraints:                             # structural losses on the predicted x0 (src/stage1/models/constraints.py)
+    enabled: false
+    temperature: 0.2                       # softmax(x0 / T): sharp but still differentiable
+    # each loss: use (on/off switch; named `use` because YAML reads the word `on` as true), weight
+    dilate_px: 3                           # losses only in the mask region grown by 3 px
+    t_min: 0                               # apply at noise levels t_min <= t < t_max: ALL levels,
+    t_max: 1000                            # because run 1's x0 is already perfect below t ~ 600
+    cldice: {use: true, weight: 0.01, iterations: 4}     # 1.0 was ~100x too strong (overfit test)
+    openings: {use: false, weight: 1.0, iterations: 12}   # OFF: hurt reconstruction in the overfit test (docs/decisions.md)
+    closure: {use: true, weight: 0.03}                   # scaled down with clDice (3.0 / 100)
+    alignment: {use: false, weight: 0.01}   # OFF: hurt reconstruction in the overfit test (docs/decisions.md)
+
+data:
+  train_npz: data/processed/train.npz
+  val_benchmark: data/benchmarks/val_benchmark.npz
+  val_cases: 256                           # fixed validation subset (same cases every time)
+  num_workers: 4
+
+train:
+  batch_size: 32                           # PER GPU (2 GPUs -> 64 per step); 64 per GPU does not fit a T4
+  val_ddim_steps: 20                       # sampling steps during training validation (faster)
+  lr: 2.0e-5                               # fine-tune: 5x lower than run 1
+  weight_decay: 0.01
+  warmup_steps: 200
+  max_steps: 26000                         # FIXED: ~7.2 h of training at ~64 samples/s (66 x 0.97 for the constraints), 2 T4s x 32
+  grad_clip: 1.0
+  ema_decay: 0.999
+  fp16: true                               # only used on a GPU
+  seed: 0
+  log_every: 50                            # steps between train-loss log lines
+  val_every: 2000                          # steps between validations ...
+  val_minutes: 30                          # ... or this many minutes, whichever comes first
+  checkpoint_minutes: 30                   # save last.pt this often (wall clock)
+  time_limit_hours: 8.5                    # stop gracefully (and save) after this long
+  sample_grid_cases: 8                     # val cases drawn in each sample grid
+
+# --smoke: tiny model, a few steps on CPU, to test the whole pipeline.
+smoke:
+  model: {block_out_channels: [16, 32, 32, 32], layers_per_block: 1, norm_num_groups: 8, attention_head_dim: 8, ddim_steps: 5}
+  data: {val_cases: 16, num_workers: 0}
+  train: {batch_size: 4, warmup_steps: 5, max_steps: 20, log_every: 5, val_every: 10,
+          checkpoint_minutes: 0, sample_grid_cases: 4, val_ddim_steps: 5}

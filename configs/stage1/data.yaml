@@ -1,0 +1,42 @@
+# Settings for the data pipeline (src/stage1/data/).
+# Change numbers here instead of inside the code.
+
+paths:
+  raw_dir: data/raw                                 # where the downloaded dataset lives
+  pickle: data/raw/resplan_unzipped/ResPlan.pkl     # the ResPlan file after unzipping
+  resplan_split: data/raw/resplan/split.json        # ResPlan's own split (tells which plans are augmented copies)
+  processed_dir: data/processed                     # where our converted arrays go
+  samples_png: outputs/stage1/samples.png                  # preview grid of converted plans
+
+raster:
+  size: 128      # output image is size x size pixels
+  padding: 4     # empty border (pixels) on every side; the plan fills the rest
+
+# ResPlan's 683 "augmented" plans are rotated/flipped/scaled copies of other
+# plans, and ResPlan forgot to transform their inner/land/garden/parking/
+# neighbor shapes (outdoor area ends up in the wrong place). Leave them out.
+exclude_augmented: true
+
+dedup:          # see src/stage1/data/dedup.py for how this works
+  # Stage 1 (candidates): structure shrunk to grid x grid, cosine similarity.
+  grid: 32
+  candidate_cosine: 0.75
+  # Stage 2 (confirm): mean per-class IoU of the full 128x128 images (after
+  # rotating/flipping), with a tolerance: pixels within `iou_tolerance` px of
+  # the same class count as matching (plain IoU punishes 2-px walls traced
+  # 1 px apart: near-identical re-posts only scored ~0.8). A plan is REMOVED
+  # if its tolerant IoU with a kept plan is >= remove_iou.
+  iou_tolerance: 1
+  remove_iou: 0.90
+  # Plans with structure cosine >= group_cosine are not removed, but kept in
+  # the SAME split, so "fairly similar" plans can't leak across splits.
+  # (Chosen by looking at example pairs: 0.85-0.90 = same design with small
+  # variations; 0.80-0.85 = different apartments sharing a common shape;
+  # 0.80 chains generic plans into one 200+ group.)
+  group_cosine: 0.85
+
+split:
+  train: 0.8
+  val: 0.1
+  test: 0.1
+  seed: 42       # fixed random seed so the split is the same every time

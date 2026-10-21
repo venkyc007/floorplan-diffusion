@@ -4,7 +4,7 @@
     -> {"type": "door (a)", "location": "exterior", "position": "edge", "size_bin": "small",
         "size_pct": 0.41, "center_dist": 0.73}
 
-Fields (the Stage 1 rules, src/data/corruptions.py describe(), constants from configs/corruption.yaml):
+Fields (the Stage 1 rules, src/stage1/data/corruptions.py describe(), constants from configs/stage1/corruption.yaml):
   type       door (a) / door (b) / window / wall / fixture / room / railing / room (whole) / region
              (intact drawings: "intact")
   location   exterior if the omitted component touches outdoor / background (4-neighbours), else interior
@@ -25,7 +25,7 @@ import yaml
 from src.stage2.data.classes16 import C16
 from src.utils import PROJECT_ROOT
 
-_S1 = yaml.safe_load((PROJECT_ROOT / "configs" / "corruption.yaml").read_text(encoding="utf-8"))
+_S1 = yaml.safe_load((PROJECT_ROOT / "configs" / "stage1" / "corruption.yaml").read_text(encoding="utf-8"))
 EDGE_CUTOFF = _S1["position"]["edge_cutoff"]          # 0.55 (Stage 1)
 SIZE_EDGES = tuple(_S1["size_bins"]["edges"])         # (2.7, 7.7) % of the building (Stage 1)
 FIELDS = ("type", "location", "position", "size_bin")

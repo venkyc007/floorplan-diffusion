@@ -1,0 +1,25 @@
+# Settings of the Stage 2 tab of the Gradio app (app/app.py; logic in src/stage2/interface/).
+# The pipeline's own settings (checkpoints, CHECK thresholds, fill) are in configs/stage2/pipeline.yaml and
+# configs/stage2/detector_threshold.yaml and are FROZEN (chosen on val). Never tune them on what the app shows.
+
+# Example drawings: held-out VAL drawings (never the test split) with one component erased by the same code the
+# validation used (src/stage2/detect/image_eval.omit). Built once by:  python -m src.stage2.interface.make_gallery
+val_zip: outputs/kaggle/stage2_data_v3/stage2_data/parser_val.zip
+gallery_dir: data/app/stage2_gallery
+gallery_seed: 30            # erasure seed; drawings are taken in the fixed held-out order (no picking by hand)
+gallery_plan:               # [omission kind, how many drawings]
+  - ["door (a)", 2]         # door drawn over with wall (the opening disappears)
+  - ["door (b)", 2]         # door leaf + arc erased, the wall gap stays
+  - ["window", 2]
+  - ["wall", 2]
+  - ["fixture", 2]
+  - ["room", 2]             # a room's inner walls / door erased
+  - ["room (whole)", 2]     # large: a whole room erased
+  - ["region", 2]           # large: a rectangle inside the building erased
+  - ["intact", 2]           # nothing erased: shows false alarms honestly
+
+fast: true                  # live settings (pipeline.yaml `fast`: N = 2, 15 DDIM steps); the UI can switch it off
+display_max_side: 900       # drawings are shown at most this many px wide / high
+upload:
+  max_side_px: 6000         # larger uploads are refused (the parser itself works at <= 2048 px)
+  min_side_px: 64

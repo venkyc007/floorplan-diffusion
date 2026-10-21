@@ -198,22 +198,43 @@ def overlap(a, b):
     return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1])
 
 
+def merged_type(members):
+    """The type of a merged flag, chosen by evidence, not by raw score (scores are in different units: room area
+    for C8, gap length for R5, probability for the detector; audit 2026-10-21, CHK-1 / CHK-2):
+      1. "region" (R8 merged room) always wins, so the hole still goes to the large-hole fill;
+      2. a detector "room" flag beats the rules' door / window types (a room fill already allows one door);
+      3. otherwise the strongest rule (members are in score order, as before), else the strongest detector flag.
+    Returns the member whose type is used."""
+    for want in (lambda c: c.type == "region", lambda c: c.type == "room" and "detector" in c.rules,
+                 lambda c: "detector" not in c.rules):
+        for c in members:
+            if want(c):
+                return c
+    return members[0]
+
+
 def merge(cands):
-    """Merge candidates whose boxes overlap: union box, type of the highest score, rules united."""
+    """Merge candidates whose boxes overlap: union box, rules united, scores summed, type by merged_type().
+    Clustering is greedy in score order (strongest first), so the merged boxes do not depend on the type rule."""
     cands = sorted(cands, key=lambda c: -c.score)
-    merged = []
+    groups = []                                         # [(merged box, members in score order)]
     for c in cands:
-        for m in merged:
-            if overlap(m.box, c.box):
-                m.box = (min(m.box[0], c.box[0]), min(m.box[1], c.box[1]), max(m.box[2], c.box[2]), max(m.box[3], c.box[3]))
-                m.rules = sorted(set(m.rules) | set(c.rules))
-                m.score += c.score
-                m.peak = m.peak or c.peak
-                if m.mask is None and c.type == m.type:
-                    m.mask = c.mask
+        for g in groups:
+            b = g[0]
+            if overlap(b, c.box):
+                g[0] = (min(b[0], c.box[0]), min(b[1], c.box[1]), max(b[2], c.box[2]), max(b[3], c.box[3]))
+                g[1].append(c)
                 break
         else:
-            merged.append(Candidate(c.type, c.box, list(c.rules), c.score, c.peak, c.mask))
+            groups.append([c.box, [c]])
+    merged = []
+    for box, members in groups:
+        lead = merged_type(members)
+        same = [c for c in members if c.type == lead.type]
+        mask = lead.mask if lead.mask is not None else next((c.mask for c in same if c.mask is not None), None)
+        peak = lead.peak or next((c.peak for c in members if c.peak), None)
+        merged.append(Candidate(lead.type, box, sorted({r for c in members for r in c.rules}),
+                                float(sum(c.score for c in members)), peak, mask))
     return merged
 
 

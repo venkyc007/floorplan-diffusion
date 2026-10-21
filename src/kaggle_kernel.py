@@ -58,9 +58,9 @@ def setup():
 
 def check_val_benchmark():
     """Rebuild the val benchmark from its seed; compare with the local checksum."""
-    sums = f"{CODE}/configs/benchmark_checksums.json"
+    sums = f"{CODE}/configs/stage1/benchmark_checksums.json"
     expected = json.load(open(sums))["val"]
-    run(f"{sys.executable} -m src.data.make_benchmark --splits val")
+    run(f"{sys.executable} -m src.stage1.data.make_benchmark --splits val")
     got = json.load(open(sums))["val"]           # make_benchmark rewrites it
     result = {"expected": expected, "kaggle": got, "match": expected == got}
     json.dump(result, open(f"{WORK}/benchmark_check.json", "w"), indent=2)
@@ -86,7 +86,7 @@ def train(config, out, extra=""):
         launcher = f"{sys.executable} -m torch.distributed.run --standalone --nproc_per_node={n}"
     else:
         launcher = sys.executable
-    run(f"{launcher} -m src.train --config {config} --out {out} {extra}".strip())
+    run(f"{launcher} -m src.stage1.train --config {config} --out {out} {extra}".strip())
 
 
 def restore_previous_run(run_dir, name):

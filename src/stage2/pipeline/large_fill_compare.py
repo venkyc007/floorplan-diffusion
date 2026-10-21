@@ -1,7 +1,7 @@
 """Large omissions: compare the three large-hole fills (user, 2026-10-20). Kaggle CPU kernel.
 
     python -m src.stage2.pipeline.large_fill_compare --zip parser_val.zip [--limit N] [--mode both|manual|auto]
-        -> outputs/stage2/large_fill_compare.md / .csv / .png
+        -> outputs/stage2/history/large_fill_compare.md / .csv / .png
 
 Cases (all held-out val drawings, fixed order as in e2e_val, nothing picked by hand):
   batch 3   its 8 large-kind cases (4 room (whole), 4 region; e2e_val --batch 3, seed 22)

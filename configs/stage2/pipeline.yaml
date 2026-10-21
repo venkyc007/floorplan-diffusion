@@ -8,7 +8,7 @@ checkpoints:
   unet: outputs/kaggle/k2a/runs/k2a_unet/checkpoints/best.pt
   diffusion: outputs/kaggle/k1/runs/k1_constrained/checkpoints/best.pt
   diffusion_control: outputs/kaggle/k1/runs/k1_control/checkpoints/best.pt   # K1 control (ablation, final test)
-  stage1_unet: outputs/runs/unet_matched/checkpoints/best.pt    # frozen Stage 1 (configs/app.yaml): large-hole B2
+  stage1_unet: outputs/runs/unet_matched/checkpoints/best.pt    # frozen Stage 1 (configs/stage1/app.yaml): large-hole B2
   stage1_diffusion: outputs/kaggle/finetune_constraints/runs/finetune_constraints/checkpoints/best.pt
   b4_unet: outputs/kaggle/b4/runs/b4_unet/checkpoints/best.pt            # B4: 256 px large-hole fine-tune (2026-10-21)
   b4_diffusion: outputs/kaggle/b4/runs/b4_diffusion/checkpoints/best.pt

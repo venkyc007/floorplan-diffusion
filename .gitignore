@@ -2,21 +2,27 @@
 data/*
 !data/.gitkeep
 
-# Training outputs: checkpoints, logs, results — but keep the figures
-# directly in outputs/ (e.g. samples.png) so they can go in the report
+# Results: the tables and figures in outputs/stage1/ and outputs/stage2/ are committed (they go in the report).
+# Not committed: downloaded Kaggle outputs and checkpoints (outputs/kaggle/, outputs/runs/), prediction caches,
+# per-case score tables, and local-only screenshots / figures.
 outputs/*
 !outputs/.gitkeep
-!outputs/*.png
-!outputs/*.md
-# small run summaries for the report (no checkpoints: *.pt is ignored below)
-!outputs/unet_baseline/
-!outputs/diffusion_run1/
-!outputs/finetune_runs/
-!outputs/full_eval/
-!outputs/unet_matched/
-!outputs/arch_eval/
-!outputs/interface/
+!outputs/README.md
+!outputs/stage1/
 !outputs/stage2/
+outputs/stage1/arch_eval_test/
+outputs/stage1/baseline_results*.csv
+outputs/stage2/*.npz
+# local only (user decision, 2026-10-15/16): old app screenshots and the TA figures
+outputs/stage1/interface/01_start.png
+outputs/stage1/interface/02_gallery_*.png
+outputs/stage1/interface/03_gallery_*.png
+outputs/stage1/interface/04_gallery_*.png
+outputs/stage1/interface/05_gallery_*.png
+outputs/stage1/interface/06_gallery_*.png
+outputs/stage1/interface/07_generate_another.png
+outputs/stage1/interface/08_editor_drawn.png
+outputs/stage1/interface/hybrid_samples*.png
 
 # Model checkpoints / weights anywhere in the project
 *.pt

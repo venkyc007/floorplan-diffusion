@@ -10,7 +10,7 @@ every t <= 600). The same t0 for every hole (no size bins), so the rows compare 
 
 Scores inside each hole, averaged per hole (classes present in prediction or truth):
   strict mIoU
-  tolerant mIoU  wall / door / window / railing pixels match within 1 px (Stage 1 rule, src/eval/metrics.py)
+  tolerant mIoU  wall / door / window / railing pixels match within 1 px (Stage 1 rule, src/stage1/eval/metrics.py)
   validity       % of holes with no more violations than the ground truth window (Stage 1 rule, 16 classes:
                  the verifier's thresholded counts, sampler.violation_breakdown)
   violations     mean per hole, and split by type: walls C1-C5 / openings C9-C14 + C18 / spaces C6-C8 + R1 + R3 /

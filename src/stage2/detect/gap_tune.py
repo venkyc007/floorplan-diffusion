@@ -20,7 +20,7 @@ import yaml
 
 from src.stage2.constraints.rules import room_instances
 from src.stage2.data.classes16 import C16
-from src.stage2.detect.detection_eval import CHOICE, OUT, build_cases, hit
+from src.stage2.detect.detection_eval import CHOICE, OUT, build_cases, hit, write_choice
 from src.stage2.detect.gaps import gap_candidates
 from src.stage2.detect.rules import CONST, merge
 
@@ -69,7 +69,7 @@ def main():
         choice["extra_rules"] = sorted(set(choice.get("extra_rules", [])) | {"R5"})
         choice["gap_rule"] = {"open_rate": 0.10, "need_area": need, "small_other": small, "min_len": chosen[0],
                               "source": "gap_tune.py on the tuning plans; R5 alone <= 0.09 false alarms per intact plan"}
-        CHOICE.write_text(yaml.safe_dump(choice, sort_keys=False), encoding="utf-8")
+        write_choice(choice)
     else:
         L += ["", "No cut-off fits the budget: R5 stays OFF."]
     (OUT / "gap_rule.md").write_text("\n".join(L) + "\n", encoding="utf-8")

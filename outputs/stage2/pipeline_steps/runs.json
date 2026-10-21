@@ -1,0 +1,128 @@
+[
+ {
+  "tag": "00_doora_auto",
+  "kind": "door (a)",
+  "mode": "auto",
+  "plan_id": "high_quality_architectural-3546",
+  "score": {
+   "intact": false,
+   "found": true,
+   "right_type": true,
+   "fixed": true,
+   "fix_iou": 0.429,
+   "false_adds": 3,
+   "tol_before": 35.6,
+   "tol_after": 47.4,
+   "valid_before": false,
+   "valid_after": false
+  },
+  "messages": [
+   "kitchen had no door -> door added on the kitchen / other_room wall",
+   "window symbol missing in the drawing -> added",
+   "door symbol missing in the drawing -> added"
+  ],
+  "timings": {
+   "parse": 7.3,
+   "detect": 3.2,
+   "fill": 19.0
+  }
+ },
+ {
+  "tag": "04_window_auto",
+  "kind": "window",
+  "mode": "auto",
+  "plan_id": "high_quality_architectural-4900",
+  "score": {
+   "intact": false,
+   "found": true,
+   "right_type": true,
+   "fixed": true,
+   "fix_iou": 0.845,
+   "false_adds": 0,
+   "tol_before": 85.6,
+   "tol_after": 85.6,
+   "valid_before": false,
+   "valid_after": false
+  },
+  "messages": [
+   "window symbol missing in the drawing -> added"
+  ],
+  "timings": {
+   "parse": 0.7,
+   "detect": 1.7,
+   "fill": 0.0
+  }
+ },
+ {
+  "tag": "12_roomwhole_auto",
+  "kind": "room (whole)",
+  "mode": "auto",
+  "plan_id": "high_quality_architectural-8299",
+  "score": {
+   "intact": false,
+   "found": true,
+   "right_type": false,
+   "fixed": false,
+   "fix_iou": 0.0,
+   "false_adds": 0,
+   "tol_before": 17.9,
+   "tol_after": 24.3,
+   "valid_before": false,
+   "valid_after": false
+  },
+  "messages": [
+   "door added on the kitchen / outdoor wall"
+  ],
+  "timings": {
+   "parse": 0.6,
+   "detect": 1.3,
+   "fill": 16.9
+  }
+ },
+ {
+  "tag": "12_roomwhole_manual",
+  "kind": "room (whole)",
+  "mode": "manual",
+  "plan_id": "high_quality_architectural-8299",
+  "score": {
+   "intact": false,
+   "found": true,
+   "right_type": false,
+   "fixed": false,
+   "fix_iou": 0.027,
+   "false_adds": 1,
+   "tol_before": 17.9,
+   "tol_after": 18.1,
+   "valid_before": false,
+   "valid_after": false
+  },
+  "messages": [
+   "wall added next to kitchen",
+   "window added on the kitchen wall",
+   "appliance added in kitchen"
+  ],
+  "timings": {
+   "parse": 0.5,
+   "detect": 0.0,
+   "fill": 16.6
+  }
+ },
+ {
+  "tag": "16_intact_auto",
+  "kind": "intact",
+  "mode": "auto",
+  "plan_id": "high_quality_architectural-9491",
+  "score": {
+   "intact": true,
+   "false_adds": 1
+  },
+  "messages": [
+   "wall added next to living"
+  ],
+  "timings": {
+   "parse": 1.1,
+   "detect": 2.8,
+   "fill": 16.0
+  }
+ }
+]

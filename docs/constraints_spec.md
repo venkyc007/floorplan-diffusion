@@ -38,7 +38,7 @@ Written for Claude Code to implement. Save as `docs/constraints_spec.md`.
 
 Write the constants to `configs/constraint_constants.yaml`, with the percentile used for each.
 
-**Operators** (`src/models/constraint_ops.py`; all differentiable, all built on `max_pool2d`, whose padding acts like −inf, so there are no border artefacts)
+**Operators** (`src/stage1/models/constraint_ops.py`; all differentiable, all built on `max_pool2d`, whose padding acts like −inf, so there are no border artefacts)
 - `shift(X, dy, dx)`: translate with zero padding.
 - `dil(X, k)` = max_pool2d(X, k, stride 1, pad k//2) (soft dilation)
 - `ero(X, k)` = −dil(−X, k) (soft erosion)

@@ -10,8 +10,8 @@ label: completion-scale 16-class map (walls 3 px); hole: bool mask (same shape) 
                on the 16 x 16 maps at 128 px and on proportionally larger maps here (global attention, any size).
   B2 "coarse"  Stage 1 first: the plan is mapped 16 -> 6 classes (wall, door, window, room = room types + fixtures,
                outdoor, background; railing -> wall) and framed as in Stage 1 (structure box long side 120 px,
-               4 px margin, centred in 128 x 128); the frozen Stage 1 size-adaptive hybrid (configs/app.yaml settings,
-               src/interface/inference.Repairer) redraws the hole; its layout is mapped back to completion scale
+               4 px margin, centred in 128 x 128); the frozen Stage 1 size-adaptive hybrid (configs/stage1/app.yaml settings,
+               src/stage1/interface/inference.Repairer) redraws the hole; its layout is mapped back to completion scale
                (nearest). Inside the hole this layout is the sketch: wall / door / window / outdoor / background
                as drawn, room pixels take the 16-class U-Net's room type / fixture there (else the most common
                room type the U-Net drew in the hole). Then the 16-class hybrid refines it at a LOW t0 (t0_refine,
@@ -42,6 +42,7 @@ I = C16.index
 ROOMS = C16.group("S")
 FIX = C16.group("F")
 CTX = 32
+MAX_BIG = 384          # largest "big" window (px); val large holes need <= 320. Larger boxes are tiled.
 TILE, STRIDE = 128, 96
 
 
@@ -179,9 +180,9 @@ FROM6 = np.array([I["wall"], I["door"], I["window"], 255, I["outdoor"], I["backg
 
 @lru_cache(maxsize=None)
 def stage1_repairer():
-    """The frozen Stage 1 size-adaptive hybrid (configs/app.yaml sampling); checkpoints from
+    """The frozen Stage 1 size-adaptive hybrid (configs/stage1/app.yaml sampling); checkpoints from
     configs/stage2/pipeline.yaml checkpoints.stage1_unet / stage1_diffusion."""
-    from src.interface.inference import Repairer, load_config
+    from src.stage1.interface.inference import Repairer, load_config
     from src.stage2.pipeline.run import cfg as pcfg
     acfg = load_config()
     c = pcfg()["checkpoints"]
@@ -242,6 +243,9 @@ def region_restrict(before, after, hole):
 
 def fill_large(label, hole, strategy, fc, fast=None, generator=None, t0_refine=150):
     t = time.time()
+    if strategy == "big" and big_window(hole)[2] > MAX_BIG:
+        strategy = "tiled"          # B4 was trained on 256 px windows; a huge box would be far outside that and
+                                    # can exhaust CPU memory (attention) -> tiles of 128 instead (audit FV9)
     if strategy == "big":
         new, info = fill_big(label, hole, fc, fast, generator)
     elif strategy == "coarse":

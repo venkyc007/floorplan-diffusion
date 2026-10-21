@@ -1,0 +1,43 @@
+# Settings of the Gradio interface (app/app.py).
+# The model and sampling settings below are FROZEN: they are the ones chosen
+# on the val benchmark in the Day 7 selection (outputs/stage1/selection.md). Do not
+# tune them on what you see in the app.
+
+checkpoints:
+  # matched-sample U-Net (Day 6): used alone and as the sketch of the hybrids
+  unet_matched: outputs/runs/unet_matched/checkpoints/best.pt
+  # diffusion with structural constraints (Day 5 fine-tune): finishes the hybrids, and "refine-600"
+  diffusion: outputs/kaggle/finetune_constraints/runs/finetune_constraints/checkpoints/best.pt
+
+sampling:
+  ddim_steps: 50            # DDIM schedule over the 1,000 noise levels; only the steps at or below t0 are run
+  # eta = 1 (stochastic DDIM) and the known-region reset are built into src.stage1.sampling_experiment.refine
+  size_adaptive_t0:         # re-noising level per hole size (mask area as % of the building)
+    small: 400
+    medium: 600
+    large: 700
+  hybrid_t0: 600            # the single-setting hybrid
+  refine_t0: 600            # pure diffusion: refine from its own one-shot prediction
+
+methods:                    # dropdown order; the first one is the default
+  - size_adaptive_hybrid
+  - hybrid_600
+  - unet_matched
+  - diffusion_refine600
+  - nearest_fill
+
+gallery: data/app/val_gallery.npz   # 24 val cases, made by: python -m src.stage1.interface.make_gallery
+gallery_per_size_bin: 8
+
+upload:
+  max_side_px: 4096         # larger images are refused
+  max_off_palette_pct: 10   # refuse a PNG if more than this % of pixels is far from every class colour
+  off_palette_distance: 60  # RGB distance that counts as "far from a class colour"
+  unknown_distance: 12      # pixels this close to the grey "unknown" colour become unknown (must be masked)
+  min_wall_px: 100          # a usable plan needs at least this many wall pixels after framing
+  keep_frame_long_side: [112, 124]   # a 128x128 input whose structure already spans this many px is not re-framed
+
+display_scale: 4            # plans are shown at 128 x 4 = 512 px
+mask_coverage: 0.25         # a 128-px pixel is masked if at least this share of its 4x4 screen block is brushed
+suggest_padding_px: 4       # padding around each suggested suspicious area
+server_port: 7860

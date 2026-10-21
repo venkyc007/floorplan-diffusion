@@ -1,14 +1,15 @@
 min_blob: 20
-source: 'detection_eval.py: best mean recall with <= 0.5 false alarms per intact val
-  plan (300 val plans)'
+source: 'check_tune.py tuning v10 on the parsed TUNING drawings (outputs/stage2/check_tune.md):
+  detector v2 threshold / min blob; strong_rules is a leftover of detection_eval.py (label-level, not used by the
+  pipeline)'
 strong_rules:
 - C8
 - C17
 - C6
 - C12
 threshold: 0.6
-final: detector + C8 + R5 + door ink + R6 + R7 + window / wall ink + R8; budget 0.4
-  (rules first, detector after)
+final: detectors v2 + v3 + C8 + R5 + door ink + R6 + window ink + R8 (fixture mix only); R7 and
+  wall ink off; budget 0.4 false alarms per intact tuning drawing (rules first, detector after)
 extra_rules:
 - C8
 - R5

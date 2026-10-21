@@ -9,8 +9,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def load_config(name):
-    """Read configs/<name>.yaml and return it as a Python dictionary."""
-    with open(PROJECT_ROOT / "configs" / f"{name}.yaml") as f:
+    """Read configs/<name>.yaml (e.g. name = "stage1/data") and return it as a Python dictionary."""
+    with open(PROJECT_ROOT / "configs" / f"{name}.yaml", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
