@@ -12,7 +12,7 @@ saved as it finishes, so a cut-off run resumes. Results go to `/kaggle/working/f
    method** (B4 + big window). Tolerant mIoU, validity, violations per hole, fixed.
 2. **CHECK** on test drawings: 60 intact (false alarms per drawing) + 120 with one size-balanced omission: found / right
    type, by type, location, position and size bin.
-3. **End to end** on 60 more test drawings: found, fixed, false additions, tolerant mIoU and validity in the omission
+3. **End to end** on 120 more test drawings: found, fixed, false additions, tolerant mIoU and validity in the omission
    region, seconds per drawing, by the same four fields.
 
 Sampling uses the **validated fast settings** (N = 2, 15 DDIM steps from t₀), the ones every val number was measured

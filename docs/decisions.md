@@ -1010,3 +1010,16 @@ assessment), the final test fully prepared but NOT run, and a new Gradio app wit
   not the model. **Decision by the pre-set rule: no fix** (neither >= 5 points nor >= 3 holes lost in A). The scale
   mismatch costs the fill at most ~2 points; it does not explain why B4's val gain did not carry over to real
   drawings (the noisier parse remains the likely cause). Documented in docs/results.md.
+
+## 2026-10-22 night: the Stage 2 test run (user approved, overnight)
+
+- End-to-end test cases 60 -> 120 (`configs/stage2/test_eval.yaml` n_e2e): the user asked whether the test set could
+  be larger; erasing several parts of the same drawing would give correlated cases, so instead more of the unused test
+  drawings are taken (300 of ~370 typed test drawings now: 60 intact + 120 CHECK + 120 end to end, each drawing used
+  once). Decided before the run; nothing in the test protocol depends on test results. About +20 GPU minutes.
+- Notebook: input folders of floorplan-stage2-final that Kaggle may keep zipped (uploaded with -r zip) are unpacked
+  to /tmp/s2final and searched too.
+- Order (one background job on the laptop): upload the code version (this commit) -> create floorplan-stage2-final
+  (1.6 GB) -> the notebook with SMOKE = True (VAL split, 2 cases per section) -> only if it ran with 0 errors and
+  exit codes 0: the real run (SMOKE = False) -> download to outputs/kaggle/final_test, report to
+  outputs/stage2/final_test.md. Log: outputs/kaggle/final_test_job.log.
