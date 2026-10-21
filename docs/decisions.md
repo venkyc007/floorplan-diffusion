@@ -857,3 +857,21 @@ Own choices:
   skipping living / hallway: finds 50% of whole rooms, 35% of regions); the rules get <= 0.25, so the choice keeps
   R8 = fixture mix only (+1.1 points for +0.05). Chosen CHECK: detectors v2 0.6 / 20 + v3 0.5 / 20, C8 >= 700,
   R5 on, door ink 1.5, R6 x1.5, window ink 0.08 / 0.02, R8 mix: 0.30 FA, 71% mean recall on tuning.
+- B4 finished (kernel floorplan-stage2-b4 v1, 00:57 -> ~02:39, 1.68 h on the clock, ~3.4 GPU h; both runs stopped
+  themselves at their 1.62 / 1.65 h budget, the watchdog was not needed). U-Net: 4,685 steps, in-training val hole
+  mIoU 0.41 -> 0.45 (64 mixed 256 px windows). Diffusion: 4,544 steps, in-training val 0.24 flat (that metric samples
+  from pure noise in 20 steps, not the hybrid the pipeline uses; the decision comes from b4_val). Checkpoints
+  downloaded to outputs/kaggle/b4/runs/b4_{unet,diffusion}/checkpoints/ (git-ignored); the current ones untouched.
+  Validation + comparison v2 + batch 2 check: kernel floorplan-stage2-b4-val v1 (CPU), launched 10:43.
+- B4 results (kernel floorplan-stage2-b4-val v1, CPU; outputs/stage2/b4_val.md, large_fill_compare_v2*.md / .png,
+  e2e_val_batch2_b4.md):
+  - Val, hole given, 30 large windows: B4 + B1 big window fixed 29 / 30, tolerant mIoU 49.3, valid 47%, vs current
+    models B1 26 / 41.9 / 30% and B3 22 / 38.1 / 37%. 30 small windows: B4 25 / 68.5 / 67% vs current 25 / 69.2 / 63%
+    -> by the user's rule small holes stay on the current models (B4 lower in tolerant mIoU).
+  - Set: fill.large_models = b4, fill.large_strategy = big (own choice: the strategy B4 was validated with on val).
+  - The 20 drawings (manual): B1 fixed 5 -> 6 / 20, tolerant mIoU 34.5 -> 32.1 (B3 33.9 -> 33.3): little change on
+    real drawings (the parse around the box is noisier than training context). Auto: region flag 0 / 20 (R8 = mix).
+  - Batch 2 small-hole check: fixed 8 / 12 both, false adds 5 both, tolerant mIoU 74.5 -> 74.4; found 8 -> 9; validity
+    25% -> 17% (one drawing, #9, from the re-tuned CHECK; small holes still use the current models).
+- GPU used this week (estimate): ~3.4 h by B4; about 0.9 GPU h left until the Saturday reset (estimate; the Kaggle
+  settings page has the exact figure).

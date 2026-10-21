@@ -1,0 +1,151 @@
+size,case,kind,hole_px,arm,tol,valid,fix_iou,fixed,seconds
+large,0,region_large,3477,"current, B1 big window",31.7,False,0.795,True,19.1
+large,0,region_large,3477,"current, B3 tiled",35.4,False,0.795,True,18.6
+large,0,region_large,3477,"B4, B1 big window",43.0,False,0.848,True,18.4
+large,1,room_whole,2684,"current, B1 big window",33.6,True,0.507,True,18.7
+large,1,room_whole,2684,"current, B3 tiled",36.3,True,0.491,True,18.8
+large,1,room_whole,2684,"B4, B1 big window",40.8,True,0.52,True,18.6
+large,2,region_large,4928,"current, B1 big window",28.4,False,0.717,True,29.9
+large,2,region_large,4928,"current, B3 tiled",28.0,False,0.799,True,19.0
+large,2,region_large,4928,"B4, B1 big window",69.5,True,0.771,True,29.8
+large,3,region_large,1748,"current, B1 big window",52.4,False,0.777,True,18.9
+large,3,region_large,1748,"current, B3 tiled",52.5,True,0.755,True,19.0
+large,3,region_large,1748,"B4, B1 big window",57.7,True,0.784,True,19.1
+large,4,room_whole,11256,"current, B1 big window",21.0,False,0.236,False,61.1
+large,4,room_whole,11256,"current, B3 tiled",22.9,False,0.188,False,37.2
+large,4,room_whole,11256,"B4, B1 big window",33.0,False,0.344,True,61.6
+large,5,room_whole,2337,"current, B1 big window",23.3,False,0.473,True,18.8
+large,5,room_whole,2337,"current, B3 tiled",29.1,False,0.495,True,18.7
+large,5,room_whole,2337,"B4, B1 big window",34.4,False,0.552,True,18.7
+large,6,room_whole,12636,"current, B1 big window",33.6,False,0.465,True,45.6
+large,6,room_whole,12636,"current, B3 tiled",21.7,False,0.318,True,74.6
+large,6,room_whole,12636,"B4, B1 big window",33.6,False,0.418,True,45.9
+large,7,room_whole,7081,"current, B1 big window",38.2,False,0.424,True,45.9
+large,7,room_whole,7081,"current, B3 tiled",19.5,False,0.302,True,37.0
+large,7,room_whole,7081,"B4, B1 big window",49.4,False,0.5,True,45.8
+large,8,region_large,2193,"current, B1 big window",71.2,True,1.0,True,18.7
+large,8,region_large,2193,"current, B3 tiled",79.0,True,1.0,True,20.1
+large,8,region_large,2193,"B4, B1 big window",71.4,True,1.0,True,19.1
+large,9,region_large,7560,"current, B1 big window",29.1,False,0.507,True,46.0
+large,9,region_large,7560,"current, B3 tiled",20.7,False,0.198,False,37.2
+large,9,region_large,7560,"B4, B1 big window",33.2,False,0.608,True,46.5
+large,10,region_large,3168,"current, B1 big window",58.0,True,0.349,True,29.8
+large,10,region_large,3168,"current, B3 tiled",55.5,True,0.376,True,18.7
+large,10,region_large,3168,"B4, B1 big window",53.1,True,0.356,True,29.2
+large,11,region_large,15351,"current, B1 big window",23.5,False,0.385,True,62.4
+large,11,region_large,15351,"current, B3 tiled",17.9,False,0.114,False,74.7
+large,11,region_large,15351,"B4, B1 big window",33.8,False,0.602,True,61.5
+large,12,region_large,9072,"current, B1 big window",16.8,False,0.23,False,46.3
+large,12,region_large,9072,"current, B3 tiled",10.3,True,0.113,False,37.3
+large,12,region_large,9072,"B4, B1 big window",32.7,True,0.666,True,46.1
+large,13,room_whole,1924,"current, B1 big window",31.0,True,0.665,True,18.7
+large,13,room_whole,1924,"current, B3 tiled",35.1,True,0.698,True,19.0
+large,13,room_whole,1924,"B4, B1 big window",33.2,True,0.703,True,19.0
+large,14,region_large,7840,"current, B1 big window",23.3,False,0.369,True,47.4
+large,14,region_large,7840,"current, B3 tiled",21.7,False,0.272,False,37.6
+large,14,region_large,7840,"B4, B1 big window",49.4,False,0.342,True,46.8
+large,15,room_whole,5568,"current, B1 big window",75.7,True,0.462,True,29.4
+large,15,room_whole,5568,"current, B3 tiled",55.8,False,0.56,True,18.5
+large,15,room_whole,5568,"B4, B1 big window",81.6,True,0.664,True,29.1
+large,16,room_whole,6106,"current, B1 big window",56.8,True,0.463,True,29.4
+large,16,room_whole,6106,"current, B3 tiled",52.2,False,0.484,True,19.6
+large,16,room_whole,6106,"B4, B1 big window",46.6,False,0.515,True,29.5
+large,17,region_large,3819,"current, B1 big window",100.0,True,1.0,True,29.1
+large,17,region_large,3819,"current, B3 tiled",100.0,True,1.0,True,18.5
+large,17,region_large,3819,"B4, B1 big window",100.0,True,1.0,True,29.3
+large,18,region_large,7298,"current, B1 big window",22.1,False,0.448,True,29.4
+large,18,region_large,7298,"current, B3 tiled",16.3,False,0.406,True,18.6
+large,18,region_large,7298,"B4, B1 big window",18.8,False,0.394,True,29.4
+large,19,region_large,4836,"current, B1 big window",26.4,False,0.445,True,29.3
+large,19,region_large,4836,"current, B3 tiled",29.1,False,0.454,True,19.1
+large,19,region_large,4836,"B4, B1 big window",38.4,False,0.588,True,29.5
+large,20,room_whole,3234,"current, B1 big window",46.0,False,0.587,True,30.0
+large,20,room_whole,3234,"current, B3 tiled",54.4,False,0.594,True,18.7
+large,20,room_whole,3234,"B4, B1 big window",63.2,False,0.656,True,29.5
+large,21,room_whole,2193,"current, B1 big window",59.2,True,0.542,True,18.7
+large,21,room_whole,2193,"current, B3 tiled",57.2,True,0.557,True,18.8
+large,21,room_whole,2193,"B4, B1 big window",60.4,True,0.519,True,19.4
+large,22,region_large,12987,"current, B1 big window",38.7,False,0.818,True,46.1
+large,22,region_large,12987,"current, B3 tiled",14.6,False,0.151,False,74.6
+large,22,region_large,12987,"B4, B1 big window",49.7,False,0.708,True,46.0
+large,23,room_whole,1785,"current, B1 big window",51.2,False,0.756,True,18.8
+large,23,room_whole,1785,"current, B3 tiled",46.1,True,0.756,True,18.7
+large,23,room_whole,1785,"B4, B1 big window",45.8,False,0.698,True,18.6
+large,24,region_large,10700,"current, B1 big window",36.9,False,0.397,True,45.9
+large,24,region_large,10700,"current, B3 tiled",18.5,True,0.176,False,74.1
+large,24,region_large,10700,"B4, B1 big window",40.8,True,0.47,True,45.9
+large,25,region_large,7448,"current, B1 big window",29.1,False,0.115,False,46.0
+large,25,region_large,7448,"current, B3 tiled",12.1,False,0.055,False,37.6
+large,25,region_large,7448,"B4, B1 big window",47.1,True,0.14,False,47.0
+large,26,region_large,14317,"current, B1 big window",26.9,False,0.395,True,61.8
+large,26,region_large,14317,"current, B3 tiled",21.2,False,0.477,True,78.1
+large,26,region_large,14317,"B4, B1 big window",45.7,True,0.562,True,64.2
+large,27,region_large,2279,"current, B1 big window",62.9,True,0.746,True,19.9
+large,27,region_large,2279,"current, B3 tiled",57.8,True,0.858,True,18.9
+large,27,region_large,2279,"B4, B1 big window",50.8,True,0.737,True,18.9
+large,28,room_whole,3886,"current, B1 big window",33.3,False,0.246,False,29.6
+large,28,room_whole,3886,"current, B3 tiled",45.2,False,0.32,True,18.7
+large,28,room_whole,3886,"B4, B1 big window",45.7,False,0.377,True,29.6
+large,29,region_large,1170,"current, B1 big window",76.2,False,0.68,True,18.7
+large,29,region_large,1170,"current, B3 tiled",78.3,False,0.768,True,18.6
+large,29,region_large,1170,"B4, B1 big window",76.2,False,0.68,True,18.7
+small,0,railing,2068,current,90.0,True,0.396,True,18.8
+small,0,railing,2068,B4,85.6,True,0.28,False,18.8
+small,1,window,1440,current,94.7,False,0.936,True,19.5
+small,1,window,1440,B4,88.8,False,0.825,True,19.1
+small,2,wall,187,current,81.3,True,0.923,True,18.8
+small,2,wall,187,B4,81.3,True,0.923,True,19.1
+small,3,railing,1849,current,17.2,True,0.0,False,18.9
+small,3,railing,1849,B4,18.8,True,0.0,False,18.7
+small,4,region,280,current,100.0,True,1.0,True,19.6
+small,4,region,280,B4,100.0,True,0.917,True,19.2
+small,5,window,612,current,83.5,True,0.903,True,18.8
+small,5,window,612,B4,80.0,True,0.871,True,19.1
+small,6,railing,550,current,98.6,False,0.947,True,18.7
+small,6,railing,550,B4,100.0,True,0.957,True,18.9
+small,7,room,1404,current,52.9,False,0.802,True,19.0
+small,7,room,1404,B4,50.2,True,0.828,True,19.1
+small,8,railing,600,current,81.4,True,0.465,True,19.1
+small,8,railing,600,B4,85.9,True,0.488,True,19.7
+small,9,railing,2703,current,14.5,False,0.0,False,19.0
+small,9,railing,2703,B4,10.9,False,0.0,False,18.6
+small,10,room,4455,current,41.7,True,0.758,True,19.4
+small,10,room,4455,B4,39.4,False,0.787,True,19.6
+small,11,window,544,current,100.0,True,0.931,True,19.2
+small,11,window,544,B4,92.0,True,0.862,True,18.8
+small,12,railing,610,current,100.0,True,1.0,True,19.0
+small,12,railing,610,B4,96.8,True,0.889,True,18.9
+small,13,window,496,current,95.0,False,1.0,True,18.7
+small,13,window,496,B4,87.0,False,0.958,True,19.8
+small,14,fixture,247,current,32.3,False,0.139,False,19.0
+small,14,fixture,247,B4,27.8,False,0.0,False,18.9
+small,15,railing,363,current,100.0,True,1.0,True,18.9
+small,15,railing,363,B4,99.7,True,0.974,True,18.9
+small,16,region,912,current,46.4,False,0.555,True,18.7
+small,16,region,912,B4,87.6,True,0.716,True,19.0
+small,17,window,204,current,89.2,True,0.667,True,18.9
+small,17,window,204,B4,89.2,True,0.667,True,18.7
+small,18,room,3136,current,21.4,False,0.589,True,18.8
+small,18,room,3136,B4,13.9,False,0.533,True,18.7
+small,19,region,1092,current,61.8,False,0.699,True,18.5
+small,19,region,1092,B4,63.2,True,0.718,True,19.2
+small,20,door,702,current,55.9,False,0.245,False,19.1
+small,20,door,702,B4,54.5,False,0.356,True,18.7
+small,21,window,190,current,79.9,True,0.0,False,18.7
+small,21,window,190,B4,75.7,True,0.0,False,18.8
+small,22,room,8393,current,36.6,True,0.588,True,18.7
+small,22,room,8393,B4,35.8,False,0.601,True,18.8
+small,23,wall,182,current,100.0,True,0.929,True,19.1
+small,23,wall,182,B4,100.0,True,0.929,True,18.6
+small,24,room,1763,current,63.8,True,0.435,True,18.7
+small,24,room,1763,B4,64.4,True,0.483,True,18.7
+small,25,door,264,current,96.0,True,0.706,True,18.9
+small,25,door,264,B4,96.0,True,0.75,True,18.7
+small,26,room,3717,current,33.3,True,0.53,True,19.1
+small,26,room,3717,B4,28.8,True,0.5,True,18.9
+small,27,fixture,288,current,78.3,False,0.593,True,18.6
+small,27,fixture,288,B4,73.0,False,0.528,True,18.6
+small,28,room,1260,current,75.4,True,0.707,True,18.8
+small,28,room,1260,B4,75.5,True,0.739,True,18.6
+small,29,room,2205,current,55.2,True,0.721,True,18.7
+small,29,room,2205,B4,53.8,False,0.754,True,18.7

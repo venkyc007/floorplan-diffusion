@@ -34,10 +34,10 @@ fill:
   sketch_prior: true                   # type-guided fill: missing component painted into the U-Net sketch (user, 2026-10-19)
   max_hole: 100                        # holes larger than this (px, either side) are cut to it, except region-missing
                                        # flags and large manual boxes: those go to the large-hole fill
-  large_strategy: tiled                # big / coarse / tiled (src/stage2/complete/large_fill.py); provisional until
-                                       # the comparison (outputs/stage2/large_fill_compare.md)
+  large_strategy: big                  # big / coarse / tiled (src/stage2/complete/large_fill.py): B1 with the B4 models
+                                       # (validated in outputs/stage2/b4_val.md, large_fill_compare_v2.md; 2026-10-21)
   t0_refine: 150                       # coarse: t0 of the 16-class refinement of the Stage 1 layout
-  large_models: current                # current / b4: the models used for large holes (B4 when validated, user 2026-10-21)
+  large_models: b4                     # current / b4: large holes -> B4 (val: +7 tol. mIoU); small holes stay on the current models
   seed: 0
 
 fast:                                  # live-app settings on the CPU (evaluation numbers use `fill`)
