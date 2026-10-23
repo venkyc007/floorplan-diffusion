@@ -15,7 +15,7 @@ structural (architectural) constraints**, in two stages:
 | classes | 6: wall, door, window, room, outdoor, background | 16: wall, door, window, railing, 6 room types, outdoor, background, 4 fixture types |
 | task | redraw the masked region | **find** what is missing, then draw it |
 | method | U-Net sketch → re-noised to t₀ → constraint-fine-tuned diffusion (size-adaptive t₀) | PARSE → CHECK → FILL → VERIFY (segmentation network, rules + learned detectors, 16-class hybrid diffusion, best-of-N verifier) |
-| result | **test** (run once): tolerant mIoU 0.846, architectural validity 88.0%, connectivity error 0.011 | see [Results](#results-at-a-glance); test notebook prepared, run once at the end |
+| result | **test** (run once): tolerant mIoU 0.846, architectural validity 88.0%, connectivity error 0.011 | **test** (run once): diffusion finish 18% → 52% valid fills; end to end 66% of omissions found, 12% fixed, 0.85 false additions per drawing |
 
 Both stages run in one **Gradio app** (`python app/app.py`): Stage 1 with a mouse-drawn or random mask, Stage 2
 with the intermediate steps (parsed map, what was flagged, the filled plan, additions in red on the drawing) and a
@@ -56,20 +56,23 @@ of each number, and the honest weak spots.
 The hybrid gives up 0.4 points of pixel accuracy for clearly more plausible structure (paired bootstrap on test:
 validity +7.1 points, connectivity error −0.074, both significant).
 
-**Stage 2 — real CubiCasa5K drawings, VALIDATION** (the one-shot test run is the project's last step:
-`docs/final_test_notebook.md`)
+**Stage 2 — real CubiCasa5K drawings, TEST set (run once, 2026-10-22)** — `outputs/stage2/final_test.md`
 
-| step | what is measured | result (val) | file |
+| step | what is measured (test) | result | val, for comparison |
 |---|---|---|---|
-| PARSE | 16-class mIoU on 159 held-out drawings; door / window component F1 | 70.1; 79.5 / 77.3 | `outputs/stage2/parser_v2.md` |
-| CHECK | omissions found / false alarms per intact drawing (held-out, nearest config) | 60% / 0.59 | `outputs/stage2/detection_eval.md` |
-| FILL (hole given) | small holes: tolerant mIoU, fixed; large holes (B4) | 69.2, 25/30; 49.3, 29/30 | `outputs/stage2/b4_val.md` |
-| END TO END | 12 fresh drawings, one small omission each: found / fixed / false additions | 9 / 8 / 5 | `outputs/stage2/e2e_val_batch2_b4.md` |
+| FILL, hole given (120 holes) | structurally valid fills: U-Net sketch → + diffusion finish | **18% → 52%** (violations per hole 23.5 → 6.8; tolerant mIoU 61.5 → 62.1) | 27% → 77% (30 holes, `t0_sweep.md`) |
+| FILL, large holes (40) | tolerant mIoU / valid: 128-px model → shipped B4 model | 49.8 / 32% → **55.4 / 45%** | 41.9 / 30% → 49.3 / 47% (`b4_val.md`) |
+| constraint ablation (120 holes) | constrained − control diffusion, tolerant mIoU [95% CI] | −0.3 [−1.6, +1.0]: no measurable effect | Stage 1: 0.751 vs 0.751 |
+| CHECK (180 drawings) | omissions found (right type) / false alarms per intact drawing | 70% (36%) / 0.80 | 60% / 0.59 (held-out) |
+| END TO END (120 drawings, size-balanced) | found / fixed / false additions per drawing | 66% / **12%** / 0.85 | 9 / 8 / 5 of 12 (small omissions) |
+| END TO END, component-level omissions only (all 371 test drawings, second evaluation) | found / fixed (any source) / fixed by the fill / false additions | 62% / **41%** [36, 46] / 22% / 0.92 | |
+| PARSE (val only) | 16-class mIoU; door / window component F1 | — | 70.1; 79.5 / 77.3 (`parser_v2.md`) |
 
-Weak spots, stated plainly: false alarms roughly double from tuning to held-out drawings; large omissions (a whole
-room) are not detected automatically (manual mode only); many "fixed" omissions are symbols the parser redrew,
-not the fill; the constraint losses give no measurable gain in Stage 1 and a small one in Stage 2. Details:
-`docs/results.md`.
+What the test shows: the diffusion finish reliably makes fills structurally valid and the large-hole models help;
+the constraint losses themselves add nothing measurable; and the automatic find-and-fix pipeline rarely completes an
+unseen drawing (12% fixed, 0.85 false additions), so the dependable use is manual mode, where the user marks the
+region and only PARSE + FILL run. The validation end-to-end batches were small and optimistic. Details, with every
+breakdown by type, location, position and size: `docs/results.md`.
 
 ## Repository map
 
@@ -135,8 +138,8 @@ Runs on a CPU (about 1–2 minutes per drawing on a laptop) or a GPU (`STAGE2_DE
 
 Checkpoints are not in git (1.6 GB). They are the outputs of the Kaggle kernels in `kaggle/kernels/` and are
 bundled, with the offline install files, in the Kaggle dataset `venkatesh007c/floorplan-stage2-final`
-(`python -m src.stage2.package_final` builds it; it is uploaded together with the final test run and shared with
-the instructor and TAs). To use them, download the dataset and copy its `checkpoints/` folder into the project
+(`python -m src.stage2.package_final` builds it; uploaded 2026-10-22, private: share it with the instructor and TAs
+or make it public, and put its link in the report). To use them, download the dataset and copy its `checkpoints/` folder into the project
 folder: every file lands at the path the code expects. Paths expected by the code:
 
 | model | config | checkpoint path (local) |

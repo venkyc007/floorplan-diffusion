@@ -1,5 +1,8 @@
 # Stage 2 final test: the one-shot run on the CubiCasa test split
 
+**Status: DONE, run once on 2026-10-22** (code `7581cb2`, kernel `floorplan-stage2-final-test` v2, all 420 cases,
+0 errors). Result: `outputs/stage2/final_test.md`; summary `docs/results.md` §0. Do not run it again.
+
 The final Stage 2 test runs **once**, as the Kaggle notebook `kaggle/notebooks/stage2_final_test/stage2_final_test.ipynb`
 (T4 × 2, no internet, no API token). It is the last step of the project: nothing may be tuned after it. Every case is
 saved as it finishes, so a cut-off run resumes. Results go to `/kaggle/working/final_test/`.

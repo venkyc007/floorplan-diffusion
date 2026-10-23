@@ -1023,3 +1023,36 @@ assessment), the final test fully prepared but NOT run, and a new Gradio app wit
   (1.6 GB) -> the notebook with SMOKE = True (VAL split, 2 cases per section) -> only if it ran with 0 errors and
   exit codes 0: the real run (SMOKE = False) -> download to outputs/kaggle/final_test, report to
   outputs/stage2/final_test.md. Log: outputs/kaggle/final_test_job.log.
+- **Done** (job log `outputs/kaggle/final_test_job.log`): code version 7581cb2 uploaded 03:33; floorplan-stage2-final
+  (1.6 GB, private) created 03:41; smoke on VAL clean (6 fill / 4 detect / 2 e2e cases, 0 errors) 05:00; the TEST run
+  (kernel floorplan-stage2-final-test v2, 2 x T4, exit codes 0, 0) complete 05:29: all 420 cases, 0 errors, 2 s per
+  end-to-end drawing. GPU used by smoke + test: 0.53 h (4.52 h left). Report: `outputs/stage2/final_test.md`;
+  summary in docs/results.md section 0. Run once; never again.
+- Test findings, recorded as they are: the diffusion finish makes fills valid (18% -> 52%) at equal accuracy; B4
+  helps large holes (+5.6 tolerant mIoU); the constraint ablation shows no measurable effect (-0.3 [-1.6, +1.0]);
+  CHECK false alarms 0.80 per intact drawing and right type 36%; end to end 66% found, 12% fixed, 0.85 false
+  additions per drawing - well below the small val batches.
+
+## 2026-10-22: second Stage 2 test evaluation - component-level omissions, all test drawings (user decision)
+
+- User request after the one-shot test: "rerun the test on Kaggle for component level omission only and end to end
+  pipeline only ... use all samples from the test set". The rule "Stage 2 test once" is relaxed by the user for this
+  one, clearly labelled second evaluation; it is legitimate because nothing in the frozen pipeline changed between the
+  runs (no setting was chosen on test results), but it was designed after seeing the first result and must be
+  reported that way.
+- Own choices: `src/stage2/test_components.py` + notebook `kaggle/notebooks/stage2_test_components` (kernel
+  floorplan-stage2-test-components, T4 x 2, same inputs and offline installs as the final test). Every typed test
+  drawing in a fixed random order (seed 2027), one omission each; kinds rotate over the seven component kinds
+  (door (a), door (b), window, wall, railing, fixture, room = a room's walls/doors), falling back to the next kind
+  if the drawing has none; erasure image_eval.omit (seed 2027 + i); run_pipeline with the validated fast settings;
+  scores e2e_val.score + "present" (right class in the final map with or without a flag); Wilson 95% intervals; a
+  line without railings (manual-only by design). The FILL ablation and the CHECK-only section are not re-run.
+- Checked locally on 3 VAL drawings (code check); no Kaggle smoke run (same notebook skeleton and installs as the
+  clean final test run). Code uploaded from the working tree (src/stage2/test_components.py not yet committed; the
+  user asked to hold commits).
+- Result (kernel floorplan-stage2-test-components v1, 2 x T4, 20 min, exit codes 0, 0; `outputs/stage2/test_components.md`):
+  371 test drawings, 0 errors. Fixed (any source) 41% [36, 46], fixed by the fill 22%, found 62%, right type 51%,
+  right class present (flagged or not) 51%, 0.92 false additions per drawing, tolerant mIoU 59.2 -> 62.0. Without
+  railings (manual-only): fixed 46% [41, 52]. By kind (fixed / by the fill): room walls 64% / 53%, window 62% / 21%,
+  wall 57% / 43%, door (b) 46% / 0% (the parser redraws it in 81%, but only flagged ~half the time), door (a)
+  37% / 17%, fixture 17% / 19%, railing 0%. GPU used 0.32 h (4.18 h left).

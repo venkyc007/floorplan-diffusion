@@ -1,4 +1,4 @@
-# outputs/stage2 — Stage 2 results (all on VALIDATION; the test result will be `final_test.md`)
+# outputs/stage2 — Stage 2 results (`final_test.md` = the TEST result, run once 2026-10-22; everything else is VALIDATION)
 
 **Data role** says how far each number can be trusted:
 **T** = measured on the *tuning* val drawings the settings were chosen on (optimistic);
@@ -11,6 +11,8 @@ in that file; **L** = label maps / data statistics (no drawings); **fig** = illu
 
 | file | what | role |
 |---|---|---|
+| **`final_test.md`** | **the Stage 2 TEST result (run once)**: FILL arms + constraint ablation, CHECK, end to end, all breakdowns | **TEST** |
+| **`test_components.md`** | **second TEST evaluation (user request)**: end to end on single-component omissions, all 371 test drawings, by kind / location / position | **TEST** |
 | `parser_v2.md` | PARSE: parser v1 / v2A / v2B, normal and room names erased (v2B chosen) | H\* |
 | `check_tune.md` | CHECK: how the final setting was chosen (budget 0.4), contribution of each part | T |
 | `detection_eval.md` | CHECK on held-out drawings; the last section is nearest to the final setting | H |

@@ -25,10 +25,10 @@ If CHECK misses something, mark it yourself (2b): then only PARSE and FILL run.
 |---|---|
 | Stage 1, test set (7,774 cases) | tolerant mIoU 0.846, structurally valid 88.0% (U-Net alone 0.850 / 81.0%) |
 | Stage 2 PARSE, held-out val drawings | 16-class mIoU 70.1; door / window F1 79.5 / 77.3 |
-| Stage 2 CHECK, held-out val drawings | 60% of omissions found, 0.59 false alarms per complete drawing |
-| Stage 2 FILL, hole given (val) | small holes 25/30 fixed, large holes 29/30 (B4) |
-| Stage 2 end to end, 12 fresh val drawings | 9 found, 8 fixed, 5 false additions |
+| Stage 2 FILL, hole given, test (120 holes) | the diffusion finish makes 52% of fills structurally valid (U-Net sketch alone 18%) |
+| Stage 2 CHECK, test (180 drawings) | 70% of omissions found, 0.80 false alarms per complete drawing |
+| Stage 2 end to end, test (120 drawings) | 66% found, 12% fixed, 0.85 false additions per drawing |
 
-Honest limits: a whole missing room is not found automatically (use manual mode); room types rely partly on the
-printed room names; false alarms are higher on new drawings than on the tuning drawings. Full numbers and sources:
+Honest limits: the automatic mode rarely completes an unseen drawing correctly, so for a known gap use manual mode
+(mark the region); room types rely partly on the printed room names; false alarms are higher on new drawings. Full numbers and sources:
 `docs/results.md` in the repository.

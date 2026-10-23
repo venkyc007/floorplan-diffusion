@@ -1,9 +1,74 @@
 # Results: what the final system does and how well
 
-All numbers come from files in `outputs/` (named in each table). **Stage 1 has test numbers** (evaluated once with
-settings frozen on val). **Stage 2 numbers are all on validation** until the one-shot test run
-(`docs/final_test_notebook.md`); where a number was measured on the drawings a setting was tuned on, it says so,
-because those numbers are optimistic. Superseded results are listed at the end and kept in `outputs/stage2/history/`.
+All numbers come from files in `outputs/` (named in each table). **Both stages have test numbers**, each evaluated
+once with settings frozen on val: Stage 1 `outputs/stage1/stage1_test.md` (2026-10-20), Stage 2
+`outputs/stage2/final_test.md` (2026-10-22, §0 below). The other Stage 2 numbers are on validation; where a number was
+measured on the drawings a setting was tuned on, it says so, because those numbers are optimistic. Superseded results
+are listed at the end and kept in `outputs/stage2/history/`.
+
+## 0. Stage 2 TEST result (run once, 2026-10-22; `outputs/stage2/final_test.md`)
+
+CubiCasa5K official test split, code `7581cb2`, the validated fast settings, Kaggle T4 × 2: 120 fill holes, 180 CHECK
+drawings, 120 end-to-end drawings, each drawing used once, omissions size-balanced (a third each small / medium /
+large); all 420 cases ran, 0 errors.
+
+**FILL with the hole given** (inside the hole; same sketch and seed per case):
+
+| holes | U-Net sketch alone | + constrained diffusion | + control diffusion | shipped large-hole method (B4) |
+|---|---|---|---|---|
+| small (40) | 80.6 tol. mIoU · 25% valid · 5.28 violations | 82.1 · 65% · 2.73 | 81.9 · 65% · 2.75 | — |
+| medium (40) | 54.5 · 18% · 24.6 | 54.3 · 57% · 6.83 | 54.9 · 57% · 6.33 | 55.0 · 57% · 5.85 |
+| large (40) | 49.4 · 10% · 40.6 | 49.8 · 32% · 10.95 | 50.4 · 38% · 10.50 | **55.4 · 45% · 9.03** |
+| all (120) | 61.5 · 18% · 23.5 | 62.1 · **52%** · 6.83 | 62.4 · 53% · 6.53 | (80) 55.2 · 51% · 7.44 |
+
+Ground truth has 2.40 / 4.58 / 7.00 violations per small / medium / large hole. Fixed (main-class IoU ≥ 0.3) is
+82–98% for every arm.
+
+- **The diffusion finish is what makes fills structurally valid**: 18% → 52% valid and 23.5 → 6.8 violations per
+  hole, at the same accuracy (61.5 → 62.1 tolerant mIoU).
+- **The shipped large-hole models (B4) help on large holes**: +5.6 tolerant mIoU and 32% → 45% valid against the
+  constrained 128-px model.
+- **Constraint ablation: no measurable effect.** Constrained − control: tolerant mIoU −0.3 [−1.6, +1.0], violations
+  per hole +0.31 [−0.03, +0.67] (paired bootstrap 95% CI, 120 holes). The constraint losses in training do not beat
+  the identical run without them; the structure gain comes from the diffusion finish and the verifier.
+
+**CHECK on test drawings**: false alarms **0.80 per intact drawing** (60 drawings; tuning 0.30, held-out val 0.59).
+Omissions found **70%**, right type **36%** (120 drawings). By kind (found / right type): door (a) 67% / 33%,
+door (b) 29% / 29%, window 40% / 40%, wall 75% / 0%, railing 0% / 0%, fixture 50% / 40%, room walls 100% / 100%,
+whole room 81% / 38%, region 77% / 33%. By size: small 52%, medium 72%, large 85% found. Interior 59%, exterior 80%;
+centre 74%, edge 60%.
+
+**End to end** (120 drawings, one omission each): found **66%**, right type 29%, **fixed 12%** (by the fill itself 7%),
+**0.85 false additions per drawing**, tolerant mIoU in the omission region 44.4 → 44.5, validity 7% → 8%, 2 s per
+drawing on a T4. Fixed by size: small 22%, medium 15%, large 0%; by kind: door (b) 3/3, door (a) 1/3, window 2/9,
+wall 2/7, room walls 1/2, fixture 0/11, railing 0/5, whole room 2/27, region 4/53.
+
+**Second test evaluation: component-level omissions, all 371 test drawings** (user request after the run above; same
+frozen pipeline; `outputs/stage2/test_components.md`). One single-component omission per drawing, kinds rotated:
+
+| omission kind | n | found | right type | fixed (any source) | fixed by the fill | right class present (flag or not) | false additions / drawing |
+|---|---|---|---|---|---|---|---|
+| **all** | 371 | 62% | 51% | **41%** [36, 46] | 22% | 51% | 0.92 |
+| all except railings (manual-only) | 330 | 69% | 57% | **46%** [41, 52] | 25% | 56% | 0.92 |
+| a room's walls / door | 53 | 94% | 92% | 64% | 53% | 68% | 1.09 |
+| window | 53 | 68% | 68% | 62% | 21% | 68% | 1.09 |
+| wall piece | 54 | 80% | 46% | 57% | 43% | 59% | 0.70 |
+| door, leaf + arc erased | 52 | 56% | 48% | 46% | 0% | 81% | 0.79 |
+| door, drawn over with wall | 54 | 65% | 52% | 37% | 17% | 44% | 0.74 |
+| fixture | 64 | 55% | 41% | 17% | 19% | 22% | 1.05 |
+| railing | 41 | 2% | 0% | 0% | 0% | 15% | 0.95 |
+
+Brackets: Wilson 95% intervals. Tolerant mIoU in the omission region 59.2 → 62.0; exterior omissions fixed 49% vs
+interior 33%. On single components the pipeline fixes about two in five omissions; the fill draws about half of
+those, the parser the rest. A door whose leaf was erased is redrawn by the parser in 81% of drawings but flagged as
+missing only about half the time, so the user is told less often than the map is right.
+
+**Reading the test against val**: the FILL results hold up (validity and violations as on val; B4's large-hole gain
+confirmed). CHECK and the end-to-end numbers drop clearly: false alarms 0.30 (tuning) → 0.59 (held-out val) → 0.80
+(test), and end-to-end fixed 8/12 on the small-omission val batch vs 22% of small test omissions. The val end-to-end
+batches had 12 drawings each and were partly re-run after fixes, so they were optimistic; the automatic pipeline
+rarely completes an unseen drawing correctly, while manual mode (the user marks the region) relies only on the
+FILL, which generalises.
 
 ## 1. The final system in one page
 
@@ -135,8 +200,10 @@ window 0.898, wall 0.924, region 0.784, room 0.675. Every metric of every method
 
 ## 4. Honest weak spots
 
-1. **Stage 2 has no test numbers yet**, and several val numbers are on the drawings the settings were tuned on.
-2. **CHECK false alarms do not generalise**: 0.30 per intact drawing on tuning, 0.59 on held-out (budget 0.4).
+1. **The automatic Stage 2 pipeline works rarely on unseen drawings**: on test, 12% of omissions fixed end to end
+   with 0.85 false additions per drawing (val batches suggested much more; they were small and partly tuned on).
+2. **CHECK false alarms do not generalise**: 0.30 per intact drawing on tuning, 0.59 on held-out val, 0.80 on test
+   (budget 0.4); right type only 36% on test.
 3. **Right type is much rarer than "found"** on held-out drawings: wall 41%, door (b) 34%, fixture 39%.
 4. **Large omissions are not detected automatically** (R8 size test does not fit the budget); they are fixed only when
    the user marks them (manual mode), and even then 6/20 on real drawings.
@@ -144,8 +211,9 @@ window 0.898, wall 0.924, region 0.784, room 0.675. Every metric of every method
    time, windows 42%.
 6. **The fill can lower local scores**: batch 2 tolerant mIoU 76.5 → 74.4; room holes score 46.5 even with the hole
    given.
-7. **Constraint machinery has small or unproven effects**: guidance does nothing; Stage 1 constrained = control;
-   Stage 2 +2.5 points in-training only.
+7. **The constraint losses have no measurable effect**: Stage 1 constrained = control; Stage 2 test ablation
+   constrained − control −0.3 tolerant mIoU [−1.6, +1.0], +0.31 violations [−0.03, +0.67]; guidance does nothing.
+   The structure gains come from the diffusion finish (validity 18% → 52% on the Stage 2 test) and the verifier.
 8. **Room types depend on the printed room names** (76.3 → 64.3 when erased); R5 relies on room types.
 9. **Synthetic omissions**: the evaluation erases parts of real drawings; real drafting omissions may look different
    (detector v3 partly reacts to erasure traces).

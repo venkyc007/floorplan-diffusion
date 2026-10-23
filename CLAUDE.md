@@ -15,14 +15,14 @@ presentation later. Favour simple, working solutions.
 ## Status (updated 2026-10-21 night)
 
 - **Stage 1 done** (tag `stage1-final`); test evaluated once (`outputs/stage1/stage1_test.md`).
-- **Stage 2 done except the one-shot test.** Final configuration: `docs/decisions.md` (top). Val results:
-  `docs/results.md`.
+- **Stage 2 done; test run once on 2026-10-22** (`outputs/stage2/final_test.md`, summary `docs/results.md` §0): FILL
+  diffusion finish 18% -> 52% valid; constraint ablation no effect; end to end 66% found, 12% fixed. Never run again.
 - **2026-10-21 night (branch `final`)**: full audit (104 findings; cheap fixes applied, the rest documented in
   decisions.md), repo reorganised (`src/stage1/`, `configs/stage1/`, `tests/stage1/`, `outputs/stage1/`,
   `kaggle/kernels/stage{1,2}/`, superseded Stage 2 results in `outputs/stage2/history/`), combined Gradio app
   (Stage 1 + Stage 2 tabs), final test fixed and prepared (NOT run), docs rewritten.
-- **Next, user's call**: approve the Stage 2 test run (`docs/final_test_notebook.md`: upload code version +
-  `floorplan-stage2-final`, launch, ~1 h on T4 × 2); then report, slides, videos (user writes the report).
+- **Next (user)**: share Kaggle dataset `floorplan-stage2-final` (trained models, uploaded 2026-10-22, private) and the
+  GitHub repo with the TAs; report, slides, videos (user writes the report).
 - Old worktree `.claude/worktrees/stage2` (branch `stage2`, same history up to 5b37914) is no longer needed;
   removing it is the user's call.
 
@@ -37,8 +37,9 @@ presentation later. Favour simple, working solutions.
 - **UTF-8 only**: every text file; always `encoding="utf-8"` in Python.
 - **Frozen settings**: Stage 1 `configs/stage1/app.yaml`; Stage 2 `configs/stage2/pipeline.yaml` +
   `detector_threshold.yaml`. Never tune them on what the app shows or on test data.
-- **Choose on val, report on test.** Stage 1 test: done once (2026-10-20). Stage 2 test: once, only after the user
-  approves; smoke tests use the VAL zips.
+- **Choose on val, report on test.** Stage 1 test: done once (2026-10-20). Stage 2 test: run once (2026-10-22) plus
+  one user-requested second evaluation (component-level omissions, all test drawings, same frozen settings);
+  nothing is ever tuned on test results; smoke tests use the VAL zips.
 - **Every self-made choice goes in `docs/decisions.md`** with its reason. This file keeps rules + status only.
 - `python -m pytest tests/` must keep passing. Datasets stay off git; CubiCasa5K drawings are not redistributed.
 - **Report / slides are the user's own writing** (IE643 plagiarism and AI-content rules): provide material, figures,
