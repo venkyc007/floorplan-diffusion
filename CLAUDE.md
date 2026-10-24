@@ -16,7 +16,8 @@ presentation later. Favour simple, working solutions.
 
 - **Stage 1 done** (tag `stage1-final`); test evaluated once (`outputs/stage1/stage1_test.md`).
 - **Stage 2 done; test run once on 2026-10-22** (`outputs/stage2/final_test.md`, summary `docs/results.md` §0): FILL
-  diffusion finish 18% -> 52% valid; constraint ablation no effect; end to end 66% found, 12% fixed. Never run again.
+  diffusion finish 18% -> 52% valid; constraint ablation no effect; end to end 66% found, 12% fixed. Second user-requested evaluation (single-component omissions, all 371 test
+  drawings): 41% fixed (`outputs/stage2/test_components.md`). Never run again.
 - **2026-10-21 night (branch `final`)**: full audit (104 findings; cheap fixes applied, the rest documented in
   decisions.md), repo reorganised (`src/stage1/`, `configs/stage1/`, `tests/stage1/`, `outputs/stage1/`,
   `kaggle/kernels/stage{1,2}/`, superseded Stage 2 results in `outputs/stage2/history/`), combined Gradio app
