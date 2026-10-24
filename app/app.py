@@ -104,10 +104,17 @@ def current_mask(state, mask_value):
 
 def pick_sample(evt: gr.SelectData):
     i = evt.index
-    plan, mask, gt = GALLERY["inputs"][i], GALLERY["masks"][i], GALLERY["targets"][i]
-    state = new_state(plan.copy(), gt.copy(), f"val sample {i + 1} (plan {GALLERY['plan_ids'][i]}, "
-                      f"{GALLERY['types'][i]} removed, {GALLERY['size_bins'][i]} hole)", mask.copy())
-    return state, mask_editor_value(plan, mask), plan_status(state, "Its benchmark mask is pre-filled in step 2.")
+    gt, mask = GALLERY["targets"][i], GALLERY["masks"][i]            # the COMPLETE plan; no mask yet
+    state = new_state(gt.copy(), gt.copy(), f"val plan {GALLERY['plan_ids'][i]} (complete)", mask.copy())
+    return state, mask_editor_value(gt), plan_status(state, "Now mark the region to remove and repair in step 2: "
+                                                            "brush it, press Random mask, or Benchmark mask.")
+
+
+def benchmark_mask(state):
+    """The val benchmark's own mask for this sample (a door / window / wall / room / region removed, Day 2 rules)."""
+    if state is None or state.get("preset_mask") is None:
+        raise gr.Error("Pick a sample plan first: only gallery plans have a benchmark mask.")
+    return mask_editor_value(state["plan"], state["preset_mask"])
 
 
 def editor_start(state, blank):
@@ -157,9 +164,10 @@ def random_mask(state):
     out = random_corruption(complete, seed)
     if out is None:
         raise gr.Error("No door, window, wall segment, room or region fits this plan; brush a mask instead.")
-    plan, mask, truth, text = out
-    new = {**new_state(plan, truth, f"{state['source'].split(' · ')[0]} · {text}", mask), "random_seed": seed}
-    return new, mask_editor_value(plan, mask), plan_status(new, "Press again for another random removal.")
+    _, mask, truth, text = out                         # keep the complete plan; the repair hides the masked area
+    new = {**new_state(truth, truth, f"{state['source'].split(' · ')[0]} · {text}", state.get("preset_mask")),
+           "random_seed": seed}
+    return new, mask_editor_value(truth, mask), plan_status(new, "Press again for another random removal.")
 
 
 def suggest_areas(state):
@@ -233,10 +241,10 @@ def stage1_tab():
                         gr.Markdown("No sample gallery found. Make it with `python -m src.stage1.interface.make_gallery`.")
                         gallery = None
                     else:
-                        items = [(plan_image(p, 2, m), f"{t} · {s}") for p, m, t, s in
-                                 zip(GALLERY["inputs"], GALLERY["masks"], GALLERY["types"], GALLERY["size_bins"])]
+                        items = [(plan_image(p, 2), f"plan {pid}") for p, pid in
+                                 zip(GALLERY["targets"], GALLERY["plan_ids"])]
                         gallery = gr.Gallery(items, columns=4, height=520, allow_preview=False,
-                                             label="24 val-benchmark cases (caption: removed part · hole size)",
+                                             label="24 complete val plans: pick one, then mark what to remove",
                                              elem_classes="pixelated")
                 with gr.Tab("Editor"):
                     gr.Markdown("Draw with the class colours; to **delete** something, paint over it with room, "
@@ -270,6 +278,7 @@ def stage1_tab():
                 elem_classes="pixelated")
             with gr.Row():
                 random_btn = gr.Button("Random mask (benchmark rules)")
+                bench_btn = gr.Button("Benchmark mask (this sample)")
                 suggest_btn = gr.Button("Suggest suspicious areas")
                 clear_btn = gr.Button("Clear mask")
             suggest_note = gr.Markdown("_Random mask removes one door, window, wall segment, room or region from the "
@@ -297,6 +306,7 @@ def stage1_tab():
     editor_btn.click(editor_use, editor, [state, mask_editor, status])
     upload_btn.click(upload_use, [upload, state], [state, mask_editor, status])
     random_btn.click(random_mask, state, [state, mask_editor, status])
+    bench_btn.click(benchmark_mask, state, mask_editor)
     suggest_btn.click(suggest_areas, state, [mask_editor, suggest_note])
     clear_btn.click(clear_mask, state, mask_editor)
     outputs = [out_input, out_repaired, out_diff, report]
@@ -337,7 +347,7 @@ def s2_pick(evt: gr.SelectData):
     grey, original, _, _ = S2.load_case(case)
     st = s2_state(grey, case, f"held-out val drawing {case['plan_id']}, {S2.case_caption(case)}")
     label = None if case["box"] is None else f"erased: {case['kind']}"
-    answer = S2.box_on_drawing(original, case["box"], label=label)
+    answer = S2.answer_image(original, grey, case["box"])
     return st, S2.fit(cv2.cvtColor(grey, cv2.COLOR_GRAY2RGB)), s2_editor_value(grey), s2_status(st), answer
 
 
@@ -428,8 +438,9 @@ def stage2_tab():
                     upload = gr.Image(type="numpy", sources=["upload", "clipboard"], label="Floor plan image")
                     upload_btn = gr.Button("Use this drawing", variant="primary")
             status = gr.Markdown("Choose a drawing to start.")
-            with gr.Accordion("Show the answer (where the part was erased)", open=False):
-                answer = gr.Image(label="Original drawing, erased part in orange", type="numpy", interactive=False)
+            with gr.Accordion("Show the answer (zoom: original | erased)", open=False):
+                answer = gr.Image(label="Zoom on the erased part: original drawing (left) and the input (right)",
+                                  type="numpy", interactive=False)
         with gr.Column(scale=1):
             gr.Markdown("### 2 · Find and fix")
             current = gr.Image(label="Input drawing", type="numpy", interactive=False)

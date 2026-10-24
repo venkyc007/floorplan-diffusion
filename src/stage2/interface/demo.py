@@ -105,6 +105,26 @@ def box_on_drawing(grey, box, colour=(255, 140, 0), label=None):
     return fit(rgb)
 
 
+def answer_image(original, erased, box, pad=60, side=700):
+    """Zoom on the erased part: original (left) | erased input (right), the omission boxed in orange. The erasure is
+    meant to look natural, so it is hard to see on the whole drawing. Intact drawings: the whole drawing."""
+    if box is None:
+        return box_on_drawing(original, None)
+    y0, x0, y1, x1 = box
+    h, w = original.shape
+    sl = (slice(max(0, y0 - pad), min(h, y1 + pad + 1)), slice(max(0, x0 - pad), min(w, x1 + pad + 1)))
+    tiles = []
+    for img in (original, erased):
+        rgb = cv2.cvtColor(img[sl], cv2.COLOR_GRAY2RGB)
+        cv2.rectangle(rgb, (x0 - sl[1].start, y0 - sl[0].start), (x1 - sl[1].start, y1 - sl[0].start), (255, 140, 0), 2)
+        tiles.append(rgb)
+    gap = np.full((tiles[0].shape[0], 12, 3), 128, np.uint8)
+    both = np.hstack([tiles[0], gap, tiles[1]])
+    f = side / max(both.shape[:2])
+    return cv2.resize(both, (round(both.shape[1] * f), round(both.shape[0] * f)),
+                      interpolation=cv2.INTER_NEAREST if f > 1 else cv2.INTER_AREA)
+
+
 # ---------------------------------------------------------------- pictures
 
 def fit(img, side=None):

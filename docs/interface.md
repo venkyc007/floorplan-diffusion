@@ -16,7 +16,8 @@ The page has three tabs: **Stage 1** (sections 1–7 below), **Stage 2**, and **
 (`app/ABOUT.md`). The UI is only in `app/app.py`; all logic is in `src/stage1/interface/` and
 `src/stage2/interface/`.
 
-**Stage 1 tab** — as below, plus **Random mask**: one door, window, wall segment, room or region is removed from the
+**Stage 1 tab** — as below, except that the gallery now shows the 24 val plans **complete** (no region removed);
+the user marks what to remove: brush, **Benchmark mask** (that sample's own val-benchmark mask) or **Random mask**: one door, window, wall segment, room or region is removed from the
 complete plan with the benchmark's own corruption rules (`src/stage1/interface/random_mask.py` →
 `src/stage1/data/corruptions.corrupt`), so the true plan stays known and the repair is scored.
 
@@ -29,6 +30,8 @@ complete plan with the benchmark's own corruption rules (`src/stage1/interface/r
 | 2b manual | the user brushes the missing region (orange) on the drawing; each separate brushed region becomes one box (`demo.mask_boxes`) → `run_pipeline(drawing, boxes)`: PARSE + FILL only (CHECK skipped) — for when CHECK misses something |
 | step pictures | PARSE: the 16-class map; CHECK: the map with every flag (red: type + which rule / detector; blue: the user's boxes); FILL + VERIFY: the completed map, changes outlined; the result on the drawing (additions in red, doors as gap + leaf + arc) |
 | text | the pipeline's messages ("bedroom had no door → door added …"), a table per hole (type, source, t₀, verifier violations), timings |
+| answer | "Show the answer": a zoom on the erased spot, original next to the input (the erasure looks natural, so it is
+hard to see on the whole drawing) |
 | scoring | gallery cases only: found / fixed / false additions / tolerant mIoU with the validation's own definitions (`e2e_val.score`) |
 | settings | the pipeline's frozen settings; "fast" (N = 2, 15 steps, as validated) by default, a switch for the evaluation settings |
 

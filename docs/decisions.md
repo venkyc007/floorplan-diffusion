@@ -1056,3 +1056,12 @@ assessment), the final test fully prepared but NOT run, and a new Gradio app wit
   railings (manual-only): fixed 46% [41, 52]. By kind (fixed / by the fill): room walls 64% / 53%, window 62% / 21%,
   wall 57% / 43%, door (b) 46% / 0% (the parser redraws it in 81%, but only flagged ~half the time), door (a)
   37% / 17%, fixture 17% / 19%, railing 0%. GPU used 0.32 h (4.18 h left).
+
+## 2026-10-24: app fixes after the user tried it
+
+- Stage 1 gallery showed the val-benchmark INPUTS (region already greyed out) and also asked for a mask: confusing.
+  Now it shows the complete plans; the user marks what to remove (brush, Random mask, or the new "Benchmark mask"
+  button = that sample's own val-benchmark mask). Random mask keeps the complete plan and only sets the mask (the
+  repair hides the masked region from the model anyway, `Repairer.condition`).
+- Stage 2 gallery was correct (every drawing differs from its original only at the erased part; intact ones not at
+  all), but the realistic erasure is hard to see; "Show the answer" now shows a zoom: original | erased input.
