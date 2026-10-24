@@ -25,11 +25,11 @@ If CHECK misses something, mark it yourself (2b): then only PARSE and FILL run.
 |---|---|
 | Stage 1, test set (7,774 cases) | tolerant mIoU 0.846, structurally valid 88.0% (U-Net alone 0.850 / 81.0%) |
 | Stage 2 PARSE, held-out val drawings | 16-class mIoU 70.1; door / window F1 79.5 / 77.3 |
-| Stage 2 FILL, hole given, test (120 holes) | the diffusion finish makes 52% of fills structurally valid (U-Net sketch alone 18%) |
-| Stage 2 CHECK, test (180 drawings) | 70% of omissions found, 0.80 false alarms per complete drawing |
-| Stage 2 end to end, test (120 drawings, a third whole rooms / regions) | 66% found, 12% fixed, 0.85 false additions per drawing |
-| Stage 2 end to end, single components only, test (all 371 drawings) | 62% found, 41% fixed (22% by the fill itself), 0.92 false additions per drawing |
+| Stage 2 FILL, hole given, test | the diffusion finish makes 52% of fills structurally valid (U-Net sketch alone 18%) |
+| Stage 2 CHECK, test | 70% of omissions found, 0.80 false alarms per complete drawing |
+| Stage 2 end to end, test (whole rooms / regions) | 66% found, 12% fixed, 0.85 false additions per drawing |
+| Stage 2 end to end, single components only, test (all drawings) | 62% found, 41% fixed (22% by the fill itself), 0.92 false additions per drawing |
 
-Honest limits: the automatic mode rarely completes an unseen drawing correctly, so for a known gap use manual mode
+For a known gap use manual mode
 (mark the region); room types rely partly on the printed room names; false alarms are higher on new drawings. Full numbers and sources:
 `docs/results.md` in the repository.

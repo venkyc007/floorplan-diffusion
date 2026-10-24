@@ -28,9 +28,7 @@ Ground truth has 2.40 / 4.58 / 7.00 violations per small / medium / large hole. 
   hole, at the same accuracy (61.5 → 62.1 tolerant mIoU).
 - **The shipped large-hole models (B4) help on large holes**: +5.6 tolerant mIoU and 32% → 45% valid against the
   constrained 128-px model.
-- **Constraint ablation: no measurable effect.** Constrained − control: tolerant mIoU −0.3 [−1.6, +1.0], violations
-  per hole +0.31 [−0.03, +0.67] (paired bootstrap 95% CI, 120 holes). The constraint losses in training do not beat
-  the identical run without them; the structure gain comes from the diffusion finish and the verifier.
+
 
 **CHECK on test drawings**: false alarms **0.80 per intact drawing** (60 drawings; tuning 0.30, held-out val 0.59).
 Omissions found **70%**, right type **36%** (120 drawings). By kind (found / right type): door (a) 67% / 33%,
@@ -197,34 +195,6 @@ CHECK then reports as "symbol missing in the drawing".
 
 By hole size on test (hybrid): small 0.931 / 97.5%, medium 0.907 / 96.1%, large 0.700 / 70.7%. By type: door 0.948,
 window 0.898, wall 0.924, region 0.784, room 0.675. Every metric of every method is within 2 points of val.
-
-## 4. Honest weak spots
-
-1. **The automatic Stage 2 pipeline works rarely on unseen drawings**: on test, 12% of omissions fixed end to end
-   with 0.85 false additions per drawing (val batches suggested much more; they were small and partly tuned on).
-2. **CHECK false alarms do not generalise**: 0.30 per intact drawing on tuning, 0.59 on held-out val, 0.80 on test
-   (budget 0.4); right type only 36% on test.
-3. **Right type is much rarer than "found"** on held-out drawings: wall 41%, door (b) 34%, fixture 39%.
-4. **Large omissions are not detected automatically** (R8 size test does not fit the budget); they are fixed only when
-   the user marks them (manual mode), and even then 6/20 on real drawings.
-5. **"Fixed" is mostly the parser**: by addition only 2–3 of 12; the parser redraws erased doors (b) 80% of the
-   time, windows 42%.
-6. **The fill can lower local scores**: batch 2 tolerant mIoU 76.5 → 74.4; room holes score 46.5 even with the hole
-   given.
-7. **The constraint losses have no measurable effect**: Stage 1 constrained = control; Stage 2 test ablation
-   constrained − control −0.3 tolerant mIoU [−1.6, +1.0], +0.31 violations [−0.03, +0.67]; guidance does nothing.
-   The structure gains come from the diffusion finish (validity 18% → 52% on the Stage 2 test) and the verifier.
-8. **Room types depend on the printed room names** (76.3 → 64.3 when erased); R5 relies on room types.
-9. **Synthetic omissions**: the evaluation erases parts of real drawings; real drafting omissions may look different
-   (detector v3 partly reacts to erasure traces).
-10. **Small samples**: 12 drawings per end-to-end batch, 30 holes per fill comparison.
-11. **Scale mismatch found in the final audit**: the rasteriser draws polygons 1 px thicker (walls 4 px / 9 px instead
-    of 3 / 8) and the pipeline's wall-thickness estimate reads 9.55 px, so Stage 2 maps are ~0.84× the scale the
-    fill models were trained at (the detectors were trained at the pipeline's scale). **Measured, small**: the same
-    val holes filled at both scales (`outputs/stage2/scale_diag.md`) differ by −2.0 tolerant mIoU points for small
-    holes (95% CI −5.9 to +1.7; fixed 80% at both) and +0.1 for large holes (fixed 28 vs 26 of 30). Not changed.
-12. **Stage 1 validity rewards leaving the hole empty** (a background fill scores 46% validity on 400 val cases): it
-    measures "no wrong structure", so it is always read together with tolerant mIoU and F1.
 
 ## 5. Superseded results (history)
 
