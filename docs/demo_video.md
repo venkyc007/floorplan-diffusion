@@ -1,7 +1,7 @@
 # Demo video — a script (about 6–8 minutes)
 
 The demo shows the experiments working. Start the app beforehand so the models are loaded (first Stage 2 run
-loads ~1.5 GB): `python app/app.py`, open http://127.0.0.1:7860, run one Stage 2 example once before recording.
+loads ~1.5 GB): `python demo_app/app.py`, open http://127.0.0.1:7860, run one Stage 2 example once before recording.
 Times on a laptop CPU: Stage 1 U-Net ~1.5 s, hybrid 30–50 s; Stage 2 about 1–2 minutes per drawing (cut the
 waiting in editing, or say what is happening while it runs).
 

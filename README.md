@@ -17,7 +17,7 @@ structural (architectural) constraints**, in two stages:
 | method | U-Net sketch → re-noised to t₀ → constraint-fine-tuned diffusion (size-adaptive t₀) | PARSE → CHECK → FILL → VERIFY (segmentation network, rules + learned detectors, 16-class hybrid diffusion, best-of-N verifier) |
 | result | **test** (run once): tolerant mIoU 0.846, architectural validity 88.0%, connectivity error 0.011 | **test** (run once): diffusion finish 18% → 52% valid fills; end to end 66% of omissions found, 12% fixed, 0.85 false additions per drawing |
 
-Both stages run in one **Gradio app** (`python app/app.py`): Stage 1 with a mouse-drawn or random mask, Stage 2
+Both stages run in one **Gradio app** (`python demo_app/app.py`; how to run it locally: `demo_app/README.md`): Stage 1 with a mouse-drawn or random mask, Stage 2
 with the intermediate steps (parsed map, what was flagged, the filled plan, additions in red on the drawing) and a
 manual mode where you point at the missing region yourself.
 
@@ -35,7 +35,7 @@ manual mode where you point at the missing region yourself.
 | 4. Component-level evaluation | per-class and tolerant IoU, **component detection precision / recall / F1** (Hungarian matching, IoU ≥ 0.5) for doors, windows, rooms, connectivity error, room leak, alignment, architectural validity (`src/stage1/eval/`); Stage 2: parser component F1, CHECK found / right type per component kind, end-to-end found / fixed / false additions (`docs/results.md`) |
 | 5. Robustness + ablation | results by type, location, position and hole size (`outputs/stage1/stage1_test.md`, `full_eval.md`; Stage 2 breakdowns in every evaluation and the final test); ablations: constrained vs control diffusion (Stage 1 `finetune_ablation.md`, `selection.md`; Stage 2 in the final test), U-Net vs hybrid, t₀, guidance, each CHECK part, large-hole models (`docs/results.md` §3) |
 | Trained models + code + documentation + dependencies | code and docs in this repo, `requirements.txt` (tested versions); checkpoints: see [Trained models](#trained-models) |
-| An interface to upload inputs and test the method | `python app/app.py`: Stage 1 (pick / draw / upload a plan, brush or random mask) and Stage 2 (pick or **upload any drawing**; every step shown; manual mode) — `docs/interface.md` |
+| An interface to upload inputs and test the method | `python demo_app/app.py`: Stage 1 (pick / draw / upload a plan, brush or random mask) and Stage 2 (pick or **upload any drawing**; every step shown; manual mode) — `docs/interface.md` |
 | A performance metric + qualitative results | the app scores every repair against the truth when it is known and shows the step pictures; the "How it works · results" tab lists the metrics; `docs/results.md`, `outputs/stage2/pipeline_steps.png` |
 | Stage-wise report (reasons, experiments, datasets, extraction, interface methodology) | written by the team; material mapped in `docs/report_guide.md`; every choice and its reason in `docs/decisions.md` |
 
@@ -77,7 +77,7 @@ breakdown by type, location, position and size: `docs/results.md`.
 ## Repository map
 
 ```
-app/                 the Gradio app (UI only): app.py, ABOUT.md (the app's "how it works" tab)
+demo_app/            the Gradio app (UI only): app.py, ABOUT.md (the app's "how it works" tab)
 src/
   stage1/            Stage 1: data/ (ResPlan -> 6-class maps, dedup, split, corruptions), models/ (U-Net,
                      diffusion, constraint losses), eval/ (metrics), interface/ (app logic), train.py, evaluate.py,
@@ -102,7 +102,7 @@ conda create -n floorplan python=3.11
 conda activate floorplan
 pip install -r requirements.txt
 python -m pytest tests/                       # 246 tests, about 1 minute on a laptop
-python app/app.py                             # http://127.0.0.1:7860  (needs the checkpoints, see below)
+python demo_app/app.py                        # http://127.0.0.1:7860  (needs the checkpoints; step by step: demo_app/README.md)
 ```
 
 Stage 2 from Python:

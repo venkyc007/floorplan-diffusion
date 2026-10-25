@@ -1,6 +1,6 @@
 """Gradio app: Stage 1 and Stage 2 of the project in one page (switch with the tabs at the top).
 
-    python app/app.py            (then open http://127.0.0.1:7860)
+    python demo_app/app.py            (then open http://127.0.0.1:7860)
 
 Stage 1 tab (ResPlan plans, 128 x 128, 6 classes; the region to repair is GIVEN):
   1. choose a plan: a val-benchmark sample, the plan editor, or an upload (PNG in our class colours / .npy);
@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))                    # so `src` imports work with "python app/app.py"
+sys.path.insert(0, str(ROOT))                    # so `src` imports work with "python demo_app/app.py"
 
 import cv2  # noqa: E402
 import gradio as gr  # noqa: E402
@@ -485,7 +485,8 @@ def stage2_tab():
 
 # ================================================================== page
 def build_ui():
-    about = (ROOT / "app" / "ABOUT.md").read_text(encoding="utf-8") if (ROOT / "app" / "ABOUT.md").exists() else ""
+    about_file = Path(__file__).with_name("ABOUT.md")
+    about = about_file.read_text(encoding="utf-8") if about_file.exists() else ""
     with gr.Blocks(title="Floor plan completion · IE643") as page:
         gr.Markdown("# Diffusion-based reconstruction of missing floor plan components\n"
                     "IE 643 course project · Team One Hot Mencoding · switch between the two stages with the tabs below. "

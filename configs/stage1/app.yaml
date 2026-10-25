@@ -1,4 +1,4 @@
-# Settings of the Gradio interface (app/app.py).
+# Settings of the Gradio interface (demo_app/app.py).
 # The model and sampling settings below are FROZEN: they are the ones chosen
 # on the val benchmark in the Day 7 selection (outputs/stage1/selection.md). Do not
 # tune them on what you see in the app.

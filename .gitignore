@@ -44,3 +44,6 @@ flagged/
 # OS / editor junk
 .DS_Store
 Thumbs.db
+
+# local only (user decision, 2026-10-25): report figures (some show CubiCasa5K drawings)
+docs/report_figures/

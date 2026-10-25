@@ -1,19 +1,19 @@
 # Interface design (Gradio app)
 
-This document describes the interactive interface (`app/app.py`) for the report's
+This document describes the interactive interface (`demo_app/app.py`) for the report's
 interface-methodology section: how input is turned into a model input, how the
 region to repair is chosen, which methods are offered, and what is reported.
 
 ```bash
 python -m src.stage1.interface.make_gallery     # once: 24 Stage 1 val cases -> data/app/val_gallery.npz
 python -m src.stage2.interface.make_gallery     # once: 18 Stage 2 val drawings -> data/app/stage2_gallery/
-python app/app.py                               # http://127.0.0.1:7860
+python demo_app/app.py                               # http://127.0.0.1:7860
 ```
 
 ## 0. One app, two stages (2026-10-21)
 
 The page has three tabs: **Stage 1** (sections 1–7 below), **Stage 2**, and **How it works · results**
-(`app/ABOUT.md`). The UI is only in `app/app.py`; all logic is in `src/stage1/interface/` and
+(`demo_app/ABOUT.md`). The UI is only in `demo_app/app.py`; all logic is in `src/stage1/interface/` and
 `src/stage2/interface/`.
 
 **Stage 1 tab** — as below, except that the gallery now shows the 24 val plans **complete** (no region removed);
@@ -48,7 +48,7 @@ plans; the test set stays untouched for the final numbers.
 
 | part | file | job |
 |---|---|---|
-| page | `app/app.py` | layout and event handlers only |
+| page | `demo_app/app.py` | layout and event handlers only |
 | settings | `configs/stage1/app.yaml` | checkpoint paths, frozen sampling settings, input limits |
 | input pipeline | `src/stage1/interface/plan_io.py` | colours → classes, framing, file loading, validation |
 | models | `src/stage1/interface/inference.py` | runs the 5 methods; loads each checkpoint on first use and keeps it |
@@ -224,7 +224,7 @@ models or data. It covers:
 - the missing-checkpoint message.
 
 **Functional test of the app** (2026-10-14). To save memory, the app's event handlers in
-`app/app.py` were called directly from Python with the real checkpoints, instead of clicking
+`demo_app/app.py` were called directly from Python with the real checkpoints, instead of clicking
 through a browser. 37 of 37 checks passed:
 - **Samples:** picking a gallery case fills step 2 with exactly its benchmark mask.
 - **All 5 methods** repair it.

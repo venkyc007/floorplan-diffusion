@@ -2,7 +2,7 @@
 
 Moved out of CLAUDE.md on 2026-10-17 when the project scope changed to Stage 2 (see CLAUDE.md). Text kept as it was, section by section; this is the reference for the report's "before prep review" chapter. The tag `stage1-final` marks the last Stage 1 commit (f1d26ba).
 
-Key commands: `python -m src.stage1.data.build_dataset --reuse-split`, `python -m src.stage1.data.make_benchmark`, `python -m src.stage1.train --config configs/<cfg>.yaml --out <dir>`, `python -m src.stage1.evaluate --checkpoint <best.pt> --benchmark val`, `python -m src.stage1.full_eval`, `python -m src.stage1.arch_eval`, `python -m src.stage1.stats`, `python -m src.stage1.selection`, `python app/app.py`, `python -m pytest tests/`.
+Key commands: `python -m src.stage1.data.build_dataset --reuse-split`, `python -m src.stage1.data.make_benchmark`, `python -m src.stage1.train --config configs/<cfg>.yaml --out <dir>`, `python -m src.stage1.evaluate --checkpoint <best.pt> --benchmark val`, `python -m src.stage1.full_eval`, `python -m src.stage1.arch_eval`, `python -m src.stage1.stats`, `python -m src.stage1.selection`, `python demo_app/app.py`, `python -m pytest tests/`.
 
 ## Final Stage 1 status (as of 2026-10-17, before the scope change)
 
@@ -123,7 +123,7 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 
 ## Day 8: Gradio interface
 
-- `python app/app.py` (port 7860; gallery once via `python -m src.stage1.interface.make_gallery`). UI only in `app/app.py`; logic in `src/stage1/interface/`; settings (frozen Day 7 selection) in `configs/stage1/app.yaml`. Design + tests + timing: `docs/interface.md`.
+- `python demo_app/app.py` (port 7860; gallery once via `python -m src.stage1.interface.make_gallery`). UI only in `demo_app/app.py`; logic in `src/stage1/interface/`; settings (frozen Day 7 selection) in `configs/stage1/app.yaml`. Design + tests + timing: `docs/interface.md`.
 - Checkpoints load lazily (first use, then kept; ≤ 2 models, ~0.75 GB RAM). CPU: hybrid 29–52 s per repair, U-Net 1.4 s (`outputs/stage1/interface/cpu_timing.md`).
 - Functional test (2026-10-14): 37/37 checks by calling the handlers. The full suite `python -m pytest tests/` had 64 tests at the time.
 - Test the app by calling its handlers in Python (`setup()` then e.g. `repair(...)`), not through the browser — the laptop is short on RAM. Browser checks: at most 2–3 screenshots, at the end.
@@ -142,7 +142,7 @@ Also required: a **Gradio interface**, **trained models**, **documentation**, an
 src/        Python source code (the reusable logic: data, models, constraints, evaluation)
 configs/    YAML config files (hyperparameters, paths, experiment settings)
 kaggle/     Kaggle kernels (kaggle/kernels/stage1/) and the Stage 2 test notebook
-app/        Gradio web interface
+demo_app/   Gradio web interface
 docs/       Documentation (data_notes.md = data pipeline + benchmarks; decisions.md = every self-made choice)
 tests/      Unit tests (python -m pytest tests/)
 data/       Datasets (git-ignored)

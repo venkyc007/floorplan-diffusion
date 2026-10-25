@@ -1,4 +1,4 @@
-# Settings of the Stage 2 tab of the Gradio app (app/app.py; logic in src/stage2/interface/).
+# Settings of the Stage 2 tab of the Gradio app (demo_app/app.py; logic in src/stage2/interface/).
 # The pipeline's own settings (checkpoints, CHECK thresholds, fill) are in configs/stage2/pipeline.yaml and
 # configs/stage2/detector_threshold.yaml and are FROZEN (chosen on val). Never tune them on what the app shows.
 

@@ -66,7 +66,7 @@ plan first. Laptop RAM is limited: load models lazily, test the app by calling i
 `src/stage1/` (Stage 1 code), `src/stage2/{data,constraints,parse,detect,complete,pipeline,interface}/`,
 `src/{utils,distributed,kaggle_prep,kaggle_kernel,doc_lines}.py` (shared); `configs/stage{1,2}/`;
 `tests/stage{1,2}/`; `outputs/stage{1,2}/` (committed results; `outputs/kaggle/`, `outputs/runs/` = local
-checkpoints, git-ignored); `kaggle/kernels/stage{1,2}/`, `kaggle/notebooks/`; `app/`; `docs/`. Folder READMEs explain
+checkpoints, git-ignored); `kaggle/kernels/stage{1,2}/`, `kaggle/notebooks/`; `demo_app/`; `docs/`. Folder READMEs explain
 each part.
 
 ## Stage summaries

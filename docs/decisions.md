@@ -1065,3 +1065,13 @@ assessment), the final test fully prepared but NOT run, and a new Gradio app wit
   repair hides the masked region from the model anyway, `Repairer.condition`).
 - Stage 2 gallery was correct (every drawing differs from its original only at the erased part; intact ones not at
   all), but the realistic erasure is hard to see; "Show the answer" now shows a zoom: original | erased input.
+
+## 2026-10-25: demo app folder and TA run instructions
+
+- `app/` renamed to `demo_app/` (user asked for "demo app"; underscore instead of a space so the commands need no
+  quoting). `app.py` now finds `ABOUT.md` next to itself instead of a hard-coded `app/` path.
+- `demo_app/README.md`: step-by-step local run for the TAs (code from GitHub, models from the Kaggle dataset
+  `floorplan-stage2-final`, examples zip from the submission Drive folder) and why the app is not hosted on
+  Hugging Face Spaces.
+- The galleries (`data/app/`, ResPlan / CubiCasa5K derived, 5 MB) stay off git; they are shared as
+  `demo_app_examples.zip` in the private submission Drive folder only.
