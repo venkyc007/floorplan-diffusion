@@ -179,7 +179,7 @@ file and lines.
 |---|---|
 | `docs/results.md` | all final numbers, step by step, with sources and weak spots |
 | `docs/decisions.md` | every choice made in the project and why (chronological log; final configuration at the top) |
-| `docs/code_walkthrough.md` | topic → file:line map (and a 10-minute plan) |
+| `docs/code_walkthrough.md` | 8-minute walkthrough script: file, line and what to say |
 | `docs/stage1_summary.md` | Stage 1 in one page |
 | `docs/constraints_spec.md` | the structural constraints C1–C18 (original specification) |
 | `docs/data_notes.md` | Stage 1 data pipeline and benchmarks |
