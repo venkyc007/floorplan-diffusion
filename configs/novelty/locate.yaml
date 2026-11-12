@@ -1,0 +1,20 @@
+# Novelty, region LOCATOR (src/novelty/locate.py): the whole parsed map in, "missing area" probability out.
+
+model:
+  encoder: resnet34             # ImageNet weights; smp adapts the first conv to the 16 one-hot channels
+
+data:
+  canvas: 320                   # px square; most parsed maps fit whole, larger ones are cropped through the area
+  erased_frac: 0.6              # 60% erased versions, 40% intact drawings
+  num_workers: 2
+
+train:
+  batch_size: 16
+  lr: 3.0e-4
+  weight_decay: 0.01
+  warmup_steps: 200
+  grad_clip: 1.0
+  seed: 0
+  log_every: 50
+  val_minutes: 6
+  time_limit_hours: 1.1         # cosine over this time, then stop
