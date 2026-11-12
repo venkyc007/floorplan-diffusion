@@ -1075,3 +1075,71 @@ assessment), the final test fully prepared but NOT run, and a new Gradio app wit
   Hugging Face Spaces.
 - The galleries (`data/app/`, ResPlan / CubiCasa5K derived, 5 MB) stay off git; they are shared as
   `demo_app_examples.zip` in the private submission Drive folder only.
+
+# Novelty assessment (from 2026-11-13): large omissions, end to end
+
+## 2026-11-13 (night): scope, plan and first choices (overnight run; user asleep, own choices logged here)
+
+User decisions (asked at the start of the night):
+- **Scope**: only the first half of the report's novelty plan (section 8.1): a large part of a real CubiCasa5K
+  drawing is omitted, no mask is given, the system must find the missing area and fill it. The room-graph idea
+  (8.2) is not attempted. Goal: clearly better numbers on large omissions, and one hybrid that handles all sizes.
+- **Permissions for this night**: Kaggle code uploads + kernel launches, local commits and pushes of a new branch
+  (`novelty`, never main / final) without asking each time. GPU: no cap.
+- **Test set**: stays closed tonight. Everything is chosen on the TUNING val drawings and reported on the HELD-OUT
+  val drawings; a single test run of the frozen hybrid is prepared for the user's approval, not run.
+- New section of the repo: `src/novelty/`, `configs/novelty/`, `tests/novelty/`, `kaggle/kernels/novelty/`,
+  `outputs/novelty/`, `docs/novelty.md`.
+
+Diagnosis (from the shipped results, before any new run):
+- Hole given, clean label maps: B4 fixes 29 / 30 large holes. Hole given, real drawings: 6 / 20. So the fill
+  models fail on what they are really given: the PARSER's map of the erased drawing, not a clean label map.
+- Automatic: CHECK flags 15 / 20 large omissions, but as small things (door, sink); its region rule R8 fired on
+  0 / 20, so the large-hole fill never ran (fixed 2 / 20; 0% of the large test omissions).
+- So three changes, each measured separately: (1) a learned region LOCATOR, (2) large-hole models trained on the
+  parser's maps of erased drawings, (3) image-wide context blocks in those models.
+
+Own choices:
+- **Large-omission set** (`src/novelty/build_set.py`, kernel floorplan-novelty-data, T4 x2): every typed TRAIN
+  drawing in a seeded random order, intact + 3 large omissions (room (whole) / region alternating, the evaluation's
+  own generators and size ranges 2-15% / 5-25%), each version through the pipeline's own `parse()` (scale choice
+  included, so the maps have the pipeline's scale). Stored: parsed map, ground truth resized to it, omission map
+  (area / erased structure). Time box 50 min per shard (a random subset if not all fit). TUNING drawings: intact +
+  2 omissions (seed 1). The HELD-OUT drawings are not in any set.
+- **Fill training windows** (`src/novelty/data.py`): 256 px (plans are ~150-400 px at map scale, so one window
+  sees most of the plan); hole = the box of the omission area with each side moved by -2..+8 px (a drawn or
+  predicted box is never exact); context = the parser's map, target = ground truth inside the hole and the
+  parser's map outside (the model must copy what it is given and draw the truth into it); 40% of the windows from
+  intact drawings with a random large area (B4's label-level rule) for variety, since each drawing has only 3
+  erased versions.
+- **Fill models** (`src/novelty/train_fill.py`, `configs/novelty/fill_*.yaml`): B4's U-Net and diffusion,
+  warm-started from the B4 checkpoints, same 14 constraint losses and weights, batch 8, 3 h each on one T4, lr 1e-4
+  (U-Net) / 5e-5 (diffusion) - higher than B4's 5e-5 / 2e-5 because the context distribution changes and the new
+  blocks start at zero. In-training validation: fixed windows of the tuning drawings' erased versions; diffusion
+  scored by one denoising pass from the truth noised to t = 800 (what the hybrid asks of it), not by sampling
+  from pure noise (B4's in-training number was flat and uninformative for that reason).
+- **Fourier context blocks** (`src/novelty/ffc.py`, after LaMa): one residual block after the deepest down block,
+  the middle block and the first up block: 1x1 conv to half the channels -> FFT -> 1x1 conv on (real, imaginary)
+  -> inverse FFT -> 1x1 conv back, added to the input. The last conv starts at ZERO so the warm-started network is
+  exactly B4 at step 0 (checked: max difference 0.0). 0.40 M new parameters. Attached with forward hooks so B4's
+  weight names are unchanged; the EMA copy is built fresh (a deep copy would keep hooks to the original).
+  Ablation: the same training without the blocks (`--no-ffc`, kernel floorplan-novelty-fill-plain).
+- **Region locator** (`src/novelty/locate.py`, `configs/novelty/locate.yaml`): input = the parser's 16-class map of
+  the WHOLE plan only, never the drawing - the report measured that detector v3 partly reacts to erasure traces
+  (23% on erased furniture); a map-only model cannot see smudges. Output = probability "missing area" (the room +
+  its walls / the rectangle inside the building). smp U-Net, ImageNet ResNet-34, BCE + Dice, 320 px canvas, 60%
+  erased / 40% intact, 1.1 h; two seeds (single model vs their average, compared on tuning drawings).
+- **Hybrid pipeline** (`src/novelty/pipeline.py`, `configs/novelty/pipeline_large.yaml`): `run_pipeline` got two
+  optional arguments (`region_fn`, `large_fill_fn`; both None = the frozen pipeline, bit for bit). The frozen
+  Stage 2 config files are not edited. A region flag removes the CHECK flags whose box centre lies inside it
+  (+ 4 px): a missing room shows up to CHECK as a missing door or sink, and the region fill redraws the whole area.
+  Large-hole fill: hole box centred in a window of >= 256 px; boxes needing > 384 px go to the shipped tiled fill;
+  then the shipped region restriction. First values (to be re-chosen on tuning drawings): threshold 0.5, blob >=
+  150 px, t0 700, N = 2, 15 steps.
+- **Evaluation protocol**: (a) tuning drawings, map level (`src/novelty/eval_maps.py`): locator sweep, fills with
+  the hole given, locator -> fill; (b) held-out drawings, end to end on the drawing (`src/novelty/eval_e2e.py`):
+  per drawing the intact version and one small, one medium, one large omission (`omit_in_bin`, the test's
+  generator), scored with `e2e_val.score` (the function behind the Stage 2 test table) so the numbers are
+  comparable with the shipped ones; arms: shipped auto, hybrid auto, locator + B4 (ablation), shipped manual,
+  hybrid manual. Added columns for a fairer judgement of large fills (report section 8.1): violations per hole,
+  tolerant wall F1 (2 px), and the best of the N samples by wall IoU (oracle).
