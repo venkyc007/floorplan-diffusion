@@ -96,7 +96,7 @@ def run_cases(args):
     fc, fast = base.cfg()["fill"], base.cfg()["fast"]
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f"e2e_{args.split}{args.tag}_{si}.csv"
-    n_done = 0
+    n_done, shown = 0, []
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS, restval="")
         w.writeheader()
@@ -122,7 +122,11 @@ def run_cases(args):
                     continue
                 image = img if o is None else o[0]
                 oc = None if o is None else {0: o[0], 1: o[1], 2: o[2], 4: o[4], 5: o[5], "lbl": lbl}
-                parsed = None
+                parsed, keep = None, None
+                if o is not None and target != "small" and len(shown) < args.figure:
+                    keep = {"pid": pid, "kind": o[4]["type"], "size": f"{o[4]['size_bin']} ({o[4]['size_pct']}%)",
+                            "image": image, "lbl": lbl, "area": o[5], "plans": {}, "fixed": {}}
+                    shown.append(keep)
                 for arm in arms:
                     if arm not in AUTO:
                         continue
@@ -130,6 +134,9 @@ def run_cases(args):
                     res = base.run_pipeline(image, fast=True, **AUTO[arm])
                     emit(row_of(pid, target, oc, arm, res, time.time() - t))
                     parsed = res["parsed"]
+                    if keep is not None:
+                        keep["parsed"], keep["plans"][arm] = parsed, res["completed"]
+                        keep["fixed"][arm] = e2e_val.score(res, o[1], lbl, o[2])["fixed"]
                 if o is None or target == "small" or parsed is None:
                     continue
                 area = lfc.to_parse_scale(o[5], parsed.shape) | lfc.to_parse_scale(o[1], parsed.shape)
@@ -145,7 +152,45 @@ def run_cases(args):
                 if "hybrid manual" in arms:
                     t = time.time()
                     plan, _ = nov.fill_region(parsed, hole, base.generator(0), fast)
-                    emit(row_of(pid, target, oc, "hybrid manual", manual_result(parsed, plan, box), time.time() - t))
+                    r = row_of(pid, target, oc, "hybrid manual", manual_result(parsed, plan, box), time.time() - t)
+                    emit(r)
+                    if keep is not None:
+                        keep["plans"]["hybrid manual"], keep["fixed"]["hybrid manual"] = plan, r["fixed"]
+    print("wrote", path, flush=True)
+    if shown:
+        figure(shown, OUT / f"e2e_{args.split}{args.tag}_examples_{si}.png")
+
+
+def figure(cases, path):
+    """The first cases of the run, as they come (no picking): erased drawing | parser's map | each arm's completed
+    map | ground truth, cropped around the omission (red box = the true omission area, for the reader only)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    arms = list(cases[0]["plans"])
+    fig, axes = plt.subplots(len(cases), len(arms) + 3, figsize=(4.2 * (len(arms) + 3), 4.2 * len(cases)), squeeze=False)
+    for c, ax in zip(cases, axes):
+        H, W = c["parsed"].shape
+        area = lfc.to_parse_scale(c["area"], (H, W))
+        y0, x0, y1, x1 = lfc.box_of(area)
+        m = max(24, (y1 - y0) // 2, (x1 - x0) // 2)
+        sl = (slice(max(0, y0 - m), min(H, y1 + m + 1)), slice(max(0, x0 - m), min(W, x1 + m + 1)))
+        fy, fx = c["image"].shape[0] / H, c["image"].shape[1] / W
+        isl = (slice(int(sl[0].start * fy), int(sl[0].stop * fy)), slice(int(sl[1].start * fx), int(sl[1].stop * fx)))
+        gt = cv2.resize(c["lbl"], (W, H), interpolation=cv2.INTER_NEAREST)
+        ax[0].imshow(c["image"][isl], cmap="gray", vmin=0, vmax=255)
+        ax[0].set_title(f"{c['pid']}\n{c['kind']}, {c['size']}: drawing given", fontsize=9)
+        panels = [("parser's map", c["parsed"])] + [(f"{a}: {'fixed' if c['fixed'].get(a) else 'not fixed'}", c["plans"][a])
+                                                    for a in arms] + [("ground truth", gt)]
+        for a, (title, plan) in zip(ax[1:], panels):
+            a.imshow(C16.colourise(plan[sl]), interpolation="nearest")
+            a.set_title(title, fontsize=9)
+            a.add_patch(plt.Rectangle((x0 - sl[1].start - .5, y0 - sl[0].start - .5), x1 - x0 + 1, y1 - y0 + 1,
+                                      fill=False, ec="red", lw=1))
+        for a in ax:
+            a.axis("off")
+    fig.tight_layout()
+    fig.savefig(path, dpi=60)
     print("wrote", path, flush=True)
 
 
@@ -248,6 +293,7 @@ def main():
     ap.add_argument("--arms", default="shipped auto,hybrid auto,locator + B4,shipped manual,hybrid manual")
     ap.add_argument("--bins", default="small,medium,large")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--figure", type=int, default=0, help="also save a figure of the first K medium / large cases")
     ap.add_argument("--report", nargs="+")
     ap.add_argument("--split-note", default="held-out: never used to choose a setting")
     args = ap.parse_args()
