@@ -487,9 +487,14 @@ def is_large(h, max_hole):
     return h["type"] == "region" or (h["type"] == "manual" and max(y1 - y0, x1 - x0) + 1 > max_hole)
 
 
-def run_pipeline(image, boxes=None, seed=None, fast=False, large=None, t0_refine=None):
+def run_pipeline(image, boxes=None, seed=None, fast=False, large=None, t0_refine=None, region_fn=None,
+                 large_fill_fn=None):
     """fast=True: the live-app settings (configs/stage2/pipeline.yaml `fast`). large: strategy for large holes
-    ("big" / "coarse" / "tiled", src/stage2/complete/large_fill.py; default fill.large_strategy)."""
+    ("big" / "coarse" / "tiled", src/stage2/complete/large_fill.py; default fill.large_strategy).
+    Novelty hooks (src/novelty/pipeline.py; both None = the frozen pipeline, unchanged):
+      region_fn(parsed) -> extra "region" holes (the learned locator); the CHECK flags inside a region are dropped,
+                           because the region fill redraws that whole area;
+      large_fill_fn(label, hole, generator, fast) -> (new label map, info): replaces fill_large for large holes."""
     c = cfg()
     large = large or c["fill"].get("large_strategy", "tiled")
     t0_refine = t0_refine or c["fill"].get("t0_refine", 150)
@@ -504,6 +509,11 @@ def run_pipeline(image, boxes=None, seed=None, fast=False, large=None, t0_refine
     else:
         holes = [{"type": "manual", "rules": [], "box": tuple(int(round(v * scale)) for v in b), "point": None}
                  for b in boxes]
+    if region_fn is not None and boxes is None:
+        regions = region_fn(parsed)
+        inside = lambda h, r: (r["box"][0] - 4 <= (h["box"][0] + h["box"][2]) / 2 <= r["box"][2] + 4 and
+                               r["box"][1] - 4 <= (h["box"][1] + h["box"][3]) / 2 <= r["box"][3] + 4)
+        holes = regions + [h for h in holes if not any(inside(h, r) for r in regions)]
     mh = c["fill"]["max_hole"]
     for h in holes:                                              # keep holes window-sized
         if is_large(h, mh):
@@ -530,7 +540,10 @@ def run_pipeline(image, boxes=None, seed=None, fast=False, large=None, t0_refine
             y0, x0, y1, x1 = h["box"]
             hole = np.zeros(completed.shape, bool)
             hole[y0:y1 + 1, x0:x1 + 1] = True
-            new, info = fill_large(completed, hole, large, c["fill"], c["fast"] if fast else None, g, t0_refine)
+            if large_fill_fn is not None:
+                new, info = large_fill_fn(completed, hole, g, c["fast"] if fast else None)
+            else:
+                new, info = fill_large(completed, hole, large, c["fill"], c["fast"] if fast else None, g, t0_refine)
             kept = new
         else:
             new, info = fill_hole(completed, h["box"], c["fill"], g, c["fast"] if fast else None, h["type"],
