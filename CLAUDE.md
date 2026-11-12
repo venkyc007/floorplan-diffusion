@@ -27,6 +27,22 @@ presentation later. Favour simple, working solutions.
 - Old worktree `.claude/worktrees/stage2` (branch `stage2`, same history up to 5b37914) is no longer needed;
   removing it is the user's call.
 
+## Novelty assessment (branch `novelty`, started 2026-11-13 night; UNFINISHED, no results yet)
+
+Goal (user): large omissions on real CubiCasa5K drawings, end to end (no mask given), plus one hybrid for all sizes.
+Code in `src/novelty/` (see its README), configs `configs/novelty/`, kernels `kaggle/kernels/novelty/`; choices in
+`docs/decisions.md` ("Novelty assessment"). Test set stays closed: choose on TUNING val drawings, report on HELD-OUT.
+State when the session stopped (2026-11-13 ~01:45 IST, usage limit):
+- DONE: large-omission set (kernel `floorplan-novelty-data`, COMPLETE; local copy `outputs/kaggle/novelty_data/`:
+  3,944 train drawings / 15,721 versions, 212 tuning drawings / 635 versions). All code written and smoke-tested.
+- RUNNING on Kaggle when stopped: `floorplan-novelty-fill-ffc` (U-Net + diffusion with Fourier blocks, ~3.2 h,
+  launched 01:44) and `floorplan-novelty-baseline` (shipped pipeline on the held-out evaluation cases).
+- NOT LAUNCHED yet: `kaggle/kernels/novelty/locate` (region locator, ~1.2 h), `fill_plain` (ablation without
+  Fourier blocks, ~3.2 h), `eval` (STAGE "tune" first, then "e2e_heldout"). Kaggle runs 2 GPU kernels at a time.
+- NEXT: download the kernel outputs to `outputs/kaggle/novelty_{locate,fill_ffc,fill_plain}/` (paths in
+  `configs/novelty/pipeline_large.yaml`), run the tune evaluation, choose threshold / t0 on tuning drawings, then
+  the held-out end-to-end evaluation, write `docs/novelty.md` and the results section. No numbers exist yet.
+
 ## Standing rules (always apply)
 
 - **Never delete anything without asking** (files, folders, branches, worktrees, data). List and compare first;
