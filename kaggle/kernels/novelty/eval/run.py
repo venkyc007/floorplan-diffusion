@@ -43,6 +43,9 @@ def place_novelty_checkpoints(find):
     import yaml
     usable = {}
     for tag, path in CONFIGS.items():
+        if path is None:                                   # shipped arms only: no novelty models needed
+            usable[tag] = None
+            continue
         c = yaml.safe_load(open(f"{CODE}/{path}", encoding="utf-8"))["checkpoints"]
         ok = True
         for p in c["locator"] + [c["unet"], c["diffusion"]]:
@@ -80,7 +83,7 @@ if __name__ == "__main__":
     py = sys.executable
     try:
         for tag, cfg in configs.items():
-            env = {"NOVELTY_CONFIG": f"{CODE}/{cfg}"}
+            env = {"NOVELTY_CONFIG": f"{CODE}/{cfg}"} if cfg else {}
             if STAGE == "tune":
                 sets = " ".join(sorted(find("large_tune_*.zip")))
                 both_gpus([f"{py} -m src.novelty.eval_maps --set {sets} --locator-sweep --tag {tag} > {out}/sweep{tag}.log 2>&1",
