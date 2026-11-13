@@ -1212,3 +1212,34 @@ Kaggle counts session hours, not GPU hours x 2 (0.78 h used after the first two 
   seeds, threshold 0.4, blob >= 150 px, box pad 2; fill = fill_*_ffc best.pt, t0 700, N = 2, 15 steps, 256 px window;
   gate off, outline off. Arms: shipped auto, hybrid auto, locator + B4, shipped manual, hybrid manual (the ablation
   arm skips intact / small cases). All 151 held-out drawings.
+
+## 2026-11-13 (day): held-out result of v1, v2 chosen on tuning, ablation
+
+- **Held-out run of frozen v1** (kernel floorplan-novelty-eval v4, 151 held-out drawings, `outputs/novelty/e2e_heldout_v1.md`):
+  medium + large omissions fixed 14% -> 35% (+21.9 [+16.9, +26.8]), recovered (2 px) 14% -> 46% (+32.5 [+27.2, +38.1]),
+  tolerant mIoU 40.6 -> 43.2; large alone fixed 13% -> 32%, recovered 11% -> 42%; small omissions 42% -> 42%;
+  region flag on 13% of intact drawings (0.15 per drawing; added components 0.68 -> 1.38). The shipped arms equal the
+  separate baseline run to the digit (same cases, deterministic). Ablation on the same cases: the locator with the
+  SHIPPED fill already gives 34% fixed / 43% recovered; the new fill adds recovered +3.3 [0.0, +6.6] and tolerant
+  mIoU +1.5 [+0.6, +2.4] (with the box given: recovered +12.6, tolerant mIoU +3.0). So the locator is most of the
+  automatic gain; the fill's own gain is real but smaller.
+- **Fill v2 (edit mode) trained** (kernel floorplan-novelty-fill-edit, U-Net 8,196 steps, diffusion 8,173 steps, 2.85 h):
+  in-training validation of the U-Net on tuning windows: hole accuracy 0.60 -> 0.67, hole mIoU 0.275 -> 0.365, wall
+  IoU 0.38 -> 0.48 against v1. The locator flags the omission on 8,121 of 11,777 training versions (69%, like the
+  75% on tuning drawings: it is not visibly over-fitted to the training drawings), so half of the training holes
+  being locator boxes is realistic.
+- **v2 replaces v1 as the final hybrid; decided on tuning drawings only** (kernel floorplan-novelty-eval v5, the same 100
+  tuning drawings and cases as the v1 check, `outputs/novelty/e2e_tuning_v2.md`). Paired v2 minus v1, automatic,
+  medium + large (200 cases): recovered +5.5 points [+1.0, +10.0], tolerant mIoU +4.4 [+3.1, +5.9], added-wall
+  precision +0.09 [+0.06, +0.14], strict fixed +2.0 [-2.5, +6.5]; violations per hole +1.25 [+0.6, +1.9] (slightly
+  worse); small omissions and intact drawings unchanged (intact added components +0.06 [-0.10, +0.26]). With the
+  box given: recovered +7.5 [+1.5, +13.5], tolerant mIoU +3.5. Rule (written before v2's numbers, see the morning
+  entry): v2 is final if it is better on tuning drawings; it is, on three of four accuracy measures.
+  The hope that an edit model would do less damage on false region flags did NOT come true (intact unchanged).
+- **Held-out run of v2** (kernel floorplan-novelty-eval v6): only the two hybrid arms (hybrid auto, hybrid manual); the
+  shipped and locator + B4 rows are the v1 run's (identical cases, deterministic, checked against the baseline run).
+  Both held-out tables (v1 and v2) are reported.
+- **Ablation without Fourier blocks trained** (kernel floorplan-novelty-fill-plain, same recipe with --no-ffc, 2.97 h):
+  in-training validation U-Net hole mIoU 0.274 (with blocks 0.275), diffusion 0.764 (0.769): no visible effect.
+  Scored on the 120 tuning holes with the hole given (kernel floorplan-novelty-eval2, second copy of the eval kernel
+  so two evaluations run at once).
