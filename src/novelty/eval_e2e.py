@@ -7,7 +7,9 @@
 
 Drawings: the HELD-OUT val drawings (configs/stage2/val_split/heldout_ids.txt, never used to choose a setting)
 minus the 12 check-set drawings and untyped plans, in a fixed random order (seed 30). --split tuning runs the same
-on the TUNING drawings (used to choose settings; those numbers are optimistic and labelled so).
+on the TUNING drawings (used to choose settings; those numbers are optimistic and labelled so). --split test
+(parser_test.zip, all typed test drawings) is prepared for ONE run of the frozen hybrid and refuses to start without
+--test-approved-by-user.
 Per drawing: the intact drawing, and up to three separate cases - one small, one medium, one large omission
 (src/stage2/detect/omission_mix.omit_in_bin, the generator of the Stage 2 test; seed 31 + drawing index), erased on
 the drawing itself. Nothing about the omission is given to the automatic arms.
@@ -54,7 +56,10 @@ FIELDS = ["pid", "target", "kind", "size_bin", "size_pct", "arm", "found", "regi
 
 
 def drawing_ids(split, z):
-    ids = (SPLIT / f"{split}_ids.txt").read_text(encoding="utf-8").split()
+    if split == "test":                                   # the official test drawings (parser_test.zip): every plan
+        ids = sorted(n[:-8] for n in z.namelist() if n.endswith("_img.png"))
+    else:
+        ids = (SPLIT / f"{split}_ids.txt").read_text(encoding="utf-8").split()
     order = [ids[i] for i in np.random.default_rng(30).permutation(len(ids))]
     return [p for p in order if p not in e2e_val.CHECK_SET and f"{p}_img.png" in z.namelist()]
 
@@ -287,7 +292,9 @@ def report(args):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--zip")
-    ap.add_argument("--split", default="heldout", choices=("heldout", "tuning"))
+    ap.add_argument("--split", default="heldout", choices=("heldout", "tuning", "test"))
+    ap.add_argument("--test-approved-by-user", action="store_true",
+                    help="required with --split test: the test set is used once, only after the user says so")
     ap.add_argument("--limit", type=int, default=None, help="only the first N drawings of this shard")
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--arms", default="shipped auto,hybrid auto,locator + B4,shipped manual,hybrid manual")
@@ -299,6 +306,9 @@ def main():
     args = ap.parse_args()
     if args.report:
         return report(args)
+    if args.split == "test" and not args.test_approved_by_user:
+        raise SystemExit("The Stage 2 test set is closed: run --split test only after the user approved this one run "
+                         "(docs/decisions.md, novelty section) and pass --test-approved-by-user.")
     run_cases(args)
 
 
