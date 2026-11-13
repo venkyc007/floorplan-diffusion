@@ -1267,3 +1267,69 @@ Kaggle counts session hours, not GPU hours x 2 (0.78 h used after the first two 
   was replaced by cheaper tests (outline prior: rejected; edit mode: adopted).
 - **Laptop restart (17:5x)**: nothing lost; all work was committed and pushed, the Kaggle kernels finished on their
   own, local checkpoints intact (checked file by file).
+
+## 2026-11-13 evening / 2026-11-14 night: round 2 - "structure first" (user: 60-70% end to end on large omissions)
+
+User (2026-11-13 evening): the round-1 result (large omissions recovered 52%, strict fixed 36%) is not enough; target
+60-70% end to end on large omissions on this dataset; full freedom of method. User (later): only the dataset used so
+far - confirmed: every round-2 model is trained on the same CubiCasa5K training drawings (same split), only with
+more erased versions per drawing; tuning and held-out cases are byte-identical to round 1.
+
+Analysis on the tuning drawings (local CPU, no training), which set the direction:
+- **Decision rule**: the fill U-Net (v2) often gives the two sides of a missing wall different room types but no
+  wall, because the wall's position is uncertain by a few pixels and "wall" then never wins the per-pixel arg-max.
+  Drawing a wall wherever its probability is >= 0.18 lifts recovered from 61.7% to 73.5% with the hole given (all
+  423 tuning cases; strict fixed 39.7% -> 58.2%); with the locator's boxes only 48.2% -> 55.3%: localisation was the
+  remaining gap. Thinning those walls to 3 px costs 3-4 points, so it is left to the diffusion finish.
+- **A generous hole does not replace the box**: widening the locator's boxes by 16 px (48% -> 38%) or using the
+  whole plan as one hole (15-53% depending on the threshold, and 14-94% of intact drawings flagged) is clearly
+  worse: v2 relies on the box as a cue. A model trained without a box was needed.
+- **Wall-continuation rays** (`src/novelty/rays.py`): only 32% of the truly missing wall pixels lie on the straight
+  continuation of a wall end that is still visible (>= half of them in 29% of cases), so rays are an input
+  feature, not a method.
+- Tried and dropped: walls on predicted room-type boundaries (precision 0.75 -> 0.52), adding supported rays to
+  the output (recovered 65% -> 59%).
+
+Own choices:
+- **Bigger set** (kernel floorplan-novelty-data2, 1.8 h): the same generator and seeds with 9 erased versions per
+  training drawing instead of 3 (versions 1-3 identical to the first set): 35,339 erased + 3,944 intact versions;
+  the tuning set rebuilt with the same seed (maps checked identical). Each version now also stores the INK MAP
+  (`data.ink_map`: share of pixels darker than grey 128 under each map pixel) and the grey drawing at map size.
+- **Structure net** (`src/novelty/structure.py`, `configs/novelty/structure.yaml`): plan-level, no box. Input: the
+  parsed map (one-hot) + 2 ray channels + ink map. Output: "a missing wall runs here" (erased walls widened by
+  1 px) and "this area is missing" (helper task). smp U-Net, ImageNet ResNet-34, BCE + Dice (wall map weight 2),
+  320 px canvas, batch 16, lr 3e-4, 70% erased / 30% intact, 2.4 h per run. Decode: heat >= 0.5 -> centre line ->
+  pieces < 6 px dropped -> redrawn 3 px. Region flag = a group of added walls (pieces within 8 px, >= 12 px, 6 px
+  margin).
+- **Why an ink map, and is it legitimate**: a room that was never drawn has no label and no furniture; the
+  parser's 16 classes cannot show that. The map is binarised, so paper tone and smudges are invisible. Trace check
+  on the tuning drawings: erased walls carry ink on 0.2% of their pixels, the blank area around them 0.8%, kept
+  walls 47%; grey levels 248.2 vs 248.7. So the net does not read ghost walls. It does read the BLANK AREA the
+  omission leaves (the generators clear every stroke in the omitted room / rectangle, by the user's definition of
+  a large omission, 2026-10-20), including the straight edge where neighbouring ink stops; for an erased
+  rectangle that edge is sharper than a real forgotten region would be. Reported with the ablation below.
+- **Results on the tuning drawings, map level, fully automatic** (`outputs/novelty/tune_structure_sweep.txt`; kernels
+  floorplan-novelty-structure and -structure-abl): all inputs, seed 0: recovered 73.5% (large 70.8%; whole rooms 86%,
+  rectangles 62%), recall 0.76, precision 0.76, 6% of intact drawings flagged; seed 1: 70-71%; WITHOUT the ink map
+  55% (20% of intact drawings flagged); without the rays 71-72%. The threshold hardly matters (0.2-0.7: 73.5-74%).
+  The 2-seed average at 0.4: 74%, but 11% of intact drawings flagged -> one net (seed 0) at 0.5.
+- **The locator is dropped as a source of region flags (v3b)**: adding its boxes + the fill's walls to the structure
+  net's result gives 74-75% recovered (no gain) and raises the intact drawings flagged from 6% to 21%.
+- **Pipeline v3** (`src/novelty/pipeline.py`, `configs/novelty/pipeline_structure_b.yaml`): region flags = groups of
+  the structure net's walls; in each flagged box the v2 edit U-Net draws the sketch, walls are added where its wall
+  probability >= 0.18 (`fill.wall_tau`), the structure net's walls are painted in, the v2 diffusion finishes from
+  t0 700 (N = 2), and structure walls the diffusion dropped are put back (`fill.keep_walls`), except over a door
+  or window it drew. Small flags outside take the shipped path as before.
+- **End-to-end check on 100 tuning drawings** (`outputs/novelty/e2e_tuning_v3a.md`, `e2e_tuning_v3b.md`; same cases as
+  round 1): large omissions recovered 9% (shipped) / 47% (v2) -> 72% (v3a: 2-net average + locator) / 70% (v3b);
+  strict fixed 7% / 30% -> 48% / 46%; medium + large recovered 10% / 47% -> 68% / 67%. Small omissions fixed 52%
+  (shipped) -> 48% (v3a) / 51% (v3b); intact drawings with a region flag 18% (v3a) / 6% (v3b), added components per
+  intact drawing 2.01 / 1.27 (shipped 0.92). v3b chosen: same accuracy within noise, a third of the false alarms.
+- **v3b frozen and sent to its held-out run** (kernel floorplan-novelty-eval v8, 04:42): only the two hybrid arms; the
+  shipped rows are the round-1 run's (same cases).
+- **Faint drawings** (found after the first structure nets): in 20% of the tuning cases the drawing's own walls are
+  lighter than grey 128, the ink map is nearly empty and recovered is 55% (82% where the walls register well).
+  Added a STROKE MAP (`data.stroke_map`: pixel >= 32 grey levels darker than a 7 px grey closing, at map size) as a
+  4th extra input: walls visible in 100% of the tuning drawings; trace check: 0.96% of erased-wall pixels flagged
+  vs 1.21% of the blank area (a lower threshold of 12-16 did show an excess, so 32 was taken). Retrain running
+  (kernel floorplan-novelty-structure2, two seeds, 2.6 h); it replaces v3b only if it is better on tuning drawings.
