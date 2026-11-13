@@ -1,0 +1,301 @@
+pid,target,kind,size_bin,size_pct,arm,found,region_flag,fixed,fix_iou,recovered,miss_recall,add_precision,false_adds,tol_before,tol_after,valid_before,valid_after,viol_gt,viol_after,n_flags,n_region_flags,added,seconds
+high_quality_architectural-575,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,3,0,3,19.1
+high_quality_architectural-575,small,wall,small,0.181,hybrid auto,True,False,True,0.5,,,,5,52.0,48.8,False,False,0,10,5,0,8,7.7
+high_quality_architectural-575,medium,room (whole),medium,3.734,hybrid auto,True,True,True,0.401,True,0.857,0.643,4,40.7,40.7,False,False,7,36,3,1,9,6.9
+high_quality_architectural-575,medium,room (whole),medium,3.734,hybrid manual,True,False,True,0.506,True,0.893,0.71,0,40.7,36.4,False,False,7,49,1,0,6,4.1
+high_quality_architectural-575,large,region,large,8.349,hybrid auto,True,True,True,0.492,True,1.0,0.807,3,18.0,26.2,False,False,2,5,3,1,4,6.9
+high_quality_architectural-575,large,region,large,8.349,hybrid manual,True,False,True,0.515,True,1.0,0.816,1,18.0,22.6,False,False,2,15,1,0,2,4.3
+colorful-4719,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.0
+colorful-4719,small,window,small,0.352,hybrid auto,True,False,True,0.847,,,,0,100.0,100.0,False,False,0,2,1,0,1,1.0
+colorful-4719,medium,region,medium,7.196,hybrid auto,True,True,True,0.521,True,1.0,0.9,1,62.3,85.8,False,True,2,2,1,1,2,5.5
+colorful-4719,medium,region,medium,7.196,hybrid manual,True,False,True,0.528,True,1.0,0.9,0,62.3,86.1,False,True,2,2,1,0,1,4.3
+colorful-4719,large,room (whole),large,9.811,hybrid auto,True,True,False,0.298,True,0.761,0.629,3,34.3,41.9,False,False,6,10,1,1,10,5.3
+colorful-4719,large,room (whole),large,9.811,hybrid manual,True,False,True,0.303,True,1.0,0.667,0,34.3,39.5,False,False,6,19,1,0,5,4.4
+colorful-444,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,20.7
+colorful-444,small,door (a),small,0.042,hybrid auto,True,False,True,0.923,,,,0,26.3,54.8,False,False,2,6,1,0,1,21.2
+colorful-444,medium,region,medium,7.283,hybrid auto,True,True,True,0.515,True,0.703,0.625,10,20.9,25.8,False,False,13,43,1,1,13,24.6
+colorful-444,medium,region,medium,7.283,hybrid manual,True,False,True,0.533,True,0.703,0.63,3,20.9,24.7,False,False,13,50,1,0,7,4.7
+colorful-444,large,region,large,15.035,hybrid auto,True,True,True,0.399,True,0.653,0.707,1,14.9,20.5,False,False,12,18,1,1,8,21.6
+colorful-444,large,region,large,15.035,hybrid manual,True,False,True,0.42,True,0.619,0.702,2,14.9,20.5,False,False,12,22,1,0,9,4.7
+colorful-14418,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.8
+colorful-14418,small,room,small,0.414,hybrid auto,True,False,False,0.273,False,0.348,0.833,0,39.8,50.7,False,False,4,6,1,0,2,3.3
+colorful-14418,medium,room (whole),medium,5.889,hybrid auto,True,True,True,0.384,True,0.685,0.722,4,25.6,21.0,False,False,11,48,2,2,10,11.4
+colorful-14418,medium,room (whole),medium,5.889,hybrid manual,True,False,True,0.381,True,0.867,0.672,0,25.6,23.2,False,False,11,58,1,0,3,4.8
+colorful-14418,large,room (whole),large,13.582,hybrid auto,True,True,True,0.364,False,0.481,0.771,2,29.2,33.2,False,False,23,28,2,2,4,11.8
+colorful-14418,large,room (whole),large,13.582,hybrid manual,True,False,True,0.379,False,0.476,0.841,5,29.2,35.2,False,False,23,30,1,0,11,5.0
+high_quality_architectural-303,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,5.3
+high_quality_architectural-303,small,fixture,small,0.06,hybrid auto,False,False,False,0.0,,,,0,69.4,69.4,False,False,1,6,0,0,0,6.0
+high_quality_architectural-303,medium,room (whole),medium,6.179,hybrid auto,True,True,True,0.348,True,0.659,0.613,0,22.6,42.9,False,False,3,22,1,1,2,10.6
+high_quality_architectural-303,medium,room (whole),medium,6.179,hybrid manual,True,False,True,0.402,True,0.697,0.583,0,22.6,34.8,False,False,3,30,1,0,1,4.7
+high_quality_architectural-303,large,room (whole),large,10.153,hybrid auto,True,True,True,0.388,True,1.0,0.736,2,31.9,45.7,False,False,13,29,1,1,7,10.5
+high_quality_architectural-303,large,room (whole),large,10.153,hybrid manual,True,False,True,0.41,True,1.0,0.736,2,31.9,42.0,False,False,13,55,1,0,4,4.9
+high_quality-8781,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.8
+high_quality-8781,small,room,small,0.74,hybrid auto,True,True,True,0.591,False,1.0,0.446,0,76.5,66.5,False,False,2,3,1,1,6,6.8
+high_quality-8781,medium,region,medium,5.32,hybrid auto,True,True,False,0.281,True,1.0,1.0,3,41.7,52.0,False,False,3,11,1,1,4,6.6
+high_quality-8781,medium,region,medium,5.32,hybrid manual,True,False,False,0.286,True,1.0,0.953,0,41.7,52.0,False,False,3,19,1,0,1,4.9
+high_quality-8781,large,room (whole),large,12.048,hybrid auto,True,True,True,0.763,True,1.0,0.797,2,64.6,62.0,False,False,2,8,1,1,5,6.7
+high_quality-8781,large,room (whole),large,12.048,hybrid manual,True,False,True,0.692,True,1.0,0.797,0,64.6,66.1,False,False,2,6,1,0,3,4.8
+high_quality-4893,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.7
+high_quality-4893,small,door (b),small,0.189,hybrid auto,True,False,True,0.355,,,,0,39.1,39.1,False,False,2,21,1,0,1,1.7
+high_quality-4893,medium,room (whole),medium,4.275,hybrid auto,True,True,True,0.497,True,1.0,0.73,2,19.6,36.3,False,False,8,10,1,1,3,6.4
+high_quality-4893,medium,room (whole),medium,4.275,hybrid manual,True,False,True,0.528,True,1.0,0.61,0,19.6,31.0,False,False,8,22,1,0,1,4.6
+high_quality-4893,large,room (whole),large,12.523,hybrid auto,True,True,True,0.415,True,0.94,0.974,1,24.6,45.7,False,False,7,16,1,1,4,6.4
+high_quality-4893,large,room (whole),large,12.523,hybrid manual,True,False,True,0.457,True,0.983,1.0,1,24.6,44.8,False,False,7,30,1,0,2,4.7
+high_quality_architectural-562,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.9
+high_quality_architectural-562,small,window,small,0.181,hybrid auto,True,False,True,0.6,,,,0,75.7,75.7,False,False,5,16,1,0,1,0.9
+high_quality_architectural-562,medium,region,medium,5.409,hybrid auto,True,True,True,0.322,True,1.0,1.0,0,65.4,70.4,False,False,1,3,1,1,1,5.7
+high_quality_architectural-562,medium,region,medium,5.409,hybrid manual,True,False,True,0.339,True,1.0,1.0,0,65.4,70.6,False,False,1,8,1,0,1,4.8
+high_quality_architectural-562,large,room (whole),large,13.587,hybrid auto,True,True,False,0.248,True,1.0,0.857,0,49.1,59.7,False,False,6,12,1,1,1,5.8
+high_quality_architectural-562,large,room (whole),large,13.587,hybrid manual,True,False,True,0.306,True,1.0,0.885,0,49.1,56.8,False,False,6,41,1,0,3,4.8
+high_quality_architectural-9096,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,8.9
+high_quality_architectural-9096,small,fixture,small,0.044,hybrid auto,False,False,False,0.3,,,,0,51.7,51.7,False,False,1,12,0,0,0,8.5
+high_quality_architectural-9096,medium,room (whole),medium,4.436,hybrid auto,True,True,True,0.357,True,1.0,0.628,12,20.9,27.4,False,False,5,63,1,1,17,12.3
+high_quality_architectural-9096,medium,room (whole),medium,4.436,hybrid manual,True,False,True,0.368,True,1.0,0.592,3,20.9,26.7,False,False,5,71,1,0,6,4.7
+high_quality_architectural-9096,large,region,large,15.089,hybrid auto,True,True,True,0.326,True,0.849,0.771,3,17.4,26.6,False,False,15,54,3,2,7,16.7
+high_quality_architectural-9096,large,region,large,15.089,hybrid manual,True,False,True,0.338,True,0.875,0.615,0,17.4,22.0,False,False,15,53,1,0,2,5.0
+high_quality_architectural-9630,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,0.7
+high_quality_architectural-9630,small,door (a),small,0.314,hybrid auto,False,False,False,0.259,,,,0,46.2,46.2,False,False,6,15,0,0,0,0.7
+high_quality_architectural-9630,medium,region,medium,5.381,hybrid auto,False,False,False,0.081,False,0.0,,6,57.6,57.6,False,False,3,13,1,1,6,5.7
+high_quality_architectural-9630,medium,region,medium,5.381,hybrid manual,True,False,True,0.607,True,1.0,0.583,0,57.6,78.0,False,False,3,9,1,0,2,4.9
+high_quality_architectural-9630,large,region,large,10.403,hybrid auto,True,False,False,0.087,False,,,0,73.6,73.6,False,False,6,18,1,0,1,0.7
+high_quality_architectural-9630,large,region,large,10.403,hybrid manual,True,False,False,0.256,False,,0.286,1,73.6,60.6,False,False,6,8,1,0,4,4.9
+high_quality_architectural-5734,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.0
+high_quality_architectural-5734,small,door (b),small,0.102,hybrid auto,False,False,False,0.3,,,,0,55.3,55.3,True,True,8,8,0,0,0,1.1
+high_quality_architectural-5734,medium,room (whole),medium,4.353,hybrid auto,True,True,True,0.425,True,0.977,0.919,1,33.7,43.3,False,False,10,20,1,1,2,5.8
+high_quality_architectural-5734,medium,room (whole),medium,4.353,hybrid manual,True,False,True,0.493,True,0.977,0.903,1,33.7,50.2,False,False,10,26,1,0,2,4.7
+high_quality_architectural-5734,large,room (whole),large,11.935,hybrid auto,True,True,False,0.259,True,0.558,0.739,2,20.9,38.4,False,True,21,15,1,1,6,5.8
+high_quality_architectural-5734,large,room (whole),large,11.935,hybrid manual,True,False,False,0.253,True,0.595,0.753,0,20.9,38.4,False,False,21,23,1,0,1,4.7
+high_quality-5767,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.2
+high_quality-5767,small,door (b),small,0.171,hybrid auto,True,False,True,0.688,,,,0,61.9,61.9,False,False,3,7,1,0,1,1.3
+high_quality-5767,medium,region,medium,7.392,hybrid auto,True,True,False,0.222,False,,1.0,2,53.4,51.6,False,True,4,2,1,1,3,6.0
+high_quality-5767,medium,region,medium,7.392,hybrid manual,True,False,False,0.24,False,,1.0,0,53.4,51.3,False,False,4,16,1,0,1,4.7
+high_quality-5767,large,region,large,19.346,hybrid auto,True,True,True,0.508,True,0.895,0.96,0,52.7,56.3,False,False,5,8,1,1,1,6.1
+high_quality-5767,large,region,large,19.346,hybrid manual,True,False,True,0.493,True,0.895,0.855,0,52.7,53.9,False,False,5,11,1,0,1,4.8
+high_quality_architectural-5996,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.9
+high_quality_architectural-5996,small,wall,small,0.123,hybrid auto,False,False,False,0.103,,,,0,64.9,64.9,False,False,7,21,0,0,0,1.0
+high_quality_architectural-5996,medium,region,medium,6.699,hybrid auto,True,True,False,0.288,True,0.968,0.806,5,23.7,29.2,False,False,4,12,1,1,6,6.0
+high_quality_architectural-5996,medium,region,medium,6.699,hybrid manual,True,False,True,0.323,True,0.984,0.806,2,23.7,28.3,False,False,4,28,1,0,3,4.8
+high_quality_architectural-5996,large,room (whole),large,11.381,hybrid auto,True,True,False,0.265,True,0.722,0.953,2,46.9,42.0,False,True,21,20,1,1,8,5.5
+high_quality_architectural-5996,large,room (whole),large,11.381,hybrid manual,True,False,False,0.279,True,0.817,0.844,0,46.9,40.0,False,False,21,39,1,0,7,4.8
+high_quality-3828,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.7
+high_quality-3828,small,window,small,0.326,hybrid auto,True,False,True,0.304,,,,0,68.2,68.2,False,False,2,11,1,0,1,1.8
+high_quality-3828,medium,room (whole),medium,5.694,hybrid auto,True,True,True,0.307,True,1.0,0.882,2,15.7,48.4,False,False,5,26,1,1,8,6.3
+high_quality-3828,medium,room (whole),medium,5.694,hybrid manual,True,False,True,0.408,True,1.0,0.899,0,15.7,36.7,False,False,5,30,1,0,3,4.7
+high_quality-3828,large,room (whole),large,9.728,hybrid auto,True,True,False,0.244,True,1.0,0.793,2,37.1,37.2,False,False,4,16,1,1,4,6.5
+high_quality-3828,large,room (whole),large,9.728,hybrid manual,True,False,False,0.274,True,1.0,0.536,0,37.1,50.5,False,False,4,16,1,0,3,4.8
+high_quality_architectural-1331,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,2,2.3
+high_quality_architectural-1331,small,railing,small,0.193,hybrid auto,False,False,False,0.383,,,,3,86.6,86.6,False,False,2,4,2,0,3,3.2
+high_quality_architectural-1331,medium,region,medium,7.557,hybrid auto,True,True,False,0.207,True,0.829,0.935,6,38.9,38.1,False,False,5,6,1,1,8,5.5
+high_quality_architectural-1331,medium,region,medium,7.557,hybrid manual,True,False,False,0.238,True,1.0,0.912,1,38.9,38.9,False,False,5,17,1,0,2,4.8
+high_quality_architectural-1331,large,region,large,21.256,hybrid auto,True,True,False,0.062,False,1.0,0.182,1,37.6,26.4,False,False,4,15,1,1,2,5.4
+high_quality_architectural-1331,large,region,large,21.256,hybrid manual,True,False,False,0.097,False,1.0,0.229,0,37.6,30.7,False,False,4,19,1,0,1,4.7
+high_quality_architectural-9001,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,3.6
+high_quality_architectural-9001,small,wall,small,0.189,hybrid auto,True,False,True,0.364,,,,3,62.1,65.3,False,False,2,7,4,0,6,5.3
+high_quality_architectural-9001,medium,region,medium,7.134,hybrid auto,True,True,False,0.063,True,0.522,0.56,5,2.2,4.9,True,False,24,39,2,1,7,6.5
+high_quality_architectural-9001,medium,region,medium,7.134,hybrid manual,True,False,False,0.029,False,0.344,0.65,1,2.2,6.1,True,False,24,40,1,0,5,4.7
+high_quality_architectural-9001,large,region,large,14.49,hybrid auto,True,True,False,0.01,False,0.066,0.35,3,24.5,21.8,True,True,28,28,4,1,6,7.9
+high_quality_architectural-9001,large,region,large,14.49,hybrid manual,True,False,False,0.084,False,0.306,0.538,0,24.5,19.1,True,True,28,17,1,0,4,4.9
+colorful-14927,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.5
+colorful-14927,small,window,small,0.928,hybrid auto,False,False,False,0.488,,,,0,62.0,62.0,True,True,8,6,0,0,0,0.5
+colorful-14927,medium,region,medium,7.218,hybrid auto,True,True,False,0.063,False,0.0,0.0,7,32.4,34.2,False,False,8,17,1,1,8,5.5
+colorful-14927,medium,region,medium,7.218,hybrid manual,True,False,False,0.026,False,0.0,,0,32.4,36.8,False,False,8,18,1,0,1,4.9
+colorful-14927,large,region,large,18.838,hybrid auto,True,True,False,0.11,True,1.0,1.0,1,26.9,31.9,False,False,8,39,2,1,3,6.7
+colorful-14927,large,region,large,18.838,hybrid manual,True,False,False,0.159,True,1.0,0.957,1,26.9,43.9,False,False,8,33,1,0,3,4.7
+high_quality-8661,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,4.2
+high_quality-8661,small,door (a),small,0.146,hybrid auto,True,False,True,0.667,,,,1,48.1,48.1,False,False,2,7,2,0,2,4.5
+high_quality-8661,medium,room (whole),medium,7.048,hybrid auto,True,False,True,0.402,False,0.417,1.0,1,28.3,28.2,False,False,2,18,2,0,2,5.5
+high_quality-8661,medium,room (whole),medium,7.048,hybrid manual,True,False,True,0.488,True,1.0,0.786,5,28.3,43.2,False,False,2,13,1,0,9,4.6
+high_quality-8661,large,region,large,10.033,hybrid auto,True,False,False,0.19,False,0.0,,1,36.4,36.4,False,False,3,60,3,0,2,5.5
+high_quality-8661,large,region,large,10.033,hybrid manual,True,False,False,0.171,True,0.5,0.623,4,36.4,55.5,False,False,3,12,1,0,11,4.8
+high_quality_architectural-9282,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,1.4
+high_quality_architectural-9282,small,railing,small,1.213,hybrid auto,False,False,False,0.0,,,,1,71.6,71.6,False,False,9,16,1,0,1,1.5
+high_quality_architectural-9282,medium,room (whole),medium,3.596,hybrid auto,True,True,False,0.216,True,1.0,0.855,5,41.5,37.3,False,False,6,24,2,1,8,6.5
+high_quality_architectural-9282,medium,room (whole),medium,3.596,hybrid manual,True,False,False,0.29,True,1.0,0.885,1,41.5,48.3,False,False,6,23,1,0,2,4.9
+high_quality_architectural-9282,large,region,large,17.043,hybrid auto,True,True,False,0.175,True,0.547,0.722,2,54.0,53.8,False,False,12,31,3,2,4,11.7
+high_quality_architectural-9282,large,region,large,17.043,hybrid manual,True,False,False,0.246,True,0.736,0.716,2,54.0,57.3,False,False,12,31,1,0,4,4.9
+high_quality-7767,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.7
+high_quality-7767,small,door (a),small,0.502,hybrid auto,True,False,True,0.591,,,,0,85.9,85.9,False,False,3,10,1,0,1,0.7
+high_quality-7767,medium,region,medium,7.523,hybrid auto,True,True,False,0.29,True,1.0,0.866,0,39.0,39.7,False,False,9,18,2,2,5,10.2
+high_quality-7767,medium,region,medium,7.523,hybrid manual,True,False,True,0.392,True,1.0,0.966,0,39.0,41.4,False,False,9,46,1,0,5,4.7
+high_quality-7767,large,region,large,9.832,hybrid auto,True,True,True,0.5,True,1.0,1.0,2,56.0,58.5,False,False,2,5,2,1,4,6.9
+high_quality-7767,large,region,large,9.832,hybrid manual,True,False,True,0.411,True,1.0,0.943,1,56.0,53.0,False,False,2,15,1,0,2,4.7
+high_quality_architectural-9296,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.0
+high_quality_architectural-9296,small,window,small,0.642,hybrid auto,True,False,True,0.885,,,,0,94.4,94.4,False,False,1,7,1,0,1,1.0
+high_quality_architectural-9296,medium,region,medium,5.444,hybrid auto,True,True,True,0.615,True,1.0,1.0,0,49.7,93.0,False,False,0,4,1,1,1,5.9
+high_quality_architectural-9296,medium,region,medium,5.444,hybrid manual,True,False,True,0.434,True,1.0,1.0,0,49.7,65.9,False,False,0,10,1,0,1,4.7
+high_quality_architectural-9296,large,room (whole),large,12.627,hybrid auto,True,True,True,0.632,True,1.0,0.749,3,36.7,61.4,False,False,9,18,1,1,4,5.8
+high_quality_architectural-9296,large,room (whole),large,12.627,hybrid manual,True,False,True,0.581,True,1.0,0.753,2,36.7,47.4,False,False,9,35,1,0,3,4.8
+high_quality_architectural-5672,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,7.4
+high_quality_architectural-5672,small,railing,small,0.326,hybrid auto,False,False,False,0.122,,,,1,69.6,69.6,False,False,2,6,1,0,1,8.3
+high_quality_architectural-5672,medium,region,medium,5.894,hybrid auto,True,True,True,0.493,True,1.0,0.847,6,46.7,44.4,False,False,5,15,3,2,8,17.0
+high_quality_architectural-5672,medium,region,medium,5.894,hybrid manual,True,False,True,0.543,True,1.0,0.651,4,46.7,46.7,False,False,5,19,1,0,5,4.8
+high_quality_architectural-5672,large,region,large,11.822,hybrid auto,True,True,True,0.644,True,0.966,0.839,3,39.3,49.4,False,False,5,26,2,1,5,13.2
+high_quality_architectural-5672,large,region,large,11.822,hybrid manual,True,False,True,0.651,True,0.966,0.761,2,39.3,48.3,False,False,5,32,1,0,6,5.0
+high_quality_architectural-9936,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,2,1,4,24.3
+high_quality_architectural-9936,small,door (b),small,0.066,hybrid auto,True,False,True,0.507,,,,1,91.0,91.0,False,False,0,6,2,0,2,18.8
+high_quality_architectural-9936,medium,region,medium,6.156,hybrid auto,True,True,True,0.656,True,1.0,1.0,6,45.0,93.8,False,True,0,0,3,3,7,33.8
+high_quality_architectural-9936,medium,region,medium,6.156,hybrid manual,True,False,True,0.459,True,1.0,1.0,2,45.0,88.1,False,False,0,6,1,0,3,5.0
+high_quality_architectural-9936,large,region,large,11.306,hybrid auto,True,True,False,0.257,True,0.817,0.539,5,20.0,14.7,False,False,23,80,3,2,8,27.3
+high_quality_architectural-9936,large,region,large,11.306,hybrid manual,True,False,True,0.308,True,1.0,0.632,3,20.0,32.3,False,False,23,78,1,0,4,4.8
+high_quality_architectural-9361,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.2
+high_quality_architectural-9361,small,window,small,0.294,hybrid auto,True,False,True,0.577,,,,0,72.4,85.7,False,False,5,15,1,0,1,2.5
+high_quality_architectural-9361,medium,room (whole),medium,4.862,hybrid auto,True,True,False,0.179,True,0.868,0.981,0,13.3,18.4,False,False,8,9,2,2,2,11.0
+high_quality_architectural-9361,medium,room (whole),medium,4.862,hybrid manual,True,False,False,0.239,True,0.887,0.95,0,13.3,18.8,False,False,8,17,1,0,3,4.9
+high_quality_architectural-9361,large,room (whole),large,15.418,hybrid auto,True,True,False,0.263,True,1.0,0.87,1,43.1,58.8,False,False,6,9,1,1,3,5.9
+high_quality_architectural-9361,large,room (whole),large,15.418,hybrid manual,True,False,False,0.29,True,1.0,0.909,1,43.1,58.9,False,False,6,10,1,0,3,4.7
+colorful-14929,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.6
+colorful-14929,small,room,small,0.499,hybrid auto,True,False,True,0.476,True,1.0,1.0,0,50.0,59.8,False,False,2,5,1,0,1,2.0
+colorful-14929,medium,region,medium,5.068,hybrid auto,True,True,False,0.267,True,1.0,0.667,1,28.4,26.2,False,False,1,9,1,1,2,5.4
+colorful-14929,medium,region,medium,5.068,hybrid manual,True,False,False,0.289,True,1.0,0.5,0,28.4,25.1,False,False,1,12,1,0,1,4.6
+colorful-14929,large,region,large,23.299,hybrid auto,True,True,False,0.252,True,1.0,0.6,3,34.0,30.7,False,False,2,11,1,1,7,5.2
+colorful-14929,large,region,large,23.299,hybrid manual,True,False,True,0.441,True,1.0,0.6,0,34.0,35.9,False,False,2,14,1,0,1,4.7
+high_quality_architectural-1632,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,2.1
+high_quality_architectural-1632,small,fixture,small,0.571,hybrid auto,True,False,False,0.0,,,,0,62.0,46.9,False,False,1,19,2,0,1,4.7
+high_quality_architectural-1632,medium,room (whole),medium,5.042,hybrid auto,True,True,False,0.25,True,0.86,0.889,5,32.5,51.0,False,False,3,14,2,1,8,8.2
+high_quality_architectural-1632,medium,room (whole),medium,5.042,hybrid manual,True,False,True,0.341,True,1.0,0.991,0,32.5,55.3,False,False,3,43,1,0,4,4.9
+high_quality_architectural-1632,large,region,large,13.91,hybrid auto,True,True,False,0.269,True,0.893,0.816,2,37.4,50.7,False,False,7,12,1,1,6,6.9
+high_quality_architectural-1632,large,region,large,13.91,hybrid manual,True,False,False,0.241,True,0.879,0.799,1,37.4,50.0,False,False,7,17,1,0,3,4.9
+high_quality-14178,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,1,1,6.8
+high_quality-14178,small,wall,small,0.306,hybrid auto,True,False,True,0.489,,,,1,46.6,65.5,False,False,2,5,2,1,2,7.7
+high_quality-14178,medium,room (whole),medium,5.553,hybrid auto,True,True,True,0.48,True,1.0,0.799,6,18.4,28.2,False,False,12,50,1,1,8,6.6
+high_quality-14178,medium,room (whole),medium,5.553,hybrid manual,True,False,True,0.463,True,1.0,0.776,2,18.4,25.4,False,False,12,57,1,0,3,4.7
+high_quality-14178,large,room (whole),large,9.478,hybrid auto,True,True,False,0.212,True,0.591,0.692,0,34.2,34.9,True,True,7,7,1,1,1,6.0
+high_quality-14178,large,room (whole),large,9.478,hybrid manual,True,False,False,0.205,True,0.591,0.652,1,34.2,43.6,True,False,7,12,1,0,2,4.7
+high_quality-729,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.1
+high_quality-729,small,door (b),small,0.122,hybrid auto,False,False,False,0.471,,,,0,96.7,96.7,False,False,2,4,0,0,0,1.1
+high_quality-729,medium,region,medium,5.77,hybrid auto,True,True,False,0.235,True,1.0,1.0,2,24.4,30.3,False,False,6,18,1,1,3,5.9
+high_quality-729,medium,region,medium,5.77,hybrid manual,True,False,True,0.31,True,1.0,0.922,0,24.4,35.0,False,False,6,16,1,0,1,4.7
+high_quality-729,large,region,large,9.719,hybrid auto,True,True,True,0.362,True,1.0,0.629,0,38.4,37.7,False,False,5,34,1,1,1,5.8
+high_quality-729,large,region,large,9.719,hybrid manual,True,False,True,0.372,True,1.0,0.559,0,38.4,31.9,False,False,5,26,1,0,1,4.8
+high_quality_architectural-555,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.0
+high_quality_architectural-555,small,railing,small,0.577,hybrid auto,False,False,False,0.0,,,,0,17.8,17.8,True,True,13,11,0,0,0,1.0
+high_quality_architectural-555,medium,region,medium,6.452,hybrid auto,True,False,False,0.0,False,0.0,,1,2.1,2.1,False,False,16,28,2,0,2,2.5
+high_quality_architectural-555,medium,region,medium,6.452,hybrid manual,True,False,True,0.597,True,0.979,1.0,0,2.1,10.4,False,False,16,35,1,0,1,4.8
+high_quality_architectural-555,large,region,large,19.813,hybrid auto,True,False,False,0.01,False,0.0,,0,20.8,20.1,False,False,10,31,1,0,1,2.2
+high_quality_architectural-555,large,region,large,19.813,hybrid manual,True,False,False,0.022,True,0.667,0.818,2,20.8,18.1,False,False,10,33,1,0,3,4.7
+high_quality-1208,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.9
+high_quality-1208,small,window,small,0.986,hybrid auto,True,False,True,0.681,,,,0,88.5,88.5,False,False,2,10,1,0,1,1.9
+high_quality-1208,medium,region,medium,6.916,hybrid auto,True,True,True,0.677,True,1.0,0.968,0,34.3,69.1,False,False,1,6,1,1,2,6.5
+high_quality-1208,medium,region,medium,6.916,hybrid manual,True,False,True,0.433,True,1.0,1.0,0,34.3,63.7,False,False,1,11,1,0,1,4.8
+high_quality-1208,large,region,large,9.267,hybrid auto,False,False,False,0.0,False,0.0,,0,48.5,48.5,False,False,5,7,0,0,0,1.7
+high_quality-1208,large,region,large,9.267,hybrid manual,True,False,True,0.722,False,1.0,0.429,1,48.5,32.7,False,False,5,6,1,0,2,4.9
+colorful-1697,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,2.7
+colorful-1697,small,window,small,1.066,hybrid auto,True,False,True,0.75,,,,0,80.1,80.1,False,False,5,10,1,0,1,2.6
+colorful-1697,medium,room (whole),medium,5.146,hybrid auto,True,True,False,0.279,True,0.6,0.54,2,30.3,42.5,False,False,10,26,1,1,6,7.3
+colorful-1697,medium,room (whole),medium,5.146,hybrid manual,True,False,False,0.257,True,0.653,0.654,2,30.3,42.7,False,False,10,36,1,0,5,4.8
+colorful-1697,large,room (whole),large,14.769,hybrid auto,True,True,False,0.27,True,0.9,0.802,6,27.9,46.3,False,False,15,33,1,1,11,8.0
+colorful-1697,large,room (whole),large,14.769,hybrid manual,True,False,False,0.258,True,0.945,0.784,1,27.9,40.8,False,False,15,40,1,0,7,5.0
+high_quality_architectural-1101,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,1.8
+high_quality_architectural-1101,small,railing,small,0.445,hybrid auto,False,False,False,0.018,,,,1,37.8,37.8,False,False,3,12,1,0,1,1.9
+high_quality_architectural-1101,medium,room (whole),medium,5.147,hybrid auto,True,True,True,0.626,True,1.0,0.91,3,23.1,71.5,False,False,4,11,3,1,5,6.4
+high_quality_architectural-1101,medium,room (whole),medium,5.147,hybrid manual,True,False,True,0.548,True,1.0,0.906,0,23.1,64.3,False,False,4,13,1,0,1,4.8
+high_quality_architectural-1101,large,room (whole),large,14.577,hybrid auto,True,True,True,0.347,True,0.972,0.738,5,32.7,61.0,False,False,10,11,3,1,14,6.7
+high_quality_architectural-1101,large,room (whole),large,14.577,hybrid manual,True,False,True,0.349,True,0.972,0.746,2,32.7,61.2,False,False,10,30,1,0,9,4.8
+high_quality_architectural-9787,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,1.5
+high_quality_architectural-9787,small,door (b),small,0.08,hybrid auto,False,False,False,0.714,,,,1,98.0,98.0,False,False,2,5,1,0,1,1.4
+high_quality_architectural-9787,medium,region,medium,6.032,hybrid auto,True,True,True,0.41,True,1.0,1.0,1,54.5,71.1,False,False,2,4,2,1,2,6.2
+high_quality_architectural-9787,medium,region,medium,6.032,hybrid manual,True,False,True,0.593,True,1.0,1.0,0,54.5,85.7,False,False,2,5,1,0,1,4.7
+high_quality_architectural-9787,large,room (whole),large,13.128,hybrid auto,True,True,False,0.165,False,1.0,0.42,5,46.8,42.9,False,False,6,9,3,1,7,6.1
+high_quality_architectural-9787,large,room (whole),large,13.128,hybrid manual,True,False,False,0.145,False,1.0,0.462,1,46.8,65.0,False,True,6,3,1,0,5,4.8
+colorful-14923,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.1
+colorful-14923,small,railing,small,1.451,hybrid auto,False,False,False,0.104,,,,0,60.7,60.7,False,False,0,8,0,0,0,1.1
+colorful-14923,medium,region,medium,5.017,hybrid auto,False,False,False,0.0,False,0.0,,1,61.4,61.4,False,False,3,5,1,0,1,2.4
+colorful-14923,medium,region,medium,5.017,hybrid manual,True,False,True,0.56,True,1.0,0.778,1,61.4,75.1,False,False,3,8,1,0,2,4.7
+colorful-14923,large,room (whole),large,13.293,hybrid auto,True,True,True,0.366,True,0.787,0.68,1,25.0,45.0,False,True,18,18,1,1,3,5.6
+colorful-14923,large,room (whole),large,13.293,hybrid manual,True,False,True,0.388,True,0.787,0.711,0,25.0,37.1,False,False,18,20,1,0,1,4.7
+high_quality_architectural-6537,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.2
+high_quality_architectural-6537,small,wall,small,0.268,hybrid auto,False,False,False,0.0,,,,0,59.5,59.5,False,False,0,2,0,0,0,1.3
+high_quality_architectural-6537,medium,room (whole),medium,7.378,hybrid auto,True,True,True,0.396,True,1.0,0.841,1,38.4,53.2,False,True,4,4,1,1,3,6.4
+high_quality_architectural-6537,medium,room (whole),medium,7.378,hybrid manual,True,False,True,0.428,True,1.0,0.907,0,38.4,52.0,False,False,4,28,1,0,1,4.8
+high_quality_architectural-6537,large,room (whole),large,15.556,hybrid auto,True,True,False,0.081,False,0.367,0.697,1,25.2,26.4,False,False,8,20,3,1,3,6.2
+high_quality_architectural-6537,large,room (whole),large,15.556,hybrid manual,True,False,False,0.106,False,0.367,0.789,0,25.2,37.5,False,False,8,18,1,0,3,4.8
+high_quality_architectural-6655,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.8
+high_quality_architectural-6655,small,fixture,small,1.11,hybrid auto,False,False,False,0.0,,,,0,38.2,38.2,False,False,5,23,0,0,0,0.8
+high_quality_architectural-6655,medium,region,medium,6.059,hybrid auto,True,False,False,0.178,False,0.4,1.0,0,54.2,55.5,False,False,10,16,1,0,1,2.2
+high_quality_architectural-6655,medium,region,medium,6.059,hybrid manual,True,False,False,0.28,False,0.467,1.0,0,54.2,56.4,False,False,10,13,1,0,1,4.8
+high_quality_architectural-6655,large,room (whole),large,11.534,hybrid auto,True,True,True,0.483,True,1.0,0.89,1,35.9,37.0,False,True,19,16,2,1,3,5.7
+high_quality_architectural-6655,large,room (whole),large,11.534,hybrid manual,True,False,True,0.503,True,1.0,0.928,0,35.9,40.2,False,False,19,21,1,0,1,4.8
+high_quality_architectural-8413,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.6
+high_quality_architectural-8413,small,fixture,small,0.855,hybrid auto,True,False,False,0.294,,,,0,41.2,49.6,False,False,0,3,1,0,1,2.0
+high_quality_architectural-8413,medium,region,medium,7.453,hybrid auto,True,False,True,0.76,True,1.0,0.571,0,76.0,69.4,False,False,0,1,1,0,2,1.9
+high_quality_architectural-8413,medium,region,medium,7.453,hybrid manual,True,False,True,0.566,True,1.0,0.786,0,76.0,87.3,False,False,0,5,1,0,1,4.7
+high_quality_architectural-8413,large,region,large,9.915,hybrid auto,True,True,False,0.149,True,1.0,0.845,1,43.9,42.7,True,False,8,10,1,1,2,5.3
+high_quality_architectural-8413,large,region,large,9.915,hybrid manual,True,False,False,0.152,True,1.0,0.848,0,43.9,41.6,True,True,8,7,1,0,2,4.8
+colorful-3068,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.5
+colorful-3068,small,room,small,0.806,hybrid auto,True,False,True,0.43,False,,,0,60.0,60.6,False,False,12,32,1,0,8,3.0
+colorful-3068,medium,region,medium,6.942,hybrid auto,True,True,True,0.559,False,,0.143,0,78.4,66.9,False,False,2,5,1,1,1,7.2
+colorful-3068,medium,region,medium,6.942,hybrid manual,True,False,True,0.5,False,,0.13,1,78.4,63.1,False,False,2,7,1,0,2,4.8
+colorful-3068,large,region,large,16.544,hybrid auto,True,True,False,0.241,True,0.882,0.805,2,25.6,38.3,False,False,9,31,1,1,4,5.8
+colorful-3068,large,region,large,16.544,hybrid manual,True,False,False,0.278,True,0.882,0.854,2,25.6,33.4,False,False,9,31,1,0,4,4.8
+high_quality_architectural-3210,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.0
+high_quality_architectural-3210,small,railing,small,0.312,hybrid auto,False,False,False,0.0,,,,0,56.2,56.2,False,False,5,9,0,0,0,1.0
+high_quality_architectural-3210,medium,room (whole),medium,5.672,hybrid auto,True,True,False,0.248,True,1.0,0.919,2,19.1,42.0,False,False,5,25,1,1,4,5.8
+high_quality_architectural-3210,medium,room (whole),medium,5.672,hybrid manual,True,False,False,0.249,True,1.0,0.842,0,19.1,32.7,False,False,5,27,1,0,1,4.7
+high_quality_architectural-3210,large,region,large,9.23,hybrid auto,True,True,True,0.494,True,1.0,0.882,2,46.2,55.2,False,False,1,18,1,1,4,6.0
+high_quality_architectural-3210,large,region,large,9.23,hybrid manual,True,False,True,0.462,True,1.0,0.893,1,46.2,46.8,False,False,1,20,1,0,2,4.8
+high_quality_architectural-7570,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.1
+high_quality_architectural-7570,small,wall,small,0.557,hybrid auto,True,False,True,0.408,,,,0,60.3,50.5,False,False,1,5,1,0,1,2.5
+high_quality_architectural-7570,medium,room (whole),medium,7.538,hybrid auto,True,True,False,0.261,True,0.535,0.537,1,22.5,24.9,False,False,9,19,1,1,4,5.8
+high_quality_architectural-7570,medium,room (whole),medium,7.538,hybrid manual,True,False,False,0.259,False,0.545,0.415,0,22.5,26.3,False,False,9,28,1,0,2,4.8
+high_quality_architectural-7570,large,region,large,12.411,hybrid auto,True,True,False,0.158,False,0.425,0.81,1,50.1,51.5,False,False,14,18,1,1,2,5.9
+high_quality_architectural-7570,large,region,large,12.411,hybrid manual,True,False,False,0.207,True,0.604,0.794,2,50.1,54.1,False,False,14,28,1,0,4,4.8
+high_quality_architectural-5981,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,8,0,7,7.0
+high_quality_architectural-5981,small,window,small,0.101,hybrid auto,False,False,False,0.149,,,,1,95.9,95.9,True,True,13,13,2,0,1,6.8
+high_quality_architectural-5981,medium,region,medium,5.214,hybrid auto,True,False,False,0.0,False,0.0,,7,14.4,14.4,False,False,8,12,8,0,7,7.1
+high_quality_architectural-5981,medium,region,medium,5.214,hybrid manual,True,False,True,0.318,True,0.895,0.708,4,14.4,14.4,False,False,8,28,1,0,7,4.8
+high_quality_architectural-5981,large,region,large,9.61,hybrid auto,True,True,False,0.115,False,0.487,0.246,1,43.1,34.1,False,False,37,39,4,1,2,13.1
+high_quality_architectural-5981,large,region,large,9.61,hybrid manual,True,False,False,0.182,False,0.487,0.263,1,43.1,31.8,False,False,37,38,1,0,6,4.9
+high_quality-4026,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.7
+high_quality-4026,small,fixture,small,0.518,hybrid auto,True,False,True,0.505,,,,0,56.3,68.6,False,False,5,10,1,0,1,2.1
+high_quality-4026,medium,region,medium,6.453,hybrid auto,True,True,True,0.388,True,1.0,1.0,0,63.0,64.6,False,False,6,14,1,1,1,5.4
+high_quality-4026,medium,region,medium,6.453,hybrid manual,True,False,True,0.448,True,1.0,0.745,0,63.0,53.6,False,False,6,7,1,0,1,4.8
+high_quality-4026,large,region,large,11.571,hybrid auto,True,True,False,0.256,True,0.688,0.995,4,29.6,46.1,False,False,6,27,1,1,6,5.5
+high_quality-4026,large,region,large,11.571,hybrid manual,True,False,False,0.292,True,0.773,0.987,1,29.6,35.3,False,False,6,34,1,0,3,4.7
+high_quality_architectural-6038,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,1,0,1,4.2
+high_quality_architectural-6038,small,wall,small,0.137,hybrid auto,False,False,False,0.0,,,,0,21.0,21.0,False,False,1,5,0,0,0,2.8
+high_quality_architectural-6038,medium,region,medium,5.801,hybrid auto,False,False,False,0.006,False,0.0,,0,32.2,32.2,False,False,15,43,0,0,0,3.0
+high_quality_architectural-6038,medium,region,medium,5.801,hybrid manual,True,False,True,0.556,True,0.958,0.859,6,32.2,41.9,False,False,15,44,1,0,9,4.7
+high_quality_architectural-6038,large,room (whole),large,10.262,hybrid auto,True,True,True,0.38,False,0.404,0.734,4,29.0,30.5,False,False,2,40,7,1,7,11.8
+high_quality_architectural-6038,large,room (whole),large,10.262,hybrid manual,True,False,True,0.446,False,0.479,0.584,4,29.0,34.3,False,False,2,30,1,0,12,4.8
+high_quality_architectural-5741,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,0.5
+high_quality_architectural-5741,small,wall,small,0.309,hybrid auto,True,False,True,0.3,,,,0,18.6,31.1,False,False,1,7,1,0,1,1.9
+high_quality_architectural-5741,medium,room (whole),medium,6.171,hybrid auto,True,True,False,0.238,True,1.0,0.756,5,17.7,26.2,False,False,9,12,1,1,6,5.5
+high_quality_architectural-5741,medium,room (whole),medium,6.171,hybrid manual,True,False,False,0.265,True,1.0,0.804,0,17.7,24.7,False,False,9,30,1,0,1,5.0
+high_quality_architectural-5741,large,region,large,17.718,hybrid auto,True,True,False,0.235,True,1.0,0.51,4,16.7,24.8,False,False,18,24,1,1,7,5.5
+high_quality_architectural-5741,large,region,large,17.718,hybrid manual,True,False,False,0.278,False,1.0,0.472,1,16.7,21.9,False,False,18,41,1,0,3,4.9
+high_quality_architectural-9661,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,3,0,3,4.6
+high_quality_architectural-9661,small,fixture,small,0.24,hybrid auto,False,False,False,0.0,,,,3,52.0,52.0,True,True,6,5,3,0,3,4.4
+high_quality_architectural-9661,medium,region,medium,7.012,hybrid auto,True,True,False,0.245,False,0.281,0.677,2,18.4,23.5,False,True,7,6,3,1,4,9.0
+high_quality_architectural-9661,medium,region,medium,7.012,hybrid manual,True,False,True,0.547,True,1.0,0.802,0,18.4,33.0,False,False,7,12,1,0,1,4.7
+high_quality_architectural-9661,large,room (whole),large,10.141,hybrid auto,True,True,True,0.442,True,0.99,0.725,4,35.3,50.0,False,False,17,28,3,1,6,9.4
+high_quality_architectural-9661,large,room (whole),large,10.141,hybrid manual,True,False,True,0.457,True,0.99,0.819,1,35.3,46.7,False,False,17,47,1,0,3,4.8
+high_quality_architectural-9935,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,5.2
+high_quality_architectural-9935,small,fixture,small,0.239,hybrid auto,True,False,False,0.01,,,,0,67.0,67.0,False,False,4,7,1,0,1,5.7
+high_quality_architectural-9935,medium,room (whole),medium,3.122,hybrid auto,False,False,False,0.0,False,0.0,,1,1.9,1.9,False,False,2,14,1,0,1,6.1
+high_quality_architectural-9935,medium,room (whole),medium,3.122,hybrid manual,True,False,True,0.581,True,1.0,0.91,3,1.9,27.2,False,False,2,13,1,0,4,4.8
+high_quality_architectural-9935,large,region,large,16.222,hybrid auto,True,True,True,0.31,True,0.519,0.745,3,21.1,22.5,False,False,23,38,2,2,5,11.3
+high_quality_architectural-9935,large,region,large,16.222,hybrid manual,True,False,True,0.31,True,0.583,0.714,2,21.1,31.4,False,False,23,40,1,0,6,4.9
+high_quality_architectural-4706,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,1.6
+high_quality_architectural-4706,small,room,small,1.897,hybrid auto,True,False,False,0.268,True,0.506,1.0,1,49.4,55.4,False,False,8,29,1,0,4,2.9
+high_quality_architectural-4706,medium,region,medium,6.569,hybrid auto,False,False,False,0.211,False,0.0,,0,46.7,46.7,False,False,4,8,0,0,0,1.3
+high_quality_architectural-4706,medium,region,medium,6.569,hybrid manual,True,False,True,0.424,True,1.0,1.0,0,46.7,52.9,False,False,4,9,1,0,1,5.0
+high_quality_architectural-4706,large,region,large,18.703,hybrid auto,True,True,True,0.614,True,1.0,0.764,1,31.9,84.0,False,False,3,9,1,1,2,6.2
+high_quality_architectural-4706,large,region,large,18.703,hybrid manual,True,False,True,0.655,True,1.0,0.95,1,31.9,53.2,False,False,3,23,1,0,2,4.8
+high_quality-1034,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,6.6
+high_quality-1034,small,wall,small,0.065,hybrid auto,True,False,True,0.545,,,,0,50.8,57.6,False,False,1,23,1,0,2,5.4
+high_quality-1034,medium,region,medium,6.955,hybrid auto,False,False,False,0.0,False,0.0,,0,20.4,20.4,False,False,20,24,0,0,0,3.0
+high_quality-1034,medium,region,medium,6.955,hybrid manual,True,False,True,0.343,True,0.79,0.867,4,20.4,37.4,False,False,20,35,1,0,5,4.8
+high_quality-1034,large,region,large,10.432,hybrid auto,True,True,False,0.117,False,0.147,1.0,0,25.8,23.1,False,False,29,41,1,1,1,7.6
+high_quality-1034,large,region,large,10.432,hybrid manual,True,False,False,0.136,False,0.147,0.721,4,25.8,26.8,False,False,29,42,1,0,9,4.8
+high_quality_architectural-7740,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,2.6
+high_quality_architectural-7740,small,door (b),small,0.053,hybrid auto,False,False,False,0.889,,,,0,62.0,62.0,False,False,3,11,0,0,0,2.7
+high_quality_architectural-7740,medium,room (whole),medium,6.36,hybrid auto,True,True,False,0.165,False,0.47,0.878,3,40.5,48.0,True,True,11,10,1,1,6,7.6
+high_quality_architectural-7740,medium,room (whole),medium,6.36,hybrid manual,True,False,False,0.192,False,0.476,1.0,2,40.5,61.9,True,True,11,6,1,0,5,4.9
+high_quality_architectural-7740,large,region,large,9.139,hybrid auto,True,True,True,0.546,True,1.0,0.762,8,30.6,44.9,False,False,8,37,1,1,13,7.6
+high_quality_architectural-7740,large,region,large,9.139,hybrid manual,True,False,True,0.564,True,1.0,0.789,2,30.6,37.3,False,False,8,61,1,0,5,5.0
+high_quality_architectural-4850,intact,intact,,,hybrid auto,,,,,,,,,,,,,,,0,0,0,2.9
+high_quality_architectural-4850,small,fixture,small,0.225,hybrid auto,True,False,True,0.64,,,,0,71.4,82.5,False,False,3,7,1,0,1,4.0
+high_quality_architectural-4850,medium,region,medium,5.503,hybrid auto,True,True,True,0.354,True,1.0,0.875,1,52.5,64.0,False,True,3,3,2,2,2,11.7
+high_quality_architectural-4850,medium,region,medium,5.503,hybrid manual,True,False,True,0.411,True,1.0,0.764,3,52.5,55.6,False,False,3,6,1,0,5,4.7
+high_quality_architectural-4850,large,region,large,8.04,hybrid auto,True,True,True,0.399,True,1.0,0.954,3,51.6,61.2,False,False,5,15,4,2,6,13.8
+high_quality_architectural-4850,large,region,large,8.04,hybrid manual,True,False,True,0.419,True,1.0,0.864,3,51.6,55.1,False,False,5,31,1,0,7,4.8

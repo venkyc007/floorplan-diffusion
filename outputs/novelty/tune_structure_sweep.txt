@@ -1,0 +1,39 @@
+635 tuning versions (423 erased)
+--- structure net alone (walls only where a group of >= 12 px forms)
+s0 tau 0.2                                   found  88% | recovered 73.5% large 70.8% room  85% region  63% | recall 0.77 prec 0.75 | fixed 44.7% large 43.7% | intact flagged   6% +  5.9 px
+s0 tau 0.3                                   found  88% | recovered 74.0% large 71.5% room  85% region  63% | recall 0.77 prec 0.76 | fixed 44.7% large 43.3% | intact flagged   6% +  5.8 px
+s0 tau 0.4                                   found  88% | recovered 73.5% large 70.8% room  85% region  62% | recall 0.77 prec 0.76 | fixed 44.7% large 43.0% | intact flagged   6% +  5.8 px
+s0 tau 0.5                                   found  88% | recovered 73.5% large 70.8% room  86% region  62% | recall 0.76 prec 0.76 | fixed 44.7% large 42.3% | intact flagged   6% +  5.7 px
+s0 tau 0.6                                   found  88% | recovered 73.8% large 71.1% room  85% region  63% | recall 0.76 prec 0.76 | fixed 43.7% large 41.5% | intact flagged   6% +  5.5 px
+s0 tau 0.7                                   found  88% | recovered 73.8% large 71.1% room  85% region  63% | recall 0.76 prec 0.76 | fixed 43.0% large 41.9% | intact flagged   6% +  5.5 px
+ens tau 0.2                                  found  90% | recovered 74.0% large 70.4% room  86% region  63% | recall 0.80 prec 0.74 | fixed 45.6% large 43.7% | intact flagged  11% + 10.0 px
+ens tau 0.3                                  found  90% | recovered 74.0% large 70.8% room  85% region  64% | recall 0.79 prec 0.74 | fixed 45.6% large 43.3% | intact flagged  11% + 10.0 px
+ens tau 0.4                                  found  90% | recovered 73.5% large 70.1% room  84% region  63% | recall 0.79 prec 0.75 | fixed 45.6% large 43.3% | intact flagged  11% +  9.8 px
+ens tau 0.5                                  found  86% | recovered 70.9% large 69.0% room  83% region  60% | recall 0.73 prec 0.77 | fixed 43.7% large 41.5% | intact flagged   4% +  2.8 px
+ens tau 0.6                                  found  86% | recovered 70.4% large 68.0% room  84% region  57% | recall 0.72 prec 0.78 | fixed 42.8% large 40.1% | intact flagged   4% +  2.6 px
+ens tau 0.7                                  found  86% | recovered 70.0% large 67.6% room  83% region  57% | recall 0.72 prec 0.78 | fixed 42.1% large 39.8% | intact flagged   4% +  2.5 px
+noink tau 0.2                                found  76% | recovered 55.1% large 52.8% room  67% region  44% | recall 0.59 prec 0.70 | fixed 34.0% large 32.7% | intact flagged  20% + 27.9 px
+noink tau 0.3                                found  76% | recovered 54.8% large 52.8% room  66% region  44% | recall 0.59 prec 0.70 | fixed 33.8% large 31.7% | intact flagged  20% + 27.7 px
+noink tau 0.4                                found  76% | recovered 54.8% large 52.5% room  66% region  44% | recall 0.59 prec 0.70 | fixed 34.0% large 32.0% | intact flagged  20% + 27.3 px
+noink tau 0.5                                found  75% | recovered 55.3% large 53.2% room  66% region  45% | recall 0.59 prec 0.71 | fixed 33.3% large 31.7% | intact flagged  20% + 27.2 px
+noink tau 0.6                                found  75% | recovered 55.3% large 52.8% room  66% region  45% | recall 0.58 prec 0.71 | fixed 33.1% large 31.7% | intact flagged  19% + 26.7 px
+noink tau 0.7                                found  76% | recovered 54.8% large 52.5% room  66% region  44% | recall 0.58 prec 0.71 | fixed 33.1% large 31.3% | intact flagged  19% + 26.8 px
+--- ens + fill U-Net walls in the locator's boxes
+struct tau 0.3 + fill p>=None                found  90% | recovered 74.0% large 70.8% room  85% region  64% | recall 0.79 prec 0.74 | fixed 45.6% large 43.3% | intact flagged  11% + 10.0 px
+struct tau 0.3 + fill p>=0.25                found  91% | recovered 74.5% large 72.2% room  87% region  62% | recall 0.81 prec 0.73 | fixed 49.6% large 46.8% | intact flagged  21% + 18.8 px
+struct tau 0.3 + fill p>=0.18                found  91% | recovered 73.8% large 71.1% room  87% region  61% | recall 0.82 prec 0.72 | fixed 51.5% large 50.0% | intact flagged  21% + 23.2 px
+struct tau 0.3 + fill p>=0.12                found  91% | recovered 73.8% large 71.5% room  87% region  61% | recall 0.83 prec 0.69 | fixed 54.4% large 52.5% | intact flagged  21% + 30.8 px
+struct tau 0.4 + fill p>=None                found  90% | recovered 73.5% large 70.1% room  84% region  63% | recall 0.79 prec 0.75 | fixed 45.6% large 43.3% | intact flagged  11% +  9.8 px
+struct tau 0.4 + fill p>=0.25                found  91% | recovered 75.2% large 72.9% room  87% region  64% | recall 0.81 prec 0.73 | fixed 50.6% large 48.2% | intact flagged  21% + 18.7 px
+struct tau 0.4 + fill p>=0.18                found  91% | recovered 74.2% large 71.8% room  87% region  62% | recall 0.82 prec 0.72 | fixed 51.5% large 50.7% | intact flagged  21% + 23.0 px
+struct tau 0.4 + fill p>=0.12                found  91% | recovered 74.0% large 71.8% room  87% region  62% | recall 0.83 prec 0.70 | fixed 53.7% large 51.4% | intact flagged  21% + 30.7 px
+struct tau 0.5 + fill p>=None                found  86% | recovered 70.9% large 69.0% room  83% region  60% | recall 0.73 prec 0.77 | fixed 43.7% large 41.5% | intact flagged   4% +  2.8 px
+struct tau 0.5 + fill p>=0.25                found  89% | recovered 73.0% large 71.5% room  85% region  62% | recall 0.77 prec 0.74 | fixed 48.5% large 45.8% | intact flagged  18% + 12.3 px
+struct tau 0.5 + fill p>=0.18                found  89% | recovered 72.6% large 71.5% room  86% region  60% | recall 0.78 prec 0.73 | fixed 49.6% large 48.9% | intact flagged  18% + 16.8 px
+struct tau 0.5 + fill p>=0.12                found  89% | recovered 72.6% large 71.8% room  85% region  61% | recall 0.80 prec 0.70 | fixed 53.4% large 51.4% | intact flagged  18% + 24.6 px
+  f = lambda k, c=lambda r: True: 100 * np.nanmean([r[k] for r in R if c(r)])
+--- locator boxes + fill U-Net only (no structure net)
+fill only p>=None                            found   0% | recovered  0.0% large  0.0% room   0% region   0% | recall 0.00 prec nan | fixed  0.0% large  0.0% | intact flagged   0% +  0.0 px
+fill only p>=0.25                            found  75% | recovered 51.8% large 51.8% room  60% region  44% | recall 0.53 prec 0.76 | fixed 35.2% large 33.8% | intact flagged  16% + 10.0 px
+fill only p>=0.18                            found  75% | recovered 55.3% large 54.9% room  66% region  45% | recall 0.58 prec 0.72 | fixed 40.7% large 40.1% | intact flagged  16% + 14.6 px
+fill only p>=0.12                            found  75% | recovered 57.0% large 56.3% room  69% region  46% | recall 0.62 prec 0.68 | fixed 44.2% large 44.7% | intact flagged  16% + 22.5 px
