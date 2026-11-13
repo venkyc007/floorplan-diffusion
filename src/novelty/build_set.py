@@ -78,6 +78,18 @@ def to_map(mask, shape):
     return cv2.resize(mask.astype(np.uint8), (shape[1], shape[0]), interpolation=cv2.INTER_NEAREST) > 0
 
 
+INK_GREY = 128            # a drawing pixel darker than this is "ink"
+
+
+def ink_map(img, shape):
+    """Where the drawing has ANY ink, at map size: the share of ink pixels (grey < INK_GREY) under each map pixel,
+    0-255. The drawing is binarised first, so paper tone, scan noise and the smudges an erasure can leave are all
+    invisible in it; what remains is walls, symbols, furniture and text. A room that was never drawn has no label
+    and no furniture, which the parser's 16-class map cannot show."""
+    ink = (img < INK_GREY).astype(np.float32)
+    return np.round(255 * cv2.resize(ink, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)).astype(np.uint8)
+
+
 def load_parser(path, device):
     ck = torch.load(path, map_location="cpu", weights_only=False)
     model = Parser(ck["config"]["model"], encoder_weights=None)
@@ -97,6 +109,8 @@ def main():
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--ink", action="store_true", help="also store the ink map (_ink.png) and the grey drawing at "
+                                                       "map size (_img.png; for trace checks only)")
     args = ap.parse_args()
     t0 = time.time()
     device = pipeline.DEVICE
@@ -127,6 +141,10 @@ def main():
                 z.writestr(f"{pid}_v{k}_map.png", png(parsed))
                 z.writestr(f"{pid}_v{k}_gt.png", png(gt))
                 z.writestr(f"{pid}_v{k}_om.png", png(om))
+                if args.ink:
+                    z.writestr(f"{pid}_v{k}_ink.png", png(ink_map(img, parsed.shape)))
+                    z.writestr(f"{pid}_v{k}_img.png", png(cv2.resize(img, (parsed.shape[1], parsed.shape[0]),
+                                                                    interpolation=cv2.INTER_AREA)))
                 rows.append({"pid": pid, "version": k, "kind": kind, "size_pct": meta.get("size_pct", ""),
                              "size_bin": meta.get("size_bin", ""), "h": parsed.shape[0], "w": parsed.shape[1]})
                 counts[kind] = counts.get(kind, 0) + 1
