@@ -24,8 +24,8 @@ STAGE = "tune"
 CONFIGS = {"_ffc": "configs/novelty/pipeline_large.yaml"}
 N_TUNE = 120
 E2E_LIMIT = None            # drawings per shard (None = all)
-EXTRA = "--arms b4,sketch,hybrid"   # extra arguments for the stage's script
-SWEEP = False               # tune: also run the locator sweep (needs the locator checkpoints)
+EXTRA = '--arms truth,b4,sketch,hybrid,auto --t0 700,900'   # extra arguments for the stage's script
+SWEEP = True               # tune: also run the locator and gate sweeps
 
 
 def copy_code():
