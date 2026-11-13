@@ -93,10 +93,11 @@ def hole_box(area, shape, rng=None):
     return max(0, y0), max(0, x0), min(shape[0] - 1, y1), min(shape[1] - 1, x1)
 
 
-def fill_window(parsed, gt, area, rng, win=256, jitter=True, centre=False):
+def fill_window(parsed, gt, area, rng, win=256, jitter=True, centre=False, box=None):
     """(context window, target window, hole mask) or None when the hole does not fit the window.
-    centre=True puts the hole in the middle (validation / inference); otherwise at a random position."""
-    y0, x0, y1, x1 = hole_box(area, parsed.shape, rng if jitter else None)
+    centre=True puts the hole in the middle (validation / inference); otherwise at a random position.
+    box: use this hole box (e.g. the locator's) instead of the box of `area`."""
+    y0, x0, y1, x1 = box if box is not None else hole_box(area, parsed.shape, rng if jitter else None)
     if y1 - y0 + 1 > win - 16 or x1 - x0 + 1 > win - 16:
         return None
     if centre:
@@ -109,9 +110,12 @@ def fill_window(parsed, gt, area, rng, win=256, jitter=True, centre=False):
     return ctx, np.where(hw > 0, tgt, ctx), hw
 
 
-def sample_fill(s, rng, win=256):
-    """One training window from a sample (see the module docstring), or None."""
+def sample_fill(s, rng, win=256, loc_frac=0.0):
+    """One training window from a sample (see the module docstring), or None.
+    loc_frac: share of erased-version windows whose hole is the LOCATOR's box for that omission (s["loc_box"],
+    set by train_fill.add_locator_boxes) instead of the jittered true box - what the pipeline really hands over."""
     parsed, gt, om = arrays(s)
+    box = s.get("loc_box") if (s["version"] > 0 and loc_frac and rng.random() < loc_frac) else None
     if s["version"] == 0:
         for kind in rng.permutation(LARGE_TYPES):
             area = large_deletion(gt, str(kind), rng)
@@ -121,25 +125,30 @@ def sample_fill(s, rng, win=256):
             return None
     else:
         area = om > 0
-    w = fill_window(parsed, gt, area, rng, win)
+    w = fill_window(parsed, gt, area, rng, win, box=box)
     return None if w is None else augment(w, rng)
 
 
-def to_model(ctx, tgt, hole):
-    """Windows -> cond (17, H, W) = one-hot context with the hole zeroed + mask, target (16, H, W), mask (1, H, W)."""
+def to_model(ctx, tgt, hole, hide=True):
+    """Windows -> cond (17, H, W) = one-hot context + mask, target (16, H, W), mask (1, H, W).
+    hide=True  ("inpaint"): the context is zeroed inside the hole, as in Stage 1 / B4;
+    hide=False ("edit"): the parser's map stays visible inside the hole - the model corrects it instead of
+                redrawing it blind (the merged room still shows hints of the missing one, and an area where
+                nothing is missing can simply be kept)."""
     _, target, mask = model_inputs(tgt[None], hole[None])
     known = torch.nn.functional.one_hot(torch.from_numpy(ctx.astype(np.int64)), C16.n).permute(2, 0, 1).float()
-    cond = torch.cat([known * (1 - mask[0]), mask[0]], 0)
+    cond = torch.cat([known * (1 - mask[0]) if hide else known, mask[0]], 0)
     return cond, target[0], mask[0]
 
 
 class FillSet(Dataset):
     """Endless random fill windows; intact_frac of them come from intact versions (random areas)."""
 
-    def __init__(self, samples, win=256, intact_frac=0.4, length=10 ** 7):
+    def __init__(self, samples, win=256, intact_frac=0.4, length=10 ** 7, hide=True, loc_frac=0.0):
         self.erased = [s for s in samples if s["version"] > 0]
         self.intact = [s for s in samples if s["version"] == 0]
         self.win, self.intact_frac, self.length, self.rng = win, intact_frac, length, None
+        self.hide, self.loc_frac = hide, loc_frac
 
     def __len__(self):
         return self.length
@@ -149,12 +158,12 @@ class FillSet(Dataset):
             self.rng = np.random.default_rng(torch.initial_seed() % 2 ** 32)
         while True:
             pool = self.intact if (self.intact and self.rng.random() < self.intact_frac) else self.erased
-            w = sample_fill(pool[self.rng.integers(len(pool))], self.rng, self.win)
+            w = sample_fill(pool[self.rng.integers(len(pool))], self.rng, self.win, self.loc_frac)
             if w is not None:
-                return to_model(*w)
+                return to_model(*w, hide=self.hide)
 
 
-def fixed_fill_windows(samples, n, seed=1234, win=256):
+def fixed_fill_windows(samples, n, seed=1234, win=256, hide=True):
     """n reproducible validation windows from ERASED versions (hole = the exact area box, centred):
     (cond, target, mask) tensors and the list of sample indices used."""
     rng = np.random.default_rng(seed)
@@ -164,7 +173,7 @@ def fixed_fill_windows(samples, n, seed=1234, win=256):
         parsed, gt, om = arrays(samples[i])
         w = fill_window(parsed, gt, om > 0, rng, win, jitter=False, centre=True)
         if w is not None:
-            out.append(to_model(*w))
+            out.append(to_model(*w, hide=hide))
             used.append(int(i))
         if len(out) >= n:
             break

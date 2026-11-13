@@ -60,3 +60,18 @@ def test_locate_canvas_shapes():
         area[30:60, 40:90] = True
         lab, tgt = locate_canvas(parsed, area, rng, canvas=320)
         assert lab.shape == tgt.shape == (320, 320) and tgt.any()
+
+
+def test_edit_mode_keeps_the_parsed_map_visible_in_the_hole():
+    rng = np.random.default_rng(0)
+    parsed = rng.integers(0, C16.n, (120, 150)).astype(np.uint8)
+    gt = rng.integers(0, C16.n, (120, 150)).astype(np.uint8)
+    area = np.zeros(parsed.shape, bool)
+    area[40:80, 50:100] = True
+    ctx, tgt, hole = fill_window(parsed, gt, area, rng, win=128, box=(38, 48, 82, 104))   # an explicit (locator) box
+    assert hole.sum() == 45 * 57
+    cond_edit, target, mask = to_model(ctx, tgt, hole, hide=False)
+    cond_hide, _, _ = to_model(ctx, tgt, hole, hide=True)
+    assert float((cond_edit[:C16.n] * mask).sum()) == float(mask.sum())      # one class per hole pixel: the parsed map
+    assert torch.equal(cond_edit[:C16.n] * (1 - mask), cond_hide[:C16.n])    # identical outside the hole
+    assert torch.equal(cond_edit[:C16.n].argmax(0), torch.from_numpy(ctx.astype(np.int64)))

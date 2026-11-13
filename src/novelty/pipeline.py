@@ -101,7 +101,11 @@ def hybrid_fill(label, hole, unet, diffusion=None, t0=700, n=2, steps_from_t0=15
     oy, ox, side = window_of(hole, nc)
     win = large_fill.crop(label, oy, ox, side, BG)
     wh = large_fill.crop(hole.astype(np.uint8), oy, ox, side, 0) > 0
-    cond = large_fill._cond(win, wh).to(base.DEVICE)
+    hidden = large_fill._cond(win, wh).to(base.DEVICE)              # context zeroed in the hole (inpaint models)
+    cond = hidden
+    if not nc.get("hide_hole", True):                              # edit models: the parsed map stays visible
+        full = torch.nn.functional.one_hot(torch.from_numpy(win.astype(np.int64)), C16.n).permute(2, 0, 1).float()
+        cond = torch.cat([full[None].to(base.DEVICE), hidden[:, -1:]], 1)
     sketch = unet.predict(cond)
 
     def pasted(lab):
@@ -113,7 +117,7 @@ def hybrid_fill(label, hole, unet, diffusion=None, t0=700, n=2, steps_from_t0=15
     c = cond.expand(n, -1, -1, -1)
     samples = sampler.hybrid_sample(diffusion, c, sketch.expand(n, -1, -1), t0=t0, steps=50, generator=generator,
                                     steps_from_t0=steps_from_t0)
-    i, counts, agree = sampler.best_of_n(samples, cond[:, -1:], cond[:, :C16.n], sketch[0])
+    i, counts, agree = sampler.best_of_n(samples, hidden[:, -1:], hidden[:, :C16.n], sketch[0])
     info = {"window": side, "t0": t0, "chosen": i, "violations": counts.tolist()}
     if all_samples:
         info["samples"] = [pasted(s) for s in samples]

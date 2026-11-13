@@ -23,7 +23,7 @@ import numpy as np
 import torch
 import yaml
 
-from src.novelty.data import FillSet, fixed_fill_windows, load_set
+from src.novelty.data import FillSet, arrays, fixed_fill_windows, load_set
 from src.novelty.models import build_large, warm_start
 from src.stage2.complete.gates34 import TINY, hole_scores
 from src.stage2.complete.train16 import append_csv, lr_factor
@@ -56,6 +56,26 @@ def validate(model, val, device, batch=16):
     return {"hole_acc": acc, "hole_mIoU": miou, "wall_IoU": float((p & t).sum() / max(int((p | t).sum()), 1))}
 
 
+def add_locator_boxes(samples, paths, device, th=0.5, min_area=150, pad=2):
+    """For every erased version: the box of the locator's flag that covers most of the omission area (s["loc_box"]),
+    or None when no flag touches it. Used as the training hole for a share of the windows (data.locator_box_frac)."""
+    from src.novelty.locate import load_locator, region_candidates, region_prob
+    models = [load_locator(p, device) for p in paths]
+    n = hit = 0
+    for s in samples:
+        if s["version"] == 0:
+            continue
+        parsed, _, om = arrays(s)
+        area = om > 0
+        flags = region_candidates(region_prob(models, parsed, device), th, min_area, pad)
+        best = max(flags, key=lambda c: int(area[c.box[0]:c.box[2] + 1, c.box[1]:c.box[3] + 1].sum()), default=None)
+        ok = best is not None and area[best.box[0]:best.box[2] + 1, best.box[1]:best.box[3] + 1].any()
+        s["loc_box"] = tuple(int(v) for v in best.box) if ok else None
+        n, hit = n + 1, hit + bool(ok)
+    print(f"locator boxes: {hit} of {n} erased versions have a flag on the omission", flush=True)
+    del models
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", required=True)
@@ -64,6 +84,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--init16", default=None, help="B4 best.pt (warm start; ignored when resuming)")
     ap.add_argument("--no-ffc", action="store_true", help="ablation: no Fourier context blocks")
+    ap.add_argument("--locators", nargs="*", default=[], help="locator checkpoints (needed if data.locator_box_frac > 0)")
     ap.add_argument("--smoke", action="store_true")
     args = ap.parse_args()
     t_start = time.time()
@@ -106,8 +127,13 @@ def main():
         print(f"resumed at step {step} ({hours_done:.2f} h, best {best:.4f})", flush=True)
 
     samples = load_set(args.train, limit=40 if args.smoke else None)
-    val = fixed_fill_windows(load_set(args.val, limit=40 if args.smoke else None), dc["val_windows"], win=dc["window"])[:3]
-    loader = torch.utils.data.DataLoader(FillSet(samples, win=dc["window"], intact_frac=dc["intact_frac"]),
+    hide, loc_frac = dc.get("hide_hole", True), dc.get("locator_box_frac", 0.0)
+    if loc_frac and args.locators:
+        add_locator_boxes(samples, args.locators, device)
+    val = fixed_fill_windows(load_set(args.val, limit=40 if args.smoke else None), dc["val_windows"], win=dc["window"],
+                             hide=hide)[:3]
+    loader = torch.utils.data.DataLoader(FillSet(samples, win=dc["window"], intact_frac=dc["intact_frac"], hide=hide,
+                                                 loc_frac=loc_frac),
                                          batch_size=tc["batch_size"], num_workers=dc["num_workers"], drop_last=True,
                                          pin_memory=device.type == "cuda", persistent_workers=dc["num_workers"] > 0)
     budget, session = tc["time_limit_hours"], time.time()
@@ -125,7 +151,8 @@ def main():
     n_new = sum(p.numel() for n, p in model.named_parameters() if n.startswith("spectral."))
     print(f"{mcfg['kind']} | Fourier blocks: {n_new / 1e6:.2f} M new params | "
           f"{sum(p.numel() for p in model.parameters()) / 1e6:.1f} M params | {len(samples)} train versions | "
-          f"{len(val[0])} val windows | device {device} | batch {tc['batch_size']}", flush=True)
+          f"{len(val[0])} val windows | device {device} | batch {tc['batch_size']} | "
+          f"{'inpaint (hole hidden)' if hide else 'edit (parsed map visible in the hole)'} | locator boxes {loc_frac}", flush=True)
     t_log, n_log, parts_acc = time.time(), 0, {}
     for cond, target, mask in loader:
         cond, target, mask = cond.to(device), target.to(device), mask.to(device)
