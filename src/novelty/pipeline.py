@@ -46,6 +46,7 @@ from src.utils import PROJECT_ROOT
 CFG_FILE = Path(os.environ.get("NOVELTY_CONFIG", PROJECT_ROOT / "configs" / "novelty" / "pipeline_large_edit.yaml"))
 BG = C16.index["background"]
 WALL = C16.index["wall"]
+OPENINGS = [C16.index["door"], C16.index["window"]]
 
 
 def cfg():
@@ -230,9 +231,9 @@ def hybrid_fill(label, hole, unet, diffusion=None, t0=700, n=2, steps_from_t0=15
         return new
 
     def kept(lab):                                                  # a sample with the dropped structure walls put back
-        out = lab.cpu().numpy().astype(np.uint8)
-        if nc.get("keep_walls") and structure.any():
-            out[structure & ~near(out == WALL, 2)] = WALL
+        out = lab.cpu().numpy().astype(np.uint8)                    # (never over a door / window the diffusion drew:
+        if nc.get("keep_walls") and structure.any():                # an opening in a structure wall is a detail it adds)
+            out[structure & ~near(out == WALL, 2) & ~np.isin(out, OPENINGS)] = WALL
         return out
     info = {"window": side, "structure_px": int(structure.sum())}
     if diffusion is None:
