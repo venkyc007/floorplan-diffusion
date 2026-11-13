@@ -20,12 +20,12 @@ import sys
 import zipfile
 
 CODE = "/tmp/code"
-STAGE = "tune"
-CONFIGS = {"_ffc": "configs/novelty/pipeline_large.yaml"}
+STAGE = "e2e_tuning"
+CONFIGS = {"_v1": "configs/novelty/pipeline_large.yaml"}
 N_TUNE = 120
-E2E_LIMIT = None            # drawings per shard (None = all)
-EXTRA = '--arms truth,b4,sketch,hybrid,auto --t0 700,900'   # extra arguments for the stage's script
-SWEEP = True               # tune: also run the locator and gate sweeps
+E2E_LIMIT = 50             # drawings per shard (None = all)
+EXTRA = '--arms "shipped auto,hybrid auto,hybrid auto + outline,shipped manual,hybrid manual" --figure 6'   # extra arguments for the stage's script
+SWEEP = False               # tune: also run the locator and gate sweeps
 
 
 def copy_code():

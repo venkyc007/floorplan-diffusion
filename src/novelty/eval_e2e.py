@@ -17,6 +17,7 @@ Arms
   shipped auto      run_pipeline(fast=True): the frozen Stage 2 pipeline                      (the baseline)
   hybrid auto       src/novelty/pipeline.run: + region locator + new large-hole fill          (the novelty)
   locator + B4      the locator's region flags filled by the SHIPPED large-hole models (ablation: which part helps)
+  hybrid auto + outline   (optional) hybrid auto with the outline prior (pipeline.outline_walls)
   shipped manual    medium / large only: the box of the true omission area given, shipped B4 fill
   hybrid manual     the same box, the new large-hole fill
 Scores: src/stage2/pipeline/e2e_val.score, the function behind the Stage 2 test table (found, fixed = found and
@@ -51,7 +52,12 @@ OUT = PROJECT_ROOT / "outputs" / "novelty"
 SPLIT = PROJECT_ROOT / "configs" / "stage2" / "val_split"
 REAL = [C16.index[c] for c in base.REAL]
 BINS = ("small", "medium", "large")
+def _fill_with_outline(label, hole, generator, fast=None):
+    return nov.fill_region(label, hole, generator, fast, outline=True)
+
+
 AUTO = {"shipped auto": {}, "hybrid auto": {"region_fn": nov.region_holes, "large_fill_fn": nov.fill_region},
+        "hybrid auto + outline": {"region_fn": nov.region_holes, "large_fill_fn": _fill_with_outline},
         "locator + B4": {"region_fn": nov.region_holes}}
 FIELDS = ["pid", "target", "kind", "size_bin", "size_pct", "arm", "found", "region_flag", "fixed", "fix_iou",
           "recovered", "miss_recall", "add_precision",
@@ -277,7 +283,8 @@ def report(args):
                      f"{100 * np.mean([T(r['valid_before']) for r in R]):.0f}% -> {100 * np.mean([T(r['valid_after']) for r in R]):.0f}% | "
                      f"{mean(R, 'viol_after'):.1f} ({mean(R, 'viol_gt'):.1f}) | {mean(R, 'false_adds'):.2f} | {mean(R, 'seconds'):.1f} |")
         key = lambda r: (r["pid"], r["target"])
-        for a, c in (("shipped auto", "hybrid auto"), ("shipped manual", "hybrid manual"), ("locator + B4", "hybrid auto")):
+        for a, c in (("shipped auto", "hybrid auto"), ("shipped manual", "hybrid manual"), ("locator + B4", "hybrid auto"),
+                     ("hybrid auto", "hybrid auto + outline")):
             A = {key(r): r for r in sub if r["arm"] == a}
             C = {key(r): r for r in sub if r["arm"] == c}
             ks = sorted(set(A) & set(C))

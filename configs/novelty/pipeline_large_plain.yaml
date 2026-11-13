@@ -13,7 +13,9 @@ checkpoints:                     # local copies of Kaggle outputs (git-ignored)
   diffusion: outputs/kaggle/novelty_fill_plain/runs/fill_diffusion_plain/checkpoints/best.pt
 
 locate:
-  threshold: 0.5                 # region flag = blob of "missing area" probability >= threshold ...
+  threshold: 0.4                 # region flag = blob of "missing area" probability >= threshold ...
+                                 # chosen on tuning drawings (outputs/novelty/tune_locator_v1.md): the highest
+                                 # recall with <= 0.2 region flags per intact drawing (75% found, 0.18)
   min_area: 150                  # ... with at least this many map px
   box_pad: 2                     # px added around the blob's box (the hole given to the fill)
 

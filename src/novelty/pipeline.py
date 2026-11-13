@@ -148,14 +148,17 @@ def hybrid_fill(label, hole, unet, diffusion=None, t0=700, n=2, steps_from_t0=15
     return pasted(samples[i]), info
 
 
-def fill_region(label, hole, generator, fast=None):
-    """The pipeline's large-hole fill (run_pipeline's large_fill_fn)."""
+def fill_region(label, hole, generator, fast=None, outline=None):
+    """The pipeline's large-hole fill (run_pipeline's large_fill_fn). outline: use the outline prior (default: the
+    config's fill.outline_prior)."""
     nc, m = cfg()["fill"], models()
+    outline = nc.get("outline_prior", False) if outline is None else outline
     t = time.time()
     if window_of(hole, nc)[2] > nc["max_window"]:                 # huge box: the shipped tiled fill
         new, info = large_fill.fill_large(label, hole, "tiled", base.cfg()["fill"], fast, generator)
         return new, dict(info, route="shipped tiled (hole larger than max_window)")
-    blob = BLOBS.get(tuple(int(v) for v in large_fill.bbox(hole))) if nc.get("outline_prior") else None
+    y0, x0, y1, x1 = large_fill.bbox(hole)
+    blob = BLOBS.get((int(y0), int(x0), int(y1), int(x1))) if outline else None
     new, info = hybrid_fill(label, hole, m["unet"], m["diffusion"], nc["t0"], nc["n_samples"], nc["steps_from_t0"],
                             generator, nc, blob=blob)
     info["seconds"] = round(time.time() - t, 1)
