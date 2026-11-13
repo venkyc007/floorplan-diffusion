@@ -22,6 +22,8 @@ Scores (as outputs/stage2/large_fill_compare_v2.md, src/stage2/pipeline/large_fi
 (wall IoU >= 0.3 at the erased structure), tolerant mIoU and validity inside the omission box; plus violations per
 hole, a tolerant wall F1 (2 px) inside the box, and for the hybrid the best sample of the N by wall IoU ("oracle":
 how good the fill could be if the verifier picked perfectly - a fairer view when several layouts are valid).
+"recovered (2 px)" = wall_recovery below: at least half of the truly missing wall pixels are back within 2 px and
+at least half of the added walls are within 2 px of a true wall.
 """
 
 import argparse
@@ -58,6 +60,23 @@ def wall_f1(plan, gt, box, tol=2):
     return float(2 * prec * rec / max(prec + rec, 1e-9))
 
 
+def wall_recovery(plan, parsed, gt, rm, region, tol=2):
+    """A fairer view of a large fill than strict IoU (3 px walls drawn 1-2 px off score ~0 IoU):
+      recall     share of the TRULY MISSING wall pixels (erased, wall in the truth, no wall within tol px in the parsed
+                 map) that have a wall within tol px in the plan
+      precision  share of the wall pixels the plan ADDS inside `region` (not within tol px of a parsed wall) that lie
+                 within tol px of a true wall (nan if it adds none)
+      recovered  recall >= 0.5 and precision >= 0.5: most of the missing walls are back, and most of what was drawn
+                 is right (own definition, fixed before any held-out run)."""
+    wall_p, wall_g, wall_o = parsed == WALL, gt == WALL, plan == WALL
+    missing = rm & wall_g & ~grown(wall_p, tol)
+    added = wall_o & region & ~grown(wall_p, tol)
+    rec = float((missing & grown(wall_o, tol)).sum() / missing.sum()) if missing.any() else float("nan")
+    prec = float((added & grown(wall_g, tol)).sum() / added.sum()) if added.any() else float("nan")
+    return {"miss_recall": round(rec, 3) if rec == rec else "", "add_precision": round(prec, 3) if prec == prec else "",
+            "recovered": bool(rec == rec and prec == prec and rec >= 0.5 and prec >= 0.5)}
+
+
 _CASE = {}                 # per-case values that do not depend on the arm (the violation counts are slow)
 
 
@@ -81,7 +100,9 @@ def score(plan, parsed, gt, rm, box, holes=None):
     s.update(fix_iou=round(iou, 3), fixed=s.get("found", True) and iou >= e2e_val.FIX_IOU,
              tol=round(100 * lfc.hole_ious(plan, gt, c["reg"])[1], 1), tol_parse=c["tol_parse"], valid=viol <= c["viol_gt"],
              valid_parse=c["viol_parse"] <= c["viol_gt"], viol=viol, viol_gt=c["viol_gt"],
-             wall_f1=round(wall_f1(plan, gt, box), 3))
+             wall_f1=round(wall_f1(plan, gt, box), 3), **wall_recovery(plan, parsed, gt, rm, c["reg"]))
+    if holes is not None and not s["found"]:
+        s["recovered"] = False
     return s
 
 
@@ -129,7 +150,8 @@ def run_cases(args):
     def add(s, arm, sc, sec, extra=None):
         rows.append({"pid": s["pid"], "version": s["version"], "kind": s["kind"], "size_bin": s["size_bin"],
                      "size_pct": s["size_pct"], "arm": arm, **{k: sc.get(k, "") for k in
-                     ("found", "fixed", "fix_iou", "tol_parse", "tol", "valid_parse", "valid", "viol_gt", "viol", "wall_f1")},
+                     ("found", "fixed", "fix_iou", "tol_parse", "tol", "valid_parse", "valid", "viol_gt", "viol", "wall_f1",
+                      "miss_recall", "add_precision", "recovered")},
                      "oracle_fix_iou": "", "flags": "", "additions": "", "seconds": round(sec, 1), **(extra or {})})
         print(rows[-1], flush=True)
     for i in erased:
@@ -210,23 +232,25 @@ def report(args):
          ", ".join(f"{k} {len({(r['pid'], r['version']) for r in er if r['kind'] == k})}" for k in dict.fromkeys(r["kind"] for r in er)) +
          "). Hole given = the box of the true omission area; auto = the locator's flags, each filled by the new "
          "hybrid. Fast sampling. See src/novelty/eval_maps.py for the scores.", "",
-         "| arm | fixed | wall IoU | oracle wall IoU (best of N) | tol. mIoU (parse -> fill) | wall F1 (2 px) | valid | violations (truth) | found | s per hole |",
-         "|---|---|---|---|---|---|---|---|---|---|"]
+         "| arm | fixed | recovered (2 px) | missing-wall recall | added-wall precision | wall IoU | oracle wall IoU (best of N) | tol. mIoU (parse -> fill) | wall F1 (2 px) | valid | violations (truth) | found | s per hole |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
 
     def line(name, R):
         found = f"{pct(R, 'found'):.0f}%" if any(r["found"] != "" for r in R) else "given"
-        return (f"| {name} | {pct(R, 'fixed'):.0f}% | {num(R, 'fix_iou'):.3f} | "
+        return (f"| {name} | {pct(R, 'fixed'):.0f}% | {pct(R, 'recovered'):.0f}% | {num(R, 'miss_recall'):.2f} | "
+                f"{num(R, 'add_precision'):.2f} | {num(R, 'fix_iou'):.3f} | "
                 f"{num(R, 'oracle_fix_iou'):.3f} | {num(R, 'tol_parse'):.1f} -> {num(R, 'tol'):.1f} | {num(R, 'wall_f1'):.3f} | "
                 f"{pct(R, 'valid'):.0f}% | {num(R, 'viol'):.1f} ({num(R, 'viol_gt'):.1f}) | {found} | {num(R, 'seconds'):.1f} |")
     for a in arms:
         L.append(line(a, [r for r in er if r["arm"] == a]))
     for field in ("kind", "size_bin"):
-        L += ["", f"By {field.replace('_', ' ')} (fixed / tol. mIoU / valid):", "",
+        L += ["", f"By {field.replace('_', ' ')} (fixed / recovered / tol. mIoU / valid):", "",
               f"| {field} | n | " + " | ".join(arms) + " |", "|---|---|" + "---|" * len(arms)]
         for v in dict.fromkeys(r[field] for r in er):
             sub = [r for r in er if r[field] == v]
             L.append(f"| {v} | {len(sub) // max(len(arms), 1)} | " + " | ".join(
-                f"{pct([r for r in sub if r['arm'] == a], 'fixed'):.0f}% / {num([r for r in sub if r['arm'] == a], 'tol'):.1f} / "
+                f"{pct([r for r in sub if r['arm'] == a], 'fixed'):.0f}% / {pct([r for r in sub if r['arm'] == a], 'recovered'):.0f}% / "
+                f"{num([r for r in sub if r['arm'] == a], 'tol'):.1f} / "
                 f"{pct([r for r in sub if r['arm'] == a], 'valid'):.0f}%" for a in arms) + " |")
     it = [r for r in rows if r["kind"] == "intact"]
     if it:

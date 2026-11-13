@@ -21,7 +21,9 @@ Arms
   hybrid manual     the same box, the new large-hole fill
 Scores: src/stage2/pipeline/e2e_val.score, the function behind the Stage 2 test table (found, fixed = found and
 wall IoU >= 0.3 at the erased structure, false additions, tolerant mIoU and validity in the omission region), plus
-"region flag" (a region-type flag overlaps the omission). Intact drawings: flags, region flags and added components.
+"region flag" (a region-type flag overlaps the omission) and, for wall-type omissions, the fairer "recovered (2 px)"
+(src/novelty/eval_maps.wall_recovery: found, >= half of the truly missing wall pixels back within 2 px, >= half of
+the added walls within 2 px of a true wall; strict IoU is ~0 for a 3 px wall drawn 2 px off). Intact drawings: flags, region flags and added components.
 Intervals: Wilson 95%; differences: paired bootstrap over drawings (2,000 resamples).
 """
 
@@ -35,6 +37,7 @@ import cv2
 import numpy as np
 
 from src.novelty import pipeline as nov
+from src.novelty.eval_maps import wall_recovery
 from src.stage2.complete import large_fill
 from src.stage2.constraints.rules import components
 from src.stage2.data.classes16 import C16
@@ -51,6 +54,7 @@ BINS = ("small", "medium", "large")
 AUTO = {"shipped auto": {}, "hybrid auto": {"region_fn": nov.region_holes, "large_fill_fn": nov.fill_region},
         "locator + B4": {"region_fn": nov.region_holes}}
 FIELDS = ["pid", "target", "kind", "size_bin", "size_pct", "arm", "found", "region_flag", "fixed", "fix_iou",
+          "recovered", "miss_recall", "add_precision",
           "false_adds", "tol_before", "tol_after", "valid_before", "valid_after", "viol_gt", "viol_after",
           "n_flags", "n_region_flags", "added", "seconds"]
 
@@ -83,8 +87,16 @@ def row_of(pid, target, o, arm, res, sec):
     s = e2e_val.score(res, o[1], o["lbl"], o[2])
     rmg = grown(s["rm"], 3)
     over = [h for h in res["holes"] if rmg[h["box"][0]:h["box"][2] + 1, h["box"][1]:h["box"][3] + 1].any()]
+    rec = {"recovered": "", "miss_recall": "", "add_precision": ""}
+    if o[2] == "room":                                    # wall-type omissions (room walls, whole room, region)
+        box = e2e_val.region_box(s["rm"], s["rm"].shape)
+        reg = np.zeros(s["rm"].shape, bool)
+        reg[box[0]:box[2] + 1, box[1]:box[3] + 1] = True
+        rec = wall_recovery(res["completed"], res["parsed"], s["gt"], s["rm"], reg)
+        rec["recovered"] = rec["recovered"] and s["found"]
     return {"pid": pid, "target": target, "kind": o[4]["type"], "size_bin": o[4]["size_bin"], "size_pct": o[4]["size_pct"],
             "arm": arm, "found": s["found"], "region_flag": any(h["type"] == "region" for h in over), "fixed": s["fixed"],
+            "recovered": rec["recovered"], "miss_recall": rec["miss_recall"], "add_precision": rec["add_precision"],
             "fix_iou": s["fix_iou"], "false_adds": s["false_adds"], "tol_before": s["tol_before"], "tol_after": s["tol_after"],
             "valid_before": s["valid_before"], "valid_after": s["valid_after"], "viol_gt": s["viol_gt"],
             "viol_after": s["viol_after"], "n_flags": len(res["holes"]),
@@ -220,6 +232,17 @@ def paired_boot(a, b, n=2000, seed=0):
     return float(d.mean()), float(np.percentile(m, 2.5)), float(np.percentile(m, 97.5))
 
 
+def rec_cell(R):
+    """recovered % [Wilson] | mean missing-wall recall | mean added-wall precision (wall-type omissions only)."""
+    W = [r for r in R if r.get("recovered", "") != ""]
+    if not W:
+        return "- | - | -"
+    k = sum(str(r["recovered"]) == "True" for r in W)
+    lo, hi = wilson(k, len(W))
+    f = lambda key: (f"{np.mean([float(r[key]) for r in W if r[key] != '']):.2f}" if any(r[key] != "" for r in W) else "-")
+    return f"**{100 * k / len(W):.0f}%** [{lo:.0f}, {hi:.0f}] | {f('miss_recall')} | {f('add_precision')}"
+
+
 def report(args):
     rows = []
     for p in sorted(q for pat in args.report for q in glob.glob(pat)):
@@ -239,8 +262,8 @@ def report(args):
         if not sub:
             continue
         L += [f"## {b} omissions", "",
-              "| arm | n | found | region flag | fixed | tol. mIoU before -> after | valid before -> after | violations (truth) | false additions / drawing | s / drawing |",
-              "|---|---|---|---|---|---|---|---|---|---|"]
+              "| arm | n | found | region flag | fixed | recovered (2 px) | missing-wall recall | added-wall precision | tol. mIoU before -> after | valid before -> after | violations (truth) | false additions / drawing | s / drawing |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for a in arms:
             R = [r for r in sub if r["arm"] == a]
             if not R:
@@ -249,6 +272,7 @@ def report(args):
             lo, hi = wilson(k, len(R))
             L.append(f"| {a} | {len(R)} | {100 * np.mean([T(r['found']) for r in R]):.0f}% | "
                      f"{100 * np.mean([T(r['region_flag']) for r in R]):.0f}% | **{100 * k / len(R):.0f}%** [{lo:.0f}, {hi:.0f}] | "
+                     f"{rec_cell(R)} | "
                      f"{mean(R, 'tol_before'):.1f} -> {mean(R, 'tol_after'):.1f} | "
                      f"{100 * np.mean([T(r['valid_before']) for r in R]):.0f}% -> {100 * np.mean([T(r['valid_after']) for r in R]):.0f}% | "
                      f"{mean(R, 'viol_after'):.1f} ({mean(R, 'viol_gt'):.1f}) | {mean(R, 'false_adds'):.2f} | {mean(R, 'seconds'):.1f} |")
@@ -260,7 +284,10 @@ def report(args):
             if not ks:
                 continue
             parts = []
-            for field, scale, name in (("fixed", 100, "fixed, points"), ("tol_after", 1, "tol. mIoU"), ("valid_after", 100, "valid, points")):
+            for field, scale, name in (("fixed", 100, "fixed, points"), ("recovered", 100, "recovered, points"),
+                                       ("tol_after", 1, "tol. mIoU"), ("valid_after", 100, "valid, points")):
+                if field == "recovered" and any(A[k].get(field, "") == "" or C[k].get(field, "") == "" for k in ks):
+                    continue
                 val = (lambda r: float(T(r[field]))) if field != "tol_after" else (lambda r: float(r[field]))
                 d, lo, hi = paired_boot([val(A[k]) for k in ks], [val(C[k]) for k in ks])
                 parts.append(f"{name} {scale * d:+.1f} [{scale * lo:+.1f}, {scale * hi:+.1f}]")
