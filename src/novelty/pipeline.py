@@ -11,7 +11,9 @@ sink, and the region fill redraws that whole area anyway.
 Large-hole fill (fill_region): the hole's box centred in a window of >= 256 px (most of the plan), the new U-Net
 draws a sketch, it is noised to t0 and finished by the new diffusion model, best-of-N by rule violations, then
 the shipped region restriction (no doors on exterior walls). Models: src/novelty/models.py, trained on the
-parser's maps of erased drawings (src/novelty/train_fill.py). Settings: configs/novelty/pipeline_large.yaml.
+parser's maps of erased drawings (src/novelty/train_fill.py). Settings: configs/novelty/pipeline_large_edit.yaml = the FINAL hybrid (fill v2, edit mode; chosen on tuning
+drawings). pipeline_large.yaml is v1 (inpaint fill), pipeline_large_plain.yaml the ablation without Fourier
+blocks; pick another file with the environment variable NOVELTY_CONFIG.
 """
 
 import os
@@ -31,7 +33,7 @@ from src.stage2.data.classes16 import C16
 from src.stage2.pipeline import run as base
 from src.utils import PROJECT_ROOT
 
-CFG_FILE = Path(os.environ.get("NOVELTY_CONFIG", PROJECT_ROOT / "configs" / "novelty" / "pipeline_large.yaml"))
+CFG_FILE = Path(os.environ.get("NOVELTY_CONFIG", PROJECT_ROOT / "configs" / "novelty" / "pipeline_large_edit.yaml"))
 BG = C16.index["background"]
 
 

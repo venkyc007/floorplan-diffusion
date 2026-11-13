@@ -1,3 +1,5 @@
+# v1 of the hybrid (inpaint fill: the hole is hidden from the fill models). Superseded by pipeline_large_edit.yaml
+# (v2, the final one); kept because its held-out table is reported (outputs/novelty/e2e_heldout_v1.md).
 # Novelty: the large-omission path added to the Stage 2 pipeline (src/novelty/pipeline.py).
 # The frozen Stage 2 settings (configs/stage2/pipeline.yaml, detector_threshold.yaml) are NOT changed: this file only
 # adds the region locator and the large-hole models; small holes still go through the shipped models.

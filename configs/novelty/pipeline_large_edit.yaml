@@ -1,3 +1,5 @@
+# FINAL hybrid (the default of src/novelty/pipeline.py): chosen over v1 on the tuning drawings
+# (outputs/novelty/e2e_tuning_v2.md; docs/decisions.md, 2026-11-13).
 # v2 of pipeline_large.yaml: the EDIT-mode large-hole models (configs/novelty/fill_*_edit.yaml). Keep the other
 # values identical to pipeline_large.yaml unless a tuning result says otherwise.
 # Novelty: the large-omission path added to the Stage 2 pipeline (src/novelty/pipeline.py).
