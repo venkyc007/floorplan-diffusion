@@ -153,6 +153,8 @@ def run_cases(args):
                 for arm in arms:
                     if arm not in AUTO:
                         continue
+                    if arm == "locator + B4" and target in ("intact", "small"):
+                        continue                          # the fill ablation only matters where a region is missing
                     t = time.time()
                     res = base.run_pipeline(image, fast=True, **AUTO[arm])
                     emit(row_of(pid, target, oc, arm, res, time.time() - t))
