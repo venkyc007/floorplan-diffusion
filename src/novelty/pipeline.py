@@ -49,6 +49,9 @@ def models():
 
 # ---------------------------------------------------------------- LOCATE
 
+BLOBS = {}                 # box -> blob of the last region_holes() call (the outline prior needs the blob's shape)
+
+
 def box_mask(shape, box):
     m = np.zeros(shape, bool)
     m[box[0]:box[2] + 1, box[1]:box[3] + 1] = True
@@ -76,6 +79,8 @@ def region_holes(parsed, prob=None, lc=None):
         prob = region_prob(models()["locator"], parsed, base.DEVICE)
     holes = [{"type": "region", "rules": ["L"], "box": c.box, "score": c.score, "point": None, "mask": c.mask}
              for c in region_candidates(prob, lc["threshold"], lc["min_area"], lc["box_pad"])]
+    BLOBS.clear()
+    BLOBS.update({tuple(int(v) for v in h["box"]): h["mask"] for h in holes})
     if lc.get("min_change", 0) > 0:
         for h in holes:
             h["change"] = sketch_change(parsed, h["box"])
@@ -92,11 +97,26 @@ def window_of(hole, nc):
     return (y0 + y1) // 2 - side // 2, (x0 + x1) // 2 - side // 2, side
 
 
+def outline_walls(sketch, blob, hole, t=3, tol=2):
+    """Structure-first prior: a wall band (t px) just inside the outline of the locator's blob, painted into the
+    sketch wherever the sketch has no wall within tol px. For a missing room the blob is the room, so its outline
+    is where the room's walls were (tuning drawings: walls on the blob outline alone bring back 57% of a missing
+    room's wall pixels within 2 px)."""
+    wall = C16.index["wall"]
+    k = np.ones((2 * t + 1, 2 * t + 1), np.uint8)
+    band = blob & ~(cv2.erode(blob.astype(np.uint8), k) > 0)
+    near = cv2.dilate((sketch == wall).astype(np.uint8), np.ones((2 * tol + 1,) * 2, np.uint8)) > 0
+    out = sketch.copy()
+    out[band & hole & ~near] = wall
+    return out
+
+
 @torch.no_grad()
 def hybrid_fill(label, hole, unet, diffusion=None, t0=700, n=2, steps_from_t0=15, generator=None, nc=None,
-                all_samples=False):
+                all_samples=False, blob=None):
     """label (H, W) map, hole bool mask -> (new map, info). diffusion=None: the U-Net sketch alone.
-    all_samples=True also returns every sample pasted into the map (for the best-of-N analysis)."""
+    all_samples=True also returns every sample pasted into the map (for the best-of-N analysis).
+    blob: the locator's blob for this hole (bool map); with it the outline prior is painted into the sketch."""
     nc = nc or cfg()["fill"]
     oy, ox, side = window_of(hole, nc)
     win = large_fill.crop(label, oy, ox, side, BG)
@@ -107,6 +127,10 @@ def hybrid_fill(label, hole, unet, diffusion=None, t0=700, n=2, steps_from_t0=15
         full = torch.nn.functional.one_hot(torch.from_numpy(win.astype(np.int64)), C16.n).permute(2, 0, 1).float()
         cond = torch.cat([full[None].to(base.DEVICE), hidden[:, -1:]], 1)
     sketch = unet.predict(cond)
+    if blob is not None:
+        wb = large_fill.crop(blob.astype(np.uint8), oy, ox, side, 0) > 0
+        sk = outline_walls(sketch[0].cpu().numpy().astype(np.uint8), wb, wh)
+        sketch = torch.from_numpy(sk.astype(np.int64))[None].to(base.DEVICE)
 
     def pasted(lab):
         new = label.copy()
@@ -131,8 +155,9 @@ def fill_region(label, hole, generator, fast=None):
     if window_of(hole, nc)[2] > nc["max_window"]:                 # huge box: the shipped tiled fill
         new, info = large_fill.fill_large(label, hole, "tiled", base.cfg()["fill"], fast, generator)
         return new, dict(info, route="shipped tiled (hole larger than max_window)")
+    blob = BLOBS.get(tuple(int(v) for v in large_fill.bbox(hole))) if nc.get("outline_prior") else None
     new, info = hybrid_fill(label, hole, m["unet"], m["diffusion"], nc["t0"], nc["n_samples"], nc["steps_from_t0"],
-                            generator, nc)
+                            generator, nc, blob=blob)
     info["seconds"] = round(time.time() - t, 1)
     return large_fill.region_restrict(label, new, hole), dict(info, route="novelty large-hole fill")
 

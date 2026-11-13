@@ -120,8 +120,9 @@ def case_of(s):
     return parsed, gt, rm, box, hole
 
 
-def auto_fill(parsed, m, nc, lc, seed=0):
-    """Locator flags -> every flagged box filled in turn with the new hybrid. -> (plan, holes)."""
+def auto_fill(parsed, m, nc, lc, seed=0, outline=False):
+    """Locator flags -> every flagged box filled in turn with the new hybrid. -> (plan, holes).
+    outline=True: with the outline prior (pipeline.outline_walls)."""
     holes = nov.region_holes(parsed, lc=lc)
     plan = parsed.copy()
     for h in holes:
@@ -130,7 +131,7 @@ def auto_fill(parsed, m, nc, lc, seed=0):
         if nov.window_of(hole, nc)[2] > nc["max_window"]:
             continue
         new, _ = nov.hybrid_fill(plan, hole, m["unet"], m["diffusion"], nc["t0"], nc["n_samples"], nc["steps_from_t0"],
-                                 base.generator(seed), nc)
+                                 base.generator(seed), nc, blob=h["mask"] if outline else None)
         plan = large_fill.region_restrict(plan, new, hole)
     return plan, holes
 
@@ -185,20 +186,23 @@ def run_cases(args):
                              for p in info["samples"])
                 add(s, f"hybrid@{t0}", score(large_fill.region_restrict(parsed, plan, hole), parsed, gt, rm, box), sec,
                     {"oracle_fix_iou": round(oracle, 3)})
-        if "auto" in arms:
-            t = time.time()
-            plan, holes = auto_fill(parsed, m, nc, lc)
-            add(s, "auto", score(plan, parsed, gt, rm, box, holes), time.time() - t,
-                {"flags": len(holes), "additions": additions(parsed, plan)})
-    if "auto" in arms:
+        for arm, outline in (("auto", False), ("auto+outline", True)):
+            if arm in arms:
+                t = time.time()
+                plan, holes = auto_fill(parsed, m, nc, lc, outline=outline)
+                add(s, arm, score(plan, parsed, gt, rm, box, holes), time.time() - t,
+                    {"flags": len(holes), "additions": additions(parsed, plan)})
+    for arm, outline in (("auto", False), ("auto+outline", True)):
+        if arm not in arms:
+            continue
         for j, i in enumerate(intact):
             if j % sn != si:
                 continue
             s = samples[i]
             parsed, _, _ = arrays(s)
             t = time.time()
-            plan, holes = auto_fill(parsed, m, nc, lc)
-            add(s, "auto", {}, time.time() - t, {"flags": len(holes), "additions": additions(parsed, plan)})
+            plan, holes = auto_fill(parsed, m, nc, lc, outline=outline)
+            add(s, arm, {}, time.time() - t, {"flags": len(holes), "additions": additions(parsed, plan)})
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f"tune_maps{args.tag}_{si}.csv"
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -252,9 +256,9 @@ def report(args):
                 f"{pct([r for r in sub if r['arm'] == a], 'fixed'):.0f}% / {pct([r for r in sub if r['arm'] == a], 'recovered'):.0f}% / "
                 f"{num([r for r in sub if r['arm'] == a], 'tol'):.1f} / "
                 f"{pct([r for r in sub if r['arm'] == a], 'valid'):.0f}%" for a in arms) + " |")
-    it = [r for r in rows if r["kind"] == "intact"]
-    if it:
-        L += ["", f"Intact drawings ({len(it)}; auto): region flags per drawing {num(it, 'flags'):.2f}, drawings with a flag "
+    for a in dict.fromkeys(r["arm"] for r in rows if r["kind"] == "intact"):
+        it = [r for r in rows if r["kind"] == "intact" and r["arm"] == a]
+        L += ["", f"Intact drawings ({len(it)}; {a}): region flags per drawing {num(it, 'flags'):.2f}, drawings with a flag "
               f"{100 * np.mean([float(r['flags']) > 0 for r in it]):.0f}%, added components per drawing {num(it, 'additions'):.2f}."]
     path = OUT / f"tune_maps{args.tag}.md"
     path.write_text("\n".join(L) + "\n", encoding="utf-8")
