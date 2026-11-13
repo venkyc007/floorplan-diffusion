@@ -1,0 +1,23 @@
+# Novelty round 2, STRUCTURE net (src/novelty/structure.py): the whole parsed map (+ wall-continuation rays + ink map)
+# in, "a missing wall runs here" and "this area is missing" out.
+
+model:
+  encoder: resnet34             # ImageNet weights; smp adapts the first conv to the 19 input channels
+
+data:
+  canvas: 320                   # px square; most parsed maps fit whole, larger ones are cropped through the omission
+  erased_frac: 0.7              # 70% erased versions, 30% intact drawings (targets all zero)
+  num_workers: 2
+  ray_procs: 4                  # processes that precompute the continuation rays at start-up
+
+train:
+  batch_size: 16
+  lr: 3.0e-4
+  weight_decay: 0.01
+  warmup_steps: 300
+  grad_clip: 1.0
+  wall_weight: 2.0              # weight of the missing-wall map's loss against the area map's (the walls are the goal)
+  seed: 0
+  log_every: 100
+  val_minutes: 10
+  time_limit_hours: 2.4         # cosine over this time, then stop

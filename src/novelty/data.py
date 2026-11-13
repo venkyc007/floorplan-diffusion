@@ -37,17 +37,23 @@ def dec(b):
     return cv2.imdecode(np.frombuffer(b, np.uint8), cv2.IMREAD_UNCHANGED)
 
 
-def load_set(paths, limit=None):
-    """[{pid, version, kind, size_pct, size_bin, map, gt, om}] with the three images kept as PNG bytes (small)."""
+def load_set(paths, limit=None, max_version=None):
+    """[{pid, version, kind, size_pct, size_bin, map, gt, om, ink}] with the images kept as PNG bytes (small).
+    ink (where the drawing has any ink, build_set.ink_map) is None for sets built without --ink.
+    max_version: keep only versions 0..max_version of every drawing (3 = exactly the first, smaller set)."""
     out = []
     for path in paths:
         with zipfile.ZipFile(path) as z:
+            names = set(z.namelist())
             for r in csv.DictReader(io.StringIO(z.read("meta.csv").decode("utf-8"))):
+                if max_version is not None and int(r["version"]) > max_version:
+                    continue
                 stem = f"{r['pid']}_v{r['version']}"
                 out.append({"pid": r["pid"], "version": int(r["version"]), "kind": r["kind"],
                             "size_pct": float(r["size_pct"] or 0), "size_bin": r["size_bin"],
                             "map": z.read(f"{stem}_map.png"), "gt": z.read(f"{stem}_gt.png"),
-                            "om": z.read(f"{stem}_om.png")})
+                            "om": z.read(f"{stem}_om.png"),
+                            "ink": z.read(f"{stem}_ink.png") if f"{stem}_ink.png" in names else None})
                 if limit and len(out) >= limit:
                     return out
     return out
@@ -221,3 +227,59 @@ class LocateSet(Dataset):
         parsed, _, om = arrays(pool[self.rng.integers(len(pool))])
         lab, tgt = augment(locate_canvas(parsed, om > 0, self.rng, self.canvas), self.rng)
         return torch.from_numpy(lab.astype(np.int64)), torch.from_numpy(tgt.astype(np.float32))[None]
+
+
+# ---------------------------------------------------------------- structure-net samples (round 2)
+
+def ray_bytes(parsed):
+    """Wall-continuation rays of a parsed map as PNG bytes: 0 none, 1 junction ray, 2 free ray (src/novelty/rays.py)."""
+    from src.novelty.rays import continuation_rays
+    free, junction = continuation_rays(parsed)
+    return cv2.imencode(".png", (junction.astype(np.uint8) + 2 * free.astype(np.uint8)))[1].tobytes()
+
+
+class StructureSet(Dataset):
+    """Endless samples for the structure net (src/novelty/structure.py): the whole parsed map on a canvas
+    (as LocateSet) -> (labels int64 (H, W), extra float (3, H, W) = free rays, junction rays, ink,
+    targets float (2, H, W) = missing-wall band, missing area). erased_frac of the samples have an omission.
+    Needs s["rays"] (structure.add_rays); s["ink"] may be None (zeros)."""
+
+    def __init__(self, samples, canvas=320, erased_frac=0.7, length=10 ** 7):
+        self.erased = [s for s in samples if s["version"] > 0]
+        self.intact = [s for s in samples if s["version"] == 0]
+        self.canvas, self.erased_frac, self.length, self.rng = canvas, erased_frac, length, None
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, i):
+        from src.novelty.structure import targets
+        if self.rng is None:
+            self.rng = np.random.default_rng(torch.initial_seed() % 2 ** 32)
+        pool = self.erased if (not self.intact or self.rng.random() < self.erased_frac) else self.intact
+        s = pool[self.rng.integers(len(pool))]
+        parsed, gt, om = arrays(s)
+        rays = dec(s["rays"])
+        ink = dec(s["ink"]) if s.get("ink") is not None else np.zeros(parsed.shape, np.uint8)
+        band, area = targets(gt, om)
+        H, W = parsed.shape
+        c = self.canvas
+
+        def origin(n, lo, hi):                           # as locate_canvas: random offset, or a crop through the area
+            if n <= c:
+                return -int(self.rng.integers(0, c - n + 1))
+            if lo is None:
+                return int(self.rng.integers(0, n - c + 1))
+            m = int(self.rng.integers(lo, hi + 1))
+            return int(np.clip(m - int(self.rng.integers(c // 4, 3 * c // 4)), 0, n - c))
+        if area.any():
+            y0, x0, y1, x1 = bbox(area > 0)
+        else:
+            y0 = x0 = y1 = x1 = None
+        oy, ox = origin(H, y0, y1), origin(W, x0, x1)
+        lab, r, k, b, a = augment([crop(parsed, oy, ox, c, c, BG), crop(rays, oy, ox, c, c, 0), crop(ink, oy, ox, c, c, 0),
+                                   crop(band.astype(np.uint8), oy, ox, c, c, 0), crop(area.astype(np.uint8), oy, ox, c, c, 0)],
+                                  self.rng)
+        extra = np.stack([(r == 2), (r == 1), k.astype(np.float32) / 255]).astype(np.float32)
+        return (torch.from_numpy(lab.astype(np.int64)), torch.from_numpy(extra),
+                torch.from_numpy(np.stack([b, a]).astype(np.float32)))
