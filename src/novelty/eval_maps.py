@@ -250,6 +250,52 @@ def locator_sweep(args):
     print("\n".join(L))
 
 
+def gate_sweep(args):
+    """The "would the fill change anything?" gate (pipeline.sketch_change) on the tuning drawings: for the locator
+    flags at a few thresholds, the new wall pixels the U-Net sketch draws in the flagged box; then found / false
+    alarms when only flags with at least G new wall pixels are kept."""
+    samples = load_set(args.set)
+    m, nc = nov.models(), nov.cfg()["fill"]
+    probs = [region_prob(m["locator"], arrays(s)[0], base.DEVICE) for s in samples]
+    L = [f"# Region flags kept only if the fill would change the area{args.tag}", "",
+         "Locator = the configured one (average if several), blob >= 150 px. change = wall pixels the large-hole U-Net "
+         "draws in the flagged box that are not within 2 px of a wall of the parsed map. found = an omission with a "
+         "kept flag on it; flags / intact = kept flags per intact drawing.", "",
+         "| threshold | min change (wall px) | found | found, medium | found, large | flags / intact drawing | intact drawings flagged | stray flags / erased drawing |",
+         "|---|---|---|---|---|---|---|---|"]
+    rows = []
+    for th in (0.3, 0.5, 0.7):
+        recs = []                                          # per sample: [(hit, change)]
+        for s, p in zip(samples, probs):
+            parsed, _, om = arrays(s)
+            area = om > 0
+            recs.append([(bool(area[c.box[0]:c.box[2] + 1, c.box[1]:c.box[3] + 1].any()),
+                          nov.sketch_change(parsed, c.box, m["unet"], nc)) for c in region_candidates(p, th, 150)])
+            for hit_, ch in recs[-1]:
+                rows.append({"threshold": th, "pid": s["pid"], "version": s["version"], "size_bin": s["size_bin"],
+                             "on_omission": hit_, "change": ch})
+        for g in (0, 10, 20, 40, 80, 160):
+            f, fa, stray, by = [], [], [], {"medium": [], "large": []}
+            for s, r in zip(samples, recs):
+                kept = [h for h, ch in r if ch >= g]
+                if s["version"] == 0:
+                    fa.append(len(kept))
+                else:
+                    f.append(any(kept))
+                    by.get(s["size_bin"], []).append(f[-1])
+                    stray.append(sum(1 for h in kept if not h))
+            L.append(f"| {th} | {g} | {100 * np.mean(f):.0f}% | {100 * np.mean(by['medium'] or [0]):.0f}% | "
+                     f"{100 * np.mean(by['large'] or [0]):.0f}% | {np.mean(fa):.2f} | {100 * np.mean([v > 0 for v in fa]):.0f}% | "
+                     f"{np.mean(stray):.2f} |")
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / f"tune_gate{args.tag}.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+    with open(OUT / f"tune_gate{args.tag}.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    print("\n".join(L))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--set", nargs="+")
@@ -262,12 +308,15 @@ def main():
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--tag", default="")
     ap.add_argument("--locator-sweep", action="store_true")
+    ap.add_argument("--gate-sweep", action="store_true")
     ap.add_argument("--report", nargs="+")
     args = ap.parse_args()
     if args.report:
         return report(args)
     if args.locator_sweep:
         return locator_sweep(args)
+    if args.gate_sweep:
+        return gate_sweep(args)
     run_cases(args)
 
 

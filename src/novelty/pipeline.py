@@ -19,6 +19,7 @@ import time
 from functools import lru_cache
 from pathlib import Path
 
+import cv2
 import numpy as np
 import torch
 import yaml
@@ -48,13 +49,38 @@ def models():
 
 # ---------------------------------------------------------------- LOCATE
 
+def box_mask(shape, box):
+    m = np.zeros(shape, bool)
+    m[box[0]:box[2] + 1, box[1]:box[3] + 1] = True
+    return m
+
+
+def sketch_change(parsed, box, unet=None, nc=None):
+    """The "would the fill change anything?" check of a region flag: hide the box, let the large-hole U-Net draw
+    it, and count the wall pixels it draws that are NOT within 2 px of a wall already in the parsed map.
+    A complete area is redrawn as it was (few new wall pixels); a missing room gets its walls (many)."""
+    hole = box_mask(parsed.shape, box)
+    if window_of(hole, nc or cfg()["fill"])[2] > (nc or cfg()["fill"])["max_window"]:
+        return 0
+    new, _ = hybrid_fill(parsed, hole, unet or models()["unet"], None, nc=nc)
+    wall = C16.index["wall"]
+    near = cv2.dilate((parsed == wall).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
+    return int(((new == wall) & hole & ~near).sum())
+
+
 def region_holes(parsed, prob=None, lc=None):
-    """Region flags of the locator as pipeline holes (box = the hole handed to the large-hole fill)."""
+    """Region flags of the locator as pipeline holes (box = the hole handed to the large-hole fill).
+    locate.min_change > 0 keeps only flags whose sketch_change is at least that many wall pixels."""
     lc = lc or cfg()["locate"]
     if prob is None:
         prob = region_prob(models()["locator"], parsed, base.DEVICE)
-    return [{"type": "region", "rules": ["L"], "box": c.box, "score": c.score, "point": None, "mask": c.mask}
-            for c in region_candidates(prob, lc["threshold"], lc["min_area"], lc["box_pad"])]
+    holes = [{"type": "region", "rules": ["L"], "box": c.box, "score": c.score, "point": None, "mask": c.mask}
+             for c in region_candidates(prob, lc["threshold"], lc["min_area"], lc["box_pad"])]
+    if lc.get("min_change", 0) > 0:
+        for h in holes:
+            h["change"] = sketch_change(parsed, h["box"])
+        holes = [h for h in holes if h["change"] >= lc["min_change"]]
+    return holes
 
 
 # ---------------------------------------------------------------- large-hole FILL
