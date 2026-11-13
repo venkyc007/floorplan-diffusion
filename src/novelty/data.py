@@ -33,6 +33,18 @@ from src.stage2.data.classes16 import C16
 BG = C16.index["background"]
 
 
+INK_GREY = 128            # a drawing pixel darker than this is "ink"
+
+
+def ink_map(img, shape):
+    """Where the drawing has ANY ink, at map size: the share of ink pixels (grey < INK_GREY) under each map pixel,
+    0-255. The drawing is binarised first, so paper tone, scan noise and the smudges an erasure can leave are all
+    invisible in it; what remains is walls, symbols, furniture and text. A room that was never drawn has no label
+    and no furniture, which the parser's 16-class map cannot show."""
+    ink = (img < INK_GREY).astype(np.float32)
+    return np.round(255 * cv2.resize(ink, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)).astype(np.uint8)
+
+
 def dec(b):
     return cv2.imdecode(np.frombuffer(b, np.uint8), cv2.IMREAD_UNCHANGED)
 

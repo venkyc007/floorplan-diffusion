@@ -56,9 +56,11 @@ def _fill_with_outline(label, hole, generator, fast=None):
     return nov.fill_region(label, hole, generator, fast, outline=True)
 
 
-AUTO = {"shipped auto": {}, "hybrid auto": {"region_fn": nov.region_holes, "large_fill_fn": nov.fill_region},
-        "hybrid auto + outline": {"region_fn": nov.region_holes, "large_fill_fn": _fill_with_outline},
-        "locator + B4": {"region_fn": nov.region_holes}}
+AUTO = {"shipped auto": lambda img: base.run_pipeline(img, fast=True),
+        "hybrid auto": lambda img: nov.run(img),          # the configured hybrid (locator, structure net, new fill)
+        "hybrid auto + outline": lambda img: base.run_pipeline(img, fast=True, region_fn=nov.region_holes,
+                                                               large_fill_fn=_fill_with_outline),
+        "locator + B4": lambda img: base.run_pipeline(img, fast=True, region_fn=nov.region_holes)}
 FIELDS = ["pid", "target", "kind", "size_bin", "size_pct", "arm", "found", "region_flag", "fixed", "fix_iou",
           "recovered", "miss_recall", "add_precision",
           "false_adds", "tol_before", "tol_after", "valid_before", "valid_after", "viol_gt", "viol_after",
@@ -156,7 +158,7 @@ def run_cases(args):
                     if arm == "locator + B4" and target in ("intact", "small"):
                         continue                          # the fill ablation only matters where a region is missing
                     t = time.time()
-                    res = base.run_pipeline(image, fast=True, **AUTO[arm])
+                    res = AUTO[arm](image)
                     emit(row_of(pid, target, oc, arm, res, time.time() - t))
                     parsed = res["parsed"]
                     if keep is not None:
@@ -176,6 +178,8 @@ def run_cases(args):
                     emit(row_of(pid, target, oc, "shipped manual", manual_result(parsed, plan, box), time.time() - t))
                 if "hybrid manual" in arms:
                     t = time.time()
+                    nov.STATE.clear()                     # the structure net's walls are recomputed for this drawing
+                    nov.STATE["image"] = image
                     plan, _ = nov.fill_region(parsed, hole, base.generator(0), fast)
                     r = row_of(pid, target, oc, "hybrid manual", manual_result(parsed, plan, box), time.time() - t)
                     emit(r)

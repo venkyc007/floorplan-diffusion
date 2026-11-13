@@ -34,6 +34,7 @@ import cv2
 import numpy as np
 import torch
 
+from src.novelty.data import ink_map
 from src.stage2.detect.image_eval import LARGE_KINDS, omit
 from src.stage2.parse.dataset import read_pair
 from src.stage2.parse.train import Parser
@@ -76,18 +77,6 @@ def png(a):
 
 def to_map(mask, shape):
     return cv2.resize(mask.astype(np.uint8), (shape[1], shape[0]), interpolation=cv2.INTER_NEAREST) > 0
-
-
-INK_GREY = 128            # a drawing pixel darker than this is "ink"
-
-
-def ink_map(img, shape):
-    """Where the drawing has ANY ink, at map size: the share of ink pixels (grey < INK_GREY) under each map pixel,
-    0-255. The drawing is binarised first, so paper tone, scan noise and the smudges an erasure can leave are all
-    invisible in it; what remains is walls, symbols, furniture and text. A room that was never drawn has no label
-    and no furniture, which the parser's 16-class map cannot show."""
-    ink = (img < INK_GREY).astype(np.float32)
-    return np.round(255 * cv2.resize(ink, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)).astype(np.uint8)
 
 
 def load_parser(path, device):
