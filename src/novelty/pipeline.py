@@ -35,7 +35,7 @@ import torch
 import yaml
 from skimage.morphology import skeletonize
 
-from src.novelty.data import ink_map
+from src.novelty.data import grey_map, ink_map, stroke_map
 from src.novelty.locate import load_locator, region_candidates, region_prob
 from src.novelty.models import load_large
 from src.stage2.complete import large_fill, sampler
@@ -111,11 +111,16 @@ def region_holes(parsed, prob=None, lc=None):
 
 # ---------------------------------------------------------------- STRUCTURE (round 2)
 
-def structure_walls(parsed, ink=None, sc=None, nets=None):
+def drawing_maps(image, shape):
+    """(ink map, stroke map) of a drawing at the parsed map's size (src/novelty/data.py)."""
+    return ink_map(image, shape), stroke_map(grey_map(image, shape))
+
+
+def structure_walls(parsed, ink=None, sc=None, nets=None, stroke=None):
     """The structure net on one parsed map -> (bool map of wall pixels to add, wall heat, area probability)."""
     from src.novelty.structure import decode_walls, predict
     sc = sc or cfg()["structure"]
-    heat, area = predict(nets or models()["structure"], parsed, ink, base.DEVICE, tta=sc.get("tta", False))
+    heat, area = predict(nets or models()["structure"], parsed, ink, base.DEVICE, tta=sc.get("tta", False), stroke=stroke)
     return decode_walls(heat, parsed, sc["tau"], sc.get("min_len", 6)), heat, area
 
 
@@ -149,13 +154,13 @@ def merge_holes(holes):
     return holes
 
 
-def all_region_holes(parsed, ink=None):
+def all_region_holes(parsed, ink=None, stroke=None):
     """Locator flags + structure flags (if the config has a structure net), overlapping boxes merged.
     Remembers the structure net's walls for the fill (STATE)."""
     c = cfg()
     holes = region_holes(parsed) if c.get("locate", {}).get("use", True) else []
     if c.get("structure") and models().get("structure"):
-        walls, _, _ = structure_walls(parsed, ink)
+        walls, _, _ = structure_walls(parsed, ink, stroke=stroke)
         STATE.update(walls=walls, shape=parsed.shape)
         holes = merge_holes(holes + structure_holes(parsed, walls))
     return holes
@@ -264,8 +269,8 @@ def fill_region(label, hole, generator, fast=None, outline=None):
     if c.get("structure") and m.get("structure"):
         if STATE.get("shape") != label.shape or STATE.get("walls") is None:   # manual mode: not computed by a region_fn
             img = STATE.get("image")
-            STATE.update(walls=structure_walls(label, None if img is None else ink_map(img, label.shape))[0],
-                         shape=label.shape)
+            ink, stroke = (None, None) if img is None else drawing_maps(img, label.shape)
+            STATE.update(walls=structure_walls(label, ink, stroke=stroke)[0], shape=label.shape)
         walls = STATE["walls"]
     new, info = hybrid_fill(label, hole, m["unet"], m["diffusion"], nc["t0"], nc["n_samples"], nc["steps_from_t0"],
                             generator, nc, blob=blob, walls=walls)
@@ -280,5 +285,5 @@ def run(image, boxes=None, seed=None, fast=True):
     fill switched in."""
     STATE.clear()
     STATE["image"] = image
-    region_fn = lambda parsed: all_region_holes(parsed, ink_map(image, parsed.shape))
+    region_fn = lambda parsed: all_region_holes(parsed, *drawing_maps(image, parsed.shape))
     return base.run_pipeline(image, boxes=boxes, seed=seed, fast=fast, region_fn=region_fn, large_fill_fn=fill_region)

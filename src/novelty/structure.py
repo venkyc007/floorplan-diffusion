@@ -13,6 +13,8 @@ is trained for walls only, with a target and a decision rule that tolerate a few
            + 2 channels of wall-continuation rays (src/novelty/rays.py: where visible walls would go if they continued)
            + 1 channel "ink": where the drawing has any ink (binarised, so paper tone and erasure smudges are
              invisible; a room that was never drawn has no label and no furniture)
+           + 1 channel "strokes" (model.n_extra: 4): ink by local contrast instead of a fixed grey level
+             (src/novelty/data.stroke_map), so faint drawings and plans with grey room fills are covered too
   output   2 probability maps: "a missing wall runs here" (the erased walls, widened by 1 px on each side) and
            "this area is missing" (the locator's target, as a helper task)
   model    U-Net with an ImageNet ResNet-34 encoder (as the locator and detector v3), BCE + Dice per map
@@ -40,18 +42,19 @@ import torch.nn.functional as F
 import yaml
 from skimage.morphology import skeletonize
 
-from src.novelty.data import BG, StructureSet, arrays, dec, load_set, ray_bytes
+from src.novelty.data import BG, StructureSet, arrays, dec, load_set, ray_bytes, stroke_map
 from src.novelty.locate import append_csv, dice_loss
 from src.stage2.data.classes16 import C16
 from src.stage2.data.erasure import grown
 
 WALL = C16.index["wall"]
-N_EXTRA = 3                      # rays (free, junction) + ink
+N_EXTRA = 4                      # rays (free, junction) + ink + strokes; the first nets (model.n_extra 3) have no strokes
 
 
 def build_structure(mcfg, weights="imagenet"):
     import segmentation_models_pytorch as smp
-    return smp.Unet(encoder_name=mcfg["encoder"], encoder_weights=weights, in_channels=C16.n + N_EXTRA, classes=2)
+    return smp.Unet(encoder_name=mcfg["encoder"], encoder_weights=weights, in_channels=C16.n + mcfg.get("n_extra", 3),
+                    classes=2)
 
 
 def load_structure(path, device="cpu"):
@@ -59,33 +62,38 @@ def load_structure(path, device="cpu"):
     model = build_structure(ck["config"]["model"], None)
     model.load_state_dict(ck["model"])
     model.use = ck["config"]["model"].get("use", {"rays": True, "ink": True})
+    model.n_extra = ck["config"]["model"].get("n_extra", 3)
     return model.eval().to(device)
 
 
-def features(lab, extra, use=None):
-    """lab (B, H, W) int64, extra (B, 3, H, W) float [free rays, junction rays, ink] -> (B, 19, H, W).
-    use = {"rays": bool, "ink": bool}: a switched-off input is zeroed (ablations keep the same network)."""
+def features(lab, extra, use=None, n_extra=N_EXTRA):
+    """lab (B, H, W) int64, extra (B, 4, H, W) float [free rays, junction rays, ink, strokes] -> (B, 16 + n_extra, H, W).
+    use = {"rays": bool, "ink": bool, "stroke": bool}: a switched-off input is zeroed (ablations keep the network)."""
     extra = extra.clone()
     if use is not None and not use.get("rays", True):
         extra[:, :2] = 0
     if use is not None and not use.get("ink", True):
-        extra[:, 2:] = 0
-    return torch.cat([F.one_hot(lab, C16.n).permute(0, 3, 1, 2).float(), extra], 1)
+        extra[:, 2:3] = 0
+    if use is not None and not use.get("stroke", True):
+        extra[:, 3:] = 0
+    return torch.cat([F.one_hot(lab, C16.n).permute(0, 3, 1, 2).float(), extra[:, :n_extra]], 1)
 
 
-def extra_maps(parsed, ink=None, rays=None):
-    """(3, H, W) float32: free rays, junction rays, ink in [0, 1] (zeros where not available)."""
+def extra_maps(parsed, ink=None, rays=None, stroke=None):
+    """(4, H, W) float32: free rays, junction rays, ink, strokes in [0, 1] (zeros where not available)."""
     if rays is None:
         from src.novelty.rays import continuation_rays
         free, junction = continuation_rays(parsed)
     else:
         free, junction = rays == 2, rays == 1
-    ink = np.zeros(parsed.shape, np.float32) if ink is None else ink.astype(np.float32) / 255
-    return np.stack([free.astype(np.float32), junction.astype(np.float32), ink])
+    zero = np.zeros(parsed.shape, np.float32)
+    ink = zero if ink is None else ink.astype(np.float32) / 255
+    stroke = zero if stroke is None else stroke.astype(np.float32) / 255
+    return np.stack([free.astype(np.float32), junction.astype(np.float32), ink, stroke])
 
 
 @torch.no_grad()
-def predict(models, parsed, ink=None, device="cpu", tta=False, rays=None):
+def predict(models, parsed, ink=None, device="cpu", tta=False, rays=None, stroke=None):
     """(wall heat, area probability), both (H, W) in [0, 1]. models: one network or a list (mean).
     tta: also average over the 8 rotations / flips of the map."""
     models = models if isinstance(models, (list, tuple)) else [models]
@@ -94,7 +102,7 @@ def predict(models, parsed, ink=None, device="cpu", tta=False, rays=None):
     lab = np.full((ph, pw), BG, np.uint8)
     lab[:H, :W] = parsed
     ex = np.zeros((N_EXTRA, ph, pw), np.float32)
-    ex[:, :H, :W] = extra_maps(parsed, ink, rays)
+    ex[:, :H, :W] = extra_maps(parsed, ink, rays, stroke)
     views = [(k, f) for f in (False, True) for k in range(4)] if tta else [(0, False)]
     acc = torch.zeros(2, ph, pw)
     for k, flip in views:
@@ -102,7 +110,8 @@ def predict(models, parsed, ink=None, device="cpu", tta=False, rays=None):
         e = np.rot90(ex[:, :, ::-1] if flip else ex, k, axes=(1, 2))
         lt = torch.from_numpy(np.ascontiguousarray(l).astype(np.int64))[None].to(device)
         et = torch.from_numpy(np.ascontiguousarray(e))[None].to(device)
-        p = sum(torch.sigmoid(m(features(lt, et, getattr(m, "use", None))).float())[0] for m in models) / len(models)
+        p = sum(torch.sigmoid(m(features(lt, et, getattr(m, "use", None), getattr(m, "n_extra", 3))).float())[0]
+                for m in models) / len(models)
         p = torch.rot90(p, -k, dims=(1, 2))
         acc += (p.flip(2) if flip else p).cpu()
     acc /= len(views)
@@ -150,7 +159,8 @@ def validate(model, samples, device, tau=0.5):
     for s in samples:
         parsed, gt, om = arrays(s)
         ink = dec(s["ink"]) if s.get("ink") is not None else None
-        heat, _ = predict(model, parsed, ink, device, rays=dec(s["rays"]) if s.get("rays") is not None else None)
+        heat, _ = predict(model, parsed, ink, device, rays=dec(s["rays"]) if s.get("rays") is not None else None,
+                          stroke=dec(s["stroke"]) if s.get("stroke") is not None else None)
         added = decode_walls(heat, parsed, tau)
         plan = np.where(added, WALL, parsed).astype(np.uint8)
         if s["version"] == 0:
@@ -170,22 +180,28 @@ def validate(model, samples, device, tau=0.5):
             "intact_flagged": float(np.mean(flagged_intact)) if flagged_intact else 0.0}
 
 
-def _rays_job(b):
-    return ray_bytes(dec(b))
+def _rays_job(job):
+    m, img = job
+    stroke = None if img is None else cv2.imencode(".png", stroke_map(dec(img)))[1].tobytes()
+    return ray_bytes(dec(m)), stroke
 
 
 def add_rays(samples, procs=4):
-    """Precompute the wall-continuation rays of every sample's parsed map (s["rays"], PNG bytes: 1 junction, 2 free)."""
+    """Precompute, for every sample: the wall-continuation rays of its parsed map (s["rays"], PNG bytes: 1 junction,
+    2 free) and the stroke map of its grey drawing (s["stroke"], PNG bytes, None without a drawing); the grey
+    drawing itself (s["img"]) is dropped afterwards to save memory."""
     t = time.time()
+    jobs = [(s["map"], s.get("img")) for s in samples]
     if procs > 1:
         import multiprocessing as mp
         with mp.Pool(procs) as pool:
-            out = pool.map(_rays_job, [s["map"] for s in samples], chunksize=64)
+            out = pool.map(_rays_job, jobs, chunksize=64)
     else:
-        out = [_rays_job(s["map"]) for s in samples]
-    for s, r in zip(samples, out):
-        s["rays"] = r
-    print(f"rays for {len(samples)} maps in {time.time() - t:.0f} s", flush=True)
+        out = [_rays_job(j) for j in jobs]
+    for s, (r, st) in zip(samples, out):
+        s["rays"], s["stroke"] = r, st
+        s["img"] = None
+    print(f"rays and stroke maps for {len(samples)} maps in {time.time() - t:.0f} s", flush=True)
 
 
 def main():
@@ -197,6 +213,8 @@ def main():
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--no-ink", action="store_true", help="ablation: the ink map is not given")
     ap.add_argument("--no-rays", action="store_true", help="ablation: the continuation rays are not given")
+    ap.add_argument("--no-stroke", action="store_true", help="the stroke map is not given (the first nets: n_extra 3)")
+    ap.add_argument("--encoder", default=None, help="override model.encoder (e.g. resnet50)")
     ap.add_argument("--max-version", type=int, default=None, help="train on versions <= this only (3 = the first set)")
     ap.add_argument("--hours", type=float, default=None, help="override train.time_limit_hours")
     ap.add_argument("--smoke", action="store_true")
@@ -204,7 +222,10 @@ def main():
     t_start = time.time()
     cfg = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
     tc, dc = cfg["train"], cfg["data"]
-    cfg["model"]["use"] = {"rays": not args.no_rays, "ink": not args.no_ink}
+    cfg["model"]["use"] = {"rays": not args.no_rays, "ink": not args.no_ink, "stroke": not args.no_stroke}
+    cfg["model"]["n_extra"] = N_EXTRA
+    if args.encoder:
+        cfg["model"]["encoder"] = args.encoder
     use = cfg["model"]["use"]
     if args.seed is not None:
         tc["seed"] = args.seed
@@ -227,7 +248,7 @@ def main():
                                          num_workers=dc["num_workers"], drop_last=True, pin_memory=amp,
                                          persistent_workers=dc["num_workers"] > 0)
     model = build_structure(cfg["model"], None if args.smoke else "imagenet").to(device)
-    model.use = use
+    model.use, model.n_extra = use, N_EXTRA
     opt = torch.optim.AdamW(model.parameters(), lr=tc["lr"], weight_decay=tc["weight_decay"])
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
     step, best, budget = 0, -9.0, tc["time_limit_hours"]
@@ -237,7 +258,7 @@ def main():
           f"device {device}", flush=True)
     last_val, t_log, losses = time.time(), time.time(), []
     for lab, extra, tgt in loader:
-        x, y = features(lab.to(device), extra.to(device), use), tgt.to(device)
+        x, y = features(lab.to(device), extra.to(device), use, N_EXTRA), tgt.to(device)
         f = (step + 1) / tc["warmup_steps"] if step < tc["warmup_steps"] else 0.5 * (1 + math.cos(math.pi * min(hours() / budget, 1)))
         for g in opt.param_groups:
             g["lr"] = tc["lr"] * f

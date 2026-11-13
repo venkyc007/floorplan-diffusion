@@ -45,13 +45,33 @@ def ink_map(img, shape):
     return np.round(255 * cv2.resize(ink, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)).astype(np.uint8)
 
 
+STROKE_CLOSE = 7          # px (map scale): strokes thinner than this stand out against the local background
+STROKE_CONTRAST = 32      # grey levels darker than the local background = a stroke
+
+
+def grey_map(img, shape):
+    """The grey drawing at map size (area-averaged)."""
+    return cv2.resize(img, (shape[1], shape[0]), interpolation=cv2.INTER_AREA)
+
+
+def stroke_map(grey):
+    """Where the drawing has a STROKE, from the grey drawing at map size: pixels at least STROKE_CONTRAST grey levels
+    darker than their local background (a grey closing, STROKE_CLOSE px), as 0 / 255. Unlike ink_map's fixed grey
+    level this also works on faint drawings (in 20% of the tuning cases the walls themselves are lighter than
+    INK_GREY) and on plans with grey room fills. Checked on the tuning drawings: erased walls show no more strokes
+    than the blank area around them (0.96% of pixels vs 1.21%), so it does not carry erasure traces."""
+    bg = cv2.morphologyEx(grey, cv2.MORPH_CLOSE, np.ones((STROKE_CLOSE, STROKE_CLOSE), np.uint8))
+    return ((bg.astype(np.int16) - grey) >= STROKE_CONTRAST).astype(np.uint8) * 255
+
+
 def dec(b):
     return cv2.imdecode(np.frombuffer(b, np.uint8), cv2.IMREAD_UNCHANGED)
 
 
 def load_set(paths, limit=None, max_version=None):
-    """[{pid, version, kind, size_pct, size_bin, map, gt, om, ink}] with the images kept as PNG bytes (small).
-    ink (where the drawing has any ink, build_set.ink_map) is None for sets built without --ink.
+    """[{pid, version, kind, size_pct, size_bin, map, gt, om, ink, img}] with the images kept as PNG bytes (small).
+    ink (where the drawing has any ink, ink_map) and img (the grey drawing at map size) are None for sets built
+    without --ink.
     max_version: keep only versions 0..max_version of every drawing (3 = exactly the first, smaller set)."""
     out = []
     for path in paths:
@@ -65,7 +85,8 @@ def load_set(paths, limit=None, max_version=None):
                             "size_pct": float(r["size_pct"] or 0), "size_bin": r["size_bin"],
                             "map": z.read(f"{stem}_map.png"), "gt": z.read(f"{stem}_gt.png"),
                             "om": z.read(f"{stem}_om.png"),
-                            "ink": z.read(f"{stem}_ink.png") if f"{stem}_ink.png" in names else None})
+                            "ink": z.read(f"{stem}_ink.png") if f"{stem}_ink.png" in names else None,
+                            "img": z.read(f"{stem}_img.png") if f"{stem}_img.png" in names else None})
                 if limit and len(out) >= limit:
                     return out
     return out
@@ -252,9 +273,9 @@ def ray_bytes(parsed):
 
 class StructureSet(Dataset):
     """Endless samples for the structure net (src/novelty/structure.py): the whole parsed map on a canvas
-    (as LocateSet) -> (labels int64 (H, W), extra float (3, H, W) = free rays, junction rays, ink,
+    (as LocateSet) -> (labels int64 (H, W), extra float (4, H, W) = free rays, junction rays, ink, strokes,
     targets float (2, H, W) = missing-wall band, missing area). erased_frac of the samples have an omission.
-    Needs s["rays"] (structure.add_rays); s["ink"] may be None (zeros)."""
+    Needs s["rays"] (structure.add_rays); s["ink"] / s["stroke"] may be None (zeros)."""
 
     def __init__(self, samples, canvas=320, erased_frac=0.7, length=10 ** 7):
         self.erased = [s for s in samples if s["version"] > 0]
@@ -273,6 +294,7 @@ class StructureSet(Dataset):
         parsed, gt, om = arrays(s)
         rays = dec(s["rays"])
         ink = dec(s["ink"]) if s.get("ink") is not None else np.zeros(parsed.shape, np.uint8)
+        stroke = dec(s["stroke"]) if s.get("stroke") is not None else np.zeros(parsed.shape, np.uint8)
         band, area = targets(gt, om)
         H, W = parsed.shape
         c = self.canvas
@@ -289,9 +311,9 @@ class StructureSet(Dataset):
         else:
             y0 = x0 = y1 = x1 = None
         oy, ox = origin(H, y0, y1), origin(W, x0, x1)
-        lab, r, k, b, a = augment([crop(parsed, oy, ox, c, c, BG), crop(rays, oy, ox, c, c, 0), crop(ink, oy, ox, c, c, 0),
-                                   crop(band.astype(np.uint8), oy, ox, c, c, 0), crop(area.astype(np.uint8), oy, ox, c, c, 0)],
-                                  self.rng)
-        extra = np.stack([(r == 2), (r == 1), k.astype(np.float32) / 255]).astype(np.float32)
+        lab, r, k, st, b, a = augment([crop(parsed, oy, ox, c, c, BG), crop(rays, oy, ox, c, c, 0), crop(ink, oy, ox, c, c, 0),
+                                       crop(stroke, oy, ox, c, c, 0), crop(band.astype(np.uint8), oy, ox, c, c, 0),
+                                       crop(area.astype(np.uint8), oy, ox, c, c, 0)], self.rng)
+        extra = np.stack([(r == 2), (r == 1), k.astype(np.float32) / 255, st.astype(np.float32) / 255]).astype(np.float32)
         return (torch.from_numpy(lab.astype(np.int64)), torch.from_numpy(extra),
                 torch.from_numpy(np.stack([b, a]).astype(np.float32)))
