@@ -1196,3 +1196,19 @@ Kaggle counts session hours, not GPU hours x 2 (0.78 h used after the first two 
 - **Held-out protocol with two versions**: v1 is frozen now (threshold 0.4, t0 700) and gets its held-out run;
   v2 gets one only after its tuning numbers are in. Which version is "the final hybrid" is decided on TUNING
   numbers only; both held-out tables are reported.
+- **End-to-end check of v1 on 100 tuning drawings** (kernel floorplan-novelty-eval v3, `outputs/novelty/e2e_tuning_v1.md`;
+  optimistic only through the locator threshold, the fill settings were not tuned): medium + large omissions fixed
+  10% -> 30% (+20 [+13.5, +26]), recovered 10% -> 42% (+31 [+24.5, +38]), found 72% -> 91% (as a region: 2% -> 76%),
+  tolerant mIoU in the omission region 37.7 -> 41.1, violations per hole 26.5 -> 18.5. With the box given: recovered
+  40% -> 54%. Cost: a region flag on 16% of intact drawings (added components per intact drawing 0.92 -> 1.57) and
+  on 10% of the drawings with a small omission (small omissions fixed 52% -> 50%, inside the noise).
+- **Outline prior: rejected.** It raises strict "fixed" on medium + large (+4.5 points) but costs precision (added-wall
+  precision 0.70 -> 0.47), recovered -13 points, tolerant mIoU -3.9, violations 18.5 -> 27.7: the painted band is kept
+  by the diffusion finish even where the flag was a rectangle or imprecise. `fill.outline_prior` stays off.
+- **Locator test-time augmentation: rejected** (8 rotations / flips of the map, tuning drawings, local CPU): the mean of
+  the 8 views gives the same trade-off as one view (75% found at 0.17 flags per intact drawing vs 75% at 0.18); the
+  maximum gives 84% found at 0.37, over the 0.2 budget. One view kept.
+- **v1 frozen and sent to its held-out run** (kernel floorplan-novelty-eval v4, 09:07): locator = average of the two
+  seeds, threshold 0.4, blob >= 150 px, box pad 2; fill = fill_*_ffc best.pt, t0 700, N = 2, 15 steps, 256 px window;
+  gate off, outline off. Arms: shipped auto, hybrid auto, locator + B4, shipped manual, hybrid manual (the ablation
+  arm skips intact / small cases). All 151 held-out drawings.

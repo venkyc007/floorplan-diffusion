@@ -32,19 +32,20 @@ presentation later. Favour simple, working solutions.
 Goal (user): large omissions on real CubiCasa5K drawings, end to end (no mask given), plus one hybrid for all sizes.
 Code in `src/novelty/` (see its README), configs `configs/novelty/`, kernels `kaggle/kernels/novelty/`; choices in
 `docs/decisions.md` ("Novelty assessment"). Test set stays closed: choose on TUNING val drawings, report on HELD-OUT.
-State 2026-11-13 07:30 IST (work in progress; numbers so far are on TUNING val drawings unless marked):
-- DONE: large-omission set (3,944 train drawings / 15,721 versions; 212 tuning drawings / 635 versions; local copy
-  `outputs/kaggle/novelty_data/`). Shipped-pipeline baseline on the HELD-OUT cases (`outputs/novelty/e2e_heldout_base.md`,
-  151 drawings): large omissions fixed 13% automatically (35% with the box given), medium 15% (47%).
-- DONE: fill models v1 (`floorplan-novelty-fill-ffc`, checkpoints in `outputs/kaggle/novelty_fill_ffc/`): with the
-  hole given they are only slightly better than B4 (tol. mIoU 29.9 -> 33.5, "fixed" 40% vs 38%). Region locator
-  (`floorplan-novelty-locate`, `outputs/kaggle/novelty_locate/`): finds 73-75% of large omissions (83% of whole
-  rooms) at 0.15-0.18 region flags per intact drawing; the shipped region rule found ~0-3%.
-- RUNNING: `floorplan-novelty-eval` (tuning run 2: sweeps + locator -> fill), `floorplan-novelty-fill-edit` (fill v2,
-  "edit mode": the parsed map stays visible in the hole; ~3.2 h from 07:16).
-- NEXT: choose v1 vs v2 and the locator threshold on tuning drawings -> ONE held-out end-to-end run of the chosen
-  config (`kaggle/kernels/novelty/eval`, STAGE e2e_heldout) -> `docs/novelty.md`; ablation without Fourier blocks
-  (`kaggle/kernels/novelty/fill_plain`, not launched). Test split: prepared (`eval_e2e --split test`), NOT run.
+State 2026-11-13 09:15 IST (work in progress):
+- Data: large-omission set (3,944 train drawings / 15,721 versions; 212 tuning drawings; `outputs/kaggle/novelty_data/`).
+- Models v1 (local copies in `outputs/kaggle/novelty_{locate,fill_ffc}/`): region locator (finds 75% of large
+  omissions at 0.18 region flags per intact tuning drawing) + large-hole fill retrained on parsed maps with Fourier
+  blocks. Settings frozen in `configs/novelty/pipeline_large.yaml` (chosen on tuning drawings).
+- Results so far (`docs/novelty.md`, `outputs/novelty/`): shipped pipeline on HELD-OUT: large omissions fixed 13%
+  (medium 15%). Hybrid v1 on 100 TUNING drawings: medium + large fixed 10% -> 30%, recovered (2 px) 10% -> 42%;
+  small omissions unchanged within noise (52% -> 50%); a region false alarm on 16% of intact drawings.
+- RUNNING: `floorplan-novelty-eval` v4 = the HELD-OUT run of frozen v1 (launched 09:07, ~2 h);
+  `floorplan-novelty-fill-edit` = fill v2 "edit mode" (launched 07:16, ~3.2 h).
+- NEXT: read the held-out v1 table into `docs/novelty.md` section 5 and `docs/results.md`; evaluate v2 on tuning
+  drawings (`kaggle/kernels/novelty/eval`, STAGE tune with `configs/novelty/pipeline_large_edit.yaml`) and give it a
+  held-out run only if it is better there; ablation without Fourier blocks (`fill_plain`, not launched).
+  Test split: prepared (`eval_e2e --split test --test-approved-by-user`), NOT run - needs the user's approval.
 
 ## Standing rules (always apply)
 
