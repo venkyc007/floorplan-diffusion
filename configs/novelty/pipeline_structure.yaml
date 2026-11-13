@@ -1,0 +1,37 @@
+# Novelty round 2 (v3): STRUCTURE FIRST. As pipeline_large_edit.yaml (v2) plus the structure net and the wall
+# threshold in the fill (src/novelty/pipeline.py). Every value is chosen on the TUNING val drawings
+# (outputs/novelty/tune_structure_*.md, e2e_tuning_v3*.md); nothing on held-out or test.
+
+checkpoints:                     # local copies of Kaggle outputs (git-ignored)
+  locator:                       # one or more locators; their probabilities are averaged
+    - outputs/kaggle/novelty_locate/runs/locator_s0/checkpoints/best.pt
+    - outputs/kaggle/novelty_locate/runs/locator_s1/checkpoints/best.pt
+  structure:                     # one or more structure nets; their probabilities are averaged
+    - outputs/kaggle/novelty_structure/runs/struct_full_s0/checkpoints/best.pt
+    - outputs/kaggle/novelty_structure/runs/struct_full_s1/checkpoints/best.pt
+  unet: outputs/kaggle/novelty_fill_edit/runs/fill_unet_edit/checkpoints/best.pt
+  diffusion: outputs/kaggle/novelty_fill_edit/runs/fill_diffusion_edit/checkpoints/best.pt
+
+locate:
+  threshold: 0.4                 # region flag = blob of "missing area" probability >= threshold (round 1 choice)
+  min_area: 150                  # ... with at least this many map px
+  box_pad: 2                     # px added around the blob's box (the hole given to the fill)
+
+structure:
+  tau: 0.5                       # a missing wall is drawn where the structure net's wall heat is at least this
+  min_len: 6                     # px: shorter centre-line pieces are dropped
+  tta: false                     # average over the 8 rotations / flips of the map
+  join: 8                        # px: added walls closer than this form one region flag
+  pad: 6                         # px of margin around a group's box
+  min_px: 12                     # a group needs at least this many added wall px to become a region flag
+
+fill:
+  hide_hole: false               # EDIT models (v2): the parsed map stays visible inside the hole
+  window: 256                    # the hole is centred in a window of at least this size (as in training)
+  max_window: 384                # holes needing more go to the shipped tiled fill
+  wall_tau: 0.18                 # the fill U-Net draws a wall where its wall probability is at least this
+  wall_thin: false               # thin those walls to 3 px before the diffusion finish
+  keep_walls: true               # structure walls the diffusion finish dropped are put back
+  t0: 700                        # sketch re-noised to this step (the Stage 1 / B4 value for large holes)
+  n_samples: 2                   # best-of-N by fewest rule violations (fast setting, as the shipped pipeline)
+  steps_from_t0: 15

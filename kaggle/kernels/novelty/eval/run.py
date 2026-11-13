@@ -49,11 +49,12 @@ def place_novelty_checkpoints(find):
             continue
         c = yaml.safe_load(open(f"{CODE}/{path}", encoding="utf-8"))["checkpoints"]
         ok = True
-        for p in c["locator"] + [c["unet"], c["diffusion"]]:
+        for p in c["locator"] + c.get("structure", []) + [c["unet"], c["diffusion"]]:
             src = find("/".join(p.split("/")[-4:]))                     # runs/<name>/checkpoints/best.pt
             if not src:
                 print("MISSING", p, flush=True)
-                ok = ok and p in c["locator"] and len(c["locator"]) > 1
+                ok = ok and ((p in c["locator"] and len(c["locator"]) > 1) or
+                             (p in c.get("structure", []) and len(c["structure"]) > 1))
                 continue
             os.makedirs(os.path.dirname(f"{CODE}/{p}"), exist_ok=True)
             shutil.copy(src[0], f"{CODE}/{p}")
@@ -86,7 +87,7 @@ if __name__ == "__main__":
         for tag, cfg in configs.items():
             env = {"NOVELTY_CONFIG": f"{CODE}/{cfg}"} if cfg else {}
             if STAGE == "tune":
-                sets = " ".join(sorted(find("large_tune_*.zip")))
+                sets = " ".join(sorted(find("large9_tune_*.zip")) or sorted(find("large_tune_*.zip")))
                 if SWEEP:
                     both_gpus([f"{py} -m src.novelty.eval_maps --set {sets} --locator-sweep --tag {tag} > {out}/sweep{tag}.log 2>&1",
                                f"{py} -m src.novelty.eval_maps --set {sets} --gate-sweep --tag {tag} > {out}/gate{tag}.log 2>&1"], env)
