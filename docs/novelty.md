@@ -101,6 +101,35 @@ recovered 37% -> 46-48%) and the diffusion finish halves the sketch's rule viola
 accuracy, as in Stage 1 and Stage 2. Strict "fixed" does not move (38-40%): it is dominated by structure that was
 never missing. The re-noising step barely matters (t0 700 kept: the Stage 1 / B4 value for large holes).
 
+### 4.3 End to end on 100 tuning drawings (`outputs/novelty/e2e_tuning_v1.md`, figure `e2e_tuning_v1_examples_0.png`)
+
+Nothing about the omission is given. Optimistic only through the locator threshold (chosen on these drawings).
+
+| omissions | pipeline | found | flagged as a region | fixed (strict) | recovered (2 px) | tol. mIoU in the region | violations per hole (truth) |
+|---|---|---|---|---|---|---|---|
+| medium + large (200) | shipped | 72% | 2% | 10% | 10% | 37.7 | 26.5 (9.6) |
+| medium + large (200) | **hybrid v1** | **91%** | **76%** | **30%** | **42%** | **41.1** | **18.5** |
+| large (100) | shipped | 77% | 1% | 7% | 9% | 36.5 | 31.0 (12.0) |
+| large (100) | **hybrid v1** | 99% | 85% | **29%** | **42%** | 40.6 | 21.2 |
+| small (100) | shipped | 67% | 2% | 52% | - | 63.0 | 10.3 (3.8) |
+| small (100) | hybrid v1 | 68% | 10% | 50% | - | 62.3 | 10.5 |
+
+Paired differences, hybrid minus shipped, medium + large: fixed +20 points [+13.5, +26], recovered +31 [+24.5, +38],
+tolerant mIoU +3.4 [+1.6, +5.3]. Small omissions: fixed -2 [-5, 0] (inside the noise).
+With the box given by hand (medium + large): recovered 40% (shipped B4) -> 54% (new fill), tolerant mIoU 38.9 -> 43.1.
+
+Where the hybrid still loses cases (same file, broken down):
+- missing whole rooms: flagged as a region in 89%, but only 44% of the flagged ones are recovered -> the FILL is
+  the limit (the room's outline has to be guessed);
+- erased rectangles: 63% of the flagged ones are recovered, but only 67% are flagged -> the LOCATOR is the limit.
+
+Cost on intact drawings (100): a region flag on 16% of them (shipped: 1%); those drawings get 5.9 added components
+each, so the mean rises from 0.92 to 1.57 added components per intact drawing.
+
+Tried and rejected on these drawings (see `docs/decisions.md`): painting the locator's outline into the sketch
+("outline prior": strict fixed +4.5 points, but recovered -13 and added-wall precision 0.70 -> 0.47), the
+fill-consistency gate, and test-time augmentation of the locator.
+
 ## 5. Results on the held-out drawings
 
 _To be filled from `outputs/novelty/e2e_heldout_*.md` after the one held-out run of the frozen hybrid._
