@@ -10,6 +10,7 @@ outputs/*
 !outputs/README.md
 !outputs/stage1/
 !outputs/stage2/
+!outputs/novelty/
 outputs/stage1/arch_eval_test/
 outputs/stage1/baseline_results*.csv
 outputs/stage2/*.npz
