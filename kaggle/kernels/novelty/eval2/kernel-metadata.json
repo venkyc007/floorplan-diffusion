@@ -21,10 +21,10 @@
     "venkatesh007c/floorplan-stage2-detv3",
     "venkatesh007c/floorplan-stage2-k1",
     "venkatesh007c/floorplan-stage2-b4",
-    "venkatesh007c/floorplan-novelty-data",
+    "venkatesh007c/floorplan-novelty-data2",
     "venkatesh007c/floorplan-novelty-locate",
-    "venkatesh007c/floorplan-novelty-fill-plain",
-    "venkatesh007c/floorplan-novelty-fill-ffc"
+    "venkatesh007c/floorplan-novelty-structure",
+    "venkatesh007c/floorplan-novelty-fill-edit"
   ],
   "model_sources": []
 }
