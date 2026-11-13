@@ -43,6 +43,7 @@ drawing -> PARSE -> CHECK (shipped rules + detectors) -> small flags  -> shipped
 | Large-omission set | Every training drawing with a large part erased (the evaluation's own generators), run through the pipeline's own parser: parsed map + ground truth + omission map. 3,944 train drawings / 15,721 versions; 212 tuning drawings / 635 versions. | `src/novelty/build_set.py` |
 | LOCATE | A U-Net (ImageNet ResNet-34 encoder) that reads the parser's 16-class map of the WHOLE plan and outputs the probability "this area is missing". It never sees the drawing, so it cannot learn erasure smudges. Two seeds averaged. | `src/novelty/locate.py` |
 | Large-hole FILL | The Stage 2 16-class U-Net + diffusion hybrid (sketch -> re-noise -> diffusion finish -> best of N), retrained on the large-omission set: context = the parser's map, target = the true layout. | `src/novelty/train_fill.py`, `models.py` |
+| Edit mode (fill v2, the final one) | The fill models SEE the parser's map inside the flagged box and correct it, instead of having it blanked and redrawing it blind (inpainting, v1). The merged room still shows hints of the missing one. Half of the training holes are the locator's own boxes. | `configs/novelty/fill_*_edit.yaml`, `data.to_model(hide=False)` |
 | Fourier context blocks | Residual FFT blocks (after LaMa) at the three deepest stages of both networks: every output pixel sees the whole window in one step. Zero-initialised, so the warm-started network starts exactly as B4. | `src/novelty/ffc.py` |
 | Hybrid pipeline | The shipped pipeline with two switch-in points: region flags from LOCATE (they swallow the small flags inside them) and the new fill for region flags / large manual boxes. Small omissions take the shipped path untouched. | `src/novelty/pipeline.py`, `configs/novelty/pipeline_large.yaml` |
 
@@ -129,6 +130,21 @@ each, so the mean rises from 0.92 to 1.57 added components per intact drawing.
 Tried and rejected on these drawings (see `docs/decisions.md`): painting the locator's outline into the sketch
 ("outline prior": strict fixed +4.5 points, but recovered -13 and added-wall precision 0.70 -> 0.47), the
 fill-consistency gate, and test-time augmentation of the locator.
+
+### 4.4 Fill v2 (edit mode) against v1, same 100 tuning drawings (`outputs/novelty/e2e_tuning_v2.md`)
+
+| medium + large (200 cases) | fixed (strict) | recovered (2 px) | added-wall precision | tol. mIoU in the region | violations per hole |
+|---|---|---|---|---|---|
+| hybrid v1, automatic | 30% | 42% | 0.70 | 41.1 | 18.5 |
+| **hybrid v2, automatic** | 32% | **47%** | **0.81** | **45.5** | 19.8 |
+| v1, box given | 42% | 54% | 0.71 | 43.1 | 21.0 |
+| **v2, box given** | 42% | **62%** | **0.81** | **46.6** | 21.5 |
+
+Paired v2 minus v1, automatic: recovered +5.5 points [+1.0, +10.0], tolerant mIoU +4.4 [+3.1, +5.9], added-wall
+precision +0.09 [+0.06, +0.14], strict fixed +2.0 [-2.5, +6.5], violations +1.25 [+0.6, +1.9]. Small omissions and
+intact drawings: no change (intact added components +0.06 [-0.10, +0.26]). By the rule fixed beforehand (the better
+version on tuning drawings is the final one) **v2 is the final hybrid**. The expected side benefit - less damage
+on a false region flag, because an edit model can keep what is there - did not show up.
 
 ## 5. Results on the held-out drawings
 
