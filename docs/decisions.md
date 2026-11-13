@@ -1243,3 +1243,12 @@ Kaggle counts session hours, not GPU hours x 2 (0.78 h used after the first two 
   in-training validation U-Net hole mIoU 0.274 (with blocks 0.275), diffusion 0.764 (0.769): no visible effect.
   Scored on the 120 tuning holes with the hole given (kernel floorplan-novelty-eval2, second copy of the eval kernel
   so two evaluations run at once).
+- **Fourier-block ablation result** (kernel floorplan-novelty-eval2, 120 tuning holes, hole given, v1 recipe with and
+  without the blocks; `outputs/novelty/tune_maps_ablation_*.md`). With blocks minus without, paired: tolerant mIoU
+  +1.0 [+0.4, +1.8] (sketch) / +1.3 [+0.2, +2.4] (hybrid); recovered +1.7 [-3.3, +6.7] / +0.8 [-4.2, +5.8]; strict
+  fixed -1.7 [-6.7, +2.5] / -1.7 [-5.0, +1.7]; violations unchanged. So the blocks give a small, statistically clear
+  gain in tolerant mIoU (about one point) and no measurable change in wall recovery: reported as a minor effect.
+  Likely reason: the backbone already has self-attention at its deepest level and a 256 px window covers most of
+  a plan, so image-wide context was not the missing ingredient. (The run with blocks reproduces the morning run's
+  numbers to the digit: 47% / 46% recovered, 33.9 / 33.5.) The ablation was done on the v1 (inpaint) recipe; v2
+  keeps the blocks and was not ablated separately.
