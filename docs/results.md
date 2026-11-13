@@ -68,6 +68,27 @@ batches had 12 drawings each and were partly re-run after fixes, so they were op
 rarely completes an unseen drawing correctly, while manual mode (the user marks the region) relies only on the
 FILL, which generalises.
 
+## 0b. Novelty assessment: large omissions end to end (2026-11-13; full write-up `docs/novelty.md`)
+
+Held-out val drawings (151; one small, one medium and one large omission each, nothing given; the test split was
+not used). The hybrid = the shipped pipeline + a region locator + a large-hole fill retrained on the parser's maps
+(`src/novelty/`). File: `outputs/novelty/e2e_heldout_final.md`.
+
+| omissions | pipeline | found | flagged as a region | fixed (strict) | recovered (2 px) | tol. mIoU in the region |
+|---|---|---|---|---|---|---|
+| large (151) | shipped | 80% | 3% | 13% [8, 19] | 11% [7, 17] | 38.6 |
+| large (151) | **hybrid** | 95% | 80% | **36%** [29, 44] | **52%** [44, 59] | 45.3 |
+| medium + large (302) | shipped | 76% | 2% | 14% [10, 18] | 14% [10, 18] | 40.6 |
+| medium + large (302) | **hybrid** | 91% | 75% | **37%** [32, 42] | **51%** [45, 57] | 46.3 |
+| small (151) | shipped / hybrid | 61% / 64% | 1% / 8% | 42% / 42% | - | 65.6 / 65.5 |
+
+Paired, hybrid minus shipped, medium + large: fixed +23.2 points [+18.2, +28.5], recovered +37.1 [+31.5, +42.7].
+"Recovered (2 px)" = found, at least half of the truly missing wall pixels back within 2 px, at least half of the
+added walls within 2 px of a true wall (strict "fixed" tops out at 72% even for the true layout). Ablation: the
+locator with the shipped fill gives 34% / 43%; the new fill adds recovered +7.9 [+3.3, +12.6]; the Fourier blocks add
+about one point of tolerant mIoU only. Cost: a region flag on 13% of intact drawings (added components per intact
+drawing 0.68 -> 1.69).
+
 ## 1. The final system in one page
 
 ### Stage 1 — mask-given inpainting (ResPlan, 128 × 128, 6 classes)

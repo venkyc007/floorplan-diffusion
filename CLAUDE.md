@@ -27,25 +27,25 @@ presentation later. Favour simple, working solutions.
 - Old worktree `.claude/worktrees/stage2` (branch `stage2`, same history up to 5b37914) is no longer needed;
   removing it is the user's call.
 
-## Novelty assessment (branch `novelty`, started 2026-11-13 night; UNFINISHED, no results yet)
+## Novelty assessment (branch `novelty`, 2026-11-13; final hybrid evaluated on held-out val, test NOT used)
 
 Goal (user): large omissions on real CubiCasa5K drawings, end to end (no mask given), plus one hybrid for all sizes.
-Code in `src/novelty/` (see its README), configs `configs/novelty/`, kernels `kaggle/kernels/novelty/`; choices in
-`docs/decisions.md` ("Novelty assessment"). Test set stays closed: choose on TUNING val drawings, report on HELD-OUT.
-State 2026-11-13 09:15 IST (work in progress):
-- Data: large-omission set (3,944 train drawings / 15,721 versions; 212 tuning drawings; `outputs/kaggle/novelty_data/`).
-- Models v1 (local copies in `outputs/kaggle/novelty_{locate,fill_ffc}/`): region locator (finds 75% of large
-  omissions at 0.18 region flags per intact tuning drawing) + large-hole fill retrained on parsed maps with Fourier
-  blocks. Settings frozen in `configs/novelty/pipeline_large.yaml` (chosen on tuning drawings).
-- Results so far (`docs/novelty.md`, `outputs/novelty/`): shipped pipeline on HELD-OUT: large omissions fixed 13%
-  (medium 15%). Hybrid v1 on 100 TUNING drawings: medium + large fixed 10% -> 30%, recovered (2 px) 10% -> 42%;
-  small omissions unchanged within noise (52% -> 50%); a region false alarm on 16% of intact drawings.
-- RUNNING: `floorplan-novelty-eval` v4 = the HELD-OUT run of frozen v1 (launched 09:07, ~2 h);
-  `floorplan-novelty-fill-edit` = fill v2 "edit mode" (launched 07:16, ~3.2 h).
-- NEXT: read the held-out v1 table into `docs/novelty.md` section 5 and `docs/results.md`; evaluate v2 on tuning
-  drawings (`kaggle/kernels/novelty/eval`, STAGE tune with `configs/novelty/pipeline_large_edit.yaml`) and give it a
-  held-out run only if it is better there; ablation without Fourier blocks (`fill_plain`, not launched).
-  Test split: prepared (`eval_e2e --split test --test-approved-by-user`), NOT run - needs the user's approval.
+Write-up: `docs/novelty.md`; code `src/novelty/` (README lists the files); configs `configs/novelty/`; kernels
+`kaggle/kernels/novelty/`; results `outputs/novelty/`; choices `docs/decisions.md` ("Novelty assessment").
+- **Final hybrid** = shipped pipeline + region locator (2 seeds averaged, threshold 0.4) + large-hole fill v2 in
+  "edit mode" (parsed map visible in the flagged box) with Fourier blocks; `configs/novelty/pipeline_large_edit.yaml`,
+  entry point `src/novelty/pipeline.run(image)`. Checkpoints (git-ignored): `outputs/kaggle/novelty_{locate,fill_edit}/`
+  (v1: `novelty_fill_ffc/`, ablation: `novelty_fill_plain/`; set: `novelty_data/`).
+- **Held-out result** (151 drawings, `outputs/novelty/e2e_heldout_final.md`): large omissions fixed 13% -> 36%, recovered
+  (2 px) 11% -> 52%; medium + large fixed 14% -> 37%, recovered 14% -> 51%; small 42% -> 42%. Cost: region flag on 13%
+  of intact drawings (added components 0.68 -> 1.69). Locator = most of the gain; new fill +7.9 points recovered;
+  Fourier blocks ~+1 tolerant mIoU only.
+- Protocol: everything chosen on the 212 TUNING val drawings, reported on the 151 HELD-OUT ones; each hybrid version
+  ran once on held-out. Kaggle GPU used: ~17 of 30 session hours (quota counts session hours, not GPUs).
+- **Open (user's call)**: one test-split run of the final hybrid
+  (`python -m src.novelty.eval_e2e --split test --test-approved-by-user`, prepared, never run); merging `novelty` into
+  `final` / `main`; a hybrid tab in the Gradio app (not built). Not attempted: the room-graph idea (report 8.2).
+- Kaggle note: `kaggle/kernels/novelty/eval` is re-pointed per run by editing STAGE / CONFIGS / EXTRA at its top.
 
 ## Standing rules (always apply)
 

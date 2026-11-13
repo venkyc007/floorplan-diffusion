@@ -286,7 +286,11 @@ def report(args):
                      f"{mean(R, 'viol_after'):.1f} ({mean(R, 'viol_gt'):.1f}) | {mean(R, 'false_adds'):.2f} | {mean(R, 'seconds'):.1f} |")
         key = lambda r: (r["pid"], r["target"])
         for a, c in (("shipped auto", "hybrid auto"), ("shipped manual", "hybrid manual"), ("locator + B4", "hybrid auto"),
-                     ("hybrid auto", "hybrid auto + outline")):
+                     ("hybrid auto", "hybrid auto + outline"),
+                     # the combined held-out table (outputs/novelty/e2e_heldout_all_arms.csv: v1 and v2 side by side)
+                     ("shipped auto", "hybrid v2 auto"), ("shipped auto", "hybrid v1 auto"), ("locator + B4", "hybrid v2 auto"),
+                     ("hybrid v1 auto", "hybrid v2 auto"), ("shipped manual", "hybrid v2 manual"),
+                     ("hybrid v1 manual", "hybrid v2 manual")):
             A = {key(r): r for r in sub if r["arm"] == a}
             C = {key(r): r for r in sub if r["arm"] == c}
             ks = sorted(set(A) & set(C))

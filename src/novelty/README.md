@@ -14,9 +14,14 @@ optional arguments that are off by default.
 | `models.py` | Builds the large-hole U-Net / diffusion (the Stage 2 16-class models + the Fourier blocks), warm start from B4, loading. | Used by the trainer and the pipeline. |
 | `train_fill.py` | Trains a large-hole fill model (U-Net or diffusion). Same recipe as B4, new data. | Kernels `fill_ffc`, `fill_plain` (ablation). |
 | `locate.py` | The region locator: the parser's map of the whole plan in, "a large part is missing here" probability out; training and inference. | Kernel `locate`; gives the pipeline its region flags. |
-| `pipeline.py` | The hybrid: shipped pipeline + locator + new large-hole fill. `run(image)` / `run(image, boxes=...)`. | Entry point; settings in `configs/novelty/pipeline_large.yaml`. |
+| `pipeline.py` | The hybrid: shipped pipeline + locator + new large-hole fill. `run(image)` / `run(image, boxes=...)`. | Entry point; settings in `configs/novelty/pipeline_large_edit.yaml` (the final hybrid, fill v2 in edit mode). `pipeline_large.yaml` is v1, `pipeline_large_plain.yaml` the ablation without Fourier blocks. |
 | `eval_maps.py` | Tuning drawings, map level: locator threshold sweep, fills with the hole given, locator -> fill. | Where settings are chosen. |
 | `eval_e2e.py` | Drawings, end to end: shipped vs hybrid on small / medium / large omissions and intact drawings. | The reported numbers (held-out val drawings). |
 
 Order of a full run: `build_set` (Kaggle) -> `locate` + `train_fill` (Kaggle) -> `eval_maps` (choose settings on
-tuning drawings) -> freeze `configs/novelty/pipeline_large.yaml` -> `eval_e2e --split heldout` (report).
+tuning drawings) -> freeze the pipeline config -> `eval_e2e --split heldout` (report).
+
+Two fill versions exist. v1 hides the flagged area from the fill models (inpainting, as Stage 1 / B4). v2, the
+final one, keeps the parser's map visible there and lets the models correct it (edit mode, `configs/novelty/fill_*_edit.yaml`);
+it was chosen over v1 on the tuning drawings. Result in one line (151 held-out drawings): large omissions fixed
+13% -> 36%, recovered within 2 px 11% -> 52%, small omissions unchanged (`docs/novelty.md` section 5).

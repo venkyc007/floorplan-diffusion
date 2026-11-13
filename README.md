@@ -193,3 +193,11 @@ ResPlan (m-agour/ResPlan) and CubiCasa5K (Kalervo et al., CC BY-NC 4.0) data; Hu
 (UNet2DModel, DDIM scheduler) and `segmentation-models-pytorch` (ResNet-34 U-Net). The project was developed with
 the help of an AI coding assistant (Claude Code); `CLAUDE.md` is its working context, and `docs/decisions.md`
 records which choices were the student's and which were proposed.
+
+## Novelty assessment (branch `novelty`)
+
+Large omissions (a whole room or region missing, nothing given) were the shipped system's weak spot: 13% of them
+fixed. `src/novelty/` adds a region locator and a large-hole fill trained on the parser's own maps and joins them to
+the shipped pipeline as one hybrid: on 151 held-out drawings large omissions fixed 13% -> 36% (recovered within 2 px
+11% -> 52%), small omissions unchanged. Write-up with every table: `docs/novelty.md`; files: `src/novelty/README.md`;
+choices: `docs/decisions.md` ("Novelty assessment").

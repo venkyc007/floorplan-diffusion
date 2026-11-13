@@ -1252,3 +1252,18 @@ Kaggle counts session hours, not GPU hours x 2 (0.78 h used after the first two 
   a plan, so image-wide context was not the missing ingredient. (The run with blocks reproduces the morning run's
   numbers to the digit: 47% / 46% recovered, 33.9 / 33.5.) The ablation was done on the v1 (inpaint) recipe; v2
   keeps the blocks and was not ablated separately.
+- **Held-out run of v2 = the final hybrid** (kernel floorplan-novelty-eval v6, 151 held-out drawings,
+  `outputs/novelty/e2e_heldout_v2.md`; all arms side by side in `e2e_heldout_final.md` / `e2e_heldout_all_arms.csv`,
+  merged by arm name from the v1 and v2 runs): large omissions fixed 13% -> 36% (+23.2 [+15.9, +30.5]), recovered
+  11% -> 52% (+41.1 [+32.5, +49.0]), tolerant mIoU 38.6 -> 45.3; medium + large fixed 14% -> 37%, recovered 14% -> 51%;
+  small 42% -> 42%. v2 minus v1 on held-out: recovered +4.6 [+0.3, +9.3], tolerant mIoU +3.2 [+2.2, +4.2] (the
+  tuning-based choice holds up). v2 draws MORE on intact drawings than v1 (1.69 vs 1.38 added components per
+  drawing; equal on tuning): reported as a cost, the choice is not revisited on held-out numbers.
+- **Final configuration**: `configs/novelty/pipeline_large_edit.yaml` is the default of `src/novelty/pipeline.py`
+  (`NOVELTY_CONFIG` selects another file); `pipeline_large.yaml` (v1) and `pipeline_large_plain.yaml` (ablation) are
+  kept because their tables are reported.
+- **Not done, on purpose**: no test-split run (needs the user's approval; the command refuses to start without
+  `--test-approved-by-user`); no app tab; no room-graph model (report 8.2); the two-model "structure first" fill
+  was replaced by cheaper tests (outline prior: rejected; edit mode: adopted).
+- **Laptop restart (17:5x)**: nothing lost; all work was committed and pushed, the Kaggle kernels finished on their
+  own, local checkpoints intact (checked file by file).
