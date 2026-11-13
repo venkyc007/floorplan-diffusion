@@ -24,7 +24,8 @@ STAGE = "tune"
 CONFIGS = {"_ffc": "configs/novelty/pipeline_large.yaml"}
 N_TUNE = 120
 E2E_LIMIT = None            # drawings per shard (None = all)
-EXTRA = ""                  # extra arguments for the stage's script
+EXTRA = "--arms b4,sketch,hybrid"   # extra arguments for the stage's script
+SWEEP = False               # tune: also run the locator sweep (needs the locator checkpoints)
 
 
 def copy_code():
@@ -86,8 +87,9 @@ if __name__ == "__main__":
             env = {"NOVELTY_CONFIG": f"{CODE}/{cfg}"} if cfg else {}
             if STAGE == "tune":
                 sets = " ".join(sorted(find("large_tune_*.zip")))
-                both_gpus([f"{py} -m src.novelty.eval_maps --set {sets} --locator-sweep --tag {tag} > {out}/sweep{tag}.log 2>&1",
-                           "true"], env)
+                if SWEEP:
+                    both_gpus([f"{py} -m src.novelty.eval_maps --set {sets} --locator-sweep --tag {tag} > {out}/sweep{tag}.log 2>&1",
+                               f"{py} -m src.novelty.eval_maps --set {sets} --gate-sweep --tag {tag} > {out}/gate{tag}.log 2>&1"], env)
                 both_gpus([f"{py} -m src.novelty.eval_maps --set {sets} --n {N_TUNE} --shard {i}/2 --tag {tag} {EXTRA} "
                            f"> {out}/tune{tag}_{i}.log 2>&1" for i in range(2)], env)
                 run(f"{py} -m src.novelty.eval_maps --report '{out}/tune_maps{tag}_*.csv' --tag {tag}")
