@@ -132,7 +132,77 @@ fill-consistency gate, and test-time augmentation of the locator.
 
 ## 5. Results on the held-out drawings
 
-_To be filled from `outputs/novelty/e2e_heldout_*.md` after the one held-out run of the frozen hybrid._
+Hybrid v1, frozen before this run (locator threshold 0.4, t0 700, N = 2; `configs/novelty/pipeline_large.yaml`).
+151 held-out val drawings, each with an intact version and one small, one medium, one large omission; nothing about
+the omission is given to the automatic arms. File: `outputs/novelty/e2e_heldout_v1.md` (per-case rows in the two
+csv files; figure `e2e_heldout_v1_examples_0.png` = the first six medium / large cases as they come, no picking).
+The shipped arms reproduce the separate baseline run exactly (42% / 15% / 13% fixed), so the two runs see the
+same cases.
+
+### 5.1 Automatic: nothing given
+
+| omissions | pipeline | found | flagged as a region | fixed (strict) | recovered (2 px) | tol. mIoU in the region | violations per hole (truth) |
+|---|---|---|---|---|---|---|---|
+| large (151) | shipped | 80% | 3% | 13% [8, 19] | 11% [7, 17] | 38.6 | 29.6 (10.2) |
+| large (151) | **hybrid v1** | **95%** | **80%** | **32%** [25, 40] | **42%** [35, 50] | **42.3** | **21.4** |
+| medium (151) | shipped | 73% | 1% | 15% [10, 21] | 17% [12, 24] | 42.6 | 19.9 (6.5) |
+| medium (151) | **hybrid v1** | **87%** | **70%** | **39%** [32, 47] | **50%** [42, 58] | 44.0 | **14.9** |
+| medium + large (302) | shipped | 76% | 2% | 14% [10, 18] | 14% [10, 18] | 40.6 | 24.7 (8.4) |
+| medium + large (302) | **hybrid v1** | **91%** | **75%** | **35%** [30, 41] | **46%** [41, 52] | **43.2** | **18.2** |
+| small (151) | shipped | 61% | 1% | 42% [34, 50] | - | 65.6 | 9.2 (3.4) |
+| small (151) | hybrid v1 | 64% | 8% | 42% [35, 50] | - | 64.8 | 9.1 |
+
+Brackets: Wilson 95% intervals. Paired differences, hybrid minus shipped (bootstrap over cases, 95%):
+
+| omissions | fixed, points | recovered, points | tol. mIoU |
+|---|---|---|---|
+| large | +19.2 [+12.6, +26.5] | +31.8 [+23.8, +39.1] | +3.6 [+1.5, +5.7] |
+| medium | +24.5 [+16.6, +33.1] | +33.1 [+25.1, +41.7] | +1.5 [-0.6, +3.7] |
+| medium + large | +21.9 [+16.9, +26.8] | +32.5 [+27.2, +38.1] | +2.6 [+1.2, +4.0] |
+| small | +0.7 [-1.3, +2.6] | - | -0.7 [-1.4, -0.2] |
+
+So on large omissions the automatic pipeline now fixes about 2.5 times as many cases by the strict rule (13% -> 32%)
+and about 4 times as many by the 2 px rule (11% -> 42%), and small omissions are handled as before.
+
+### 5.2 Which part helps (ablation on the same cases, medium + large)
+
+| arm | fixed | recovered (2 px) | added-wall precision | tol. mIoU |
+|---|---|---|---|---|
+| shipped pipeline | 14% | 14% | 0.75 | 40.6 |
+| + locator, shipped B4 fill | 34% | 43% | 0.68 | 41.6 |
+| + locator, new fill (hybrid v1) | 35% | 46% | 0.72 | 43.2 |
+| box given by hand, shipped B4 fill | 41% | 46% | 0.66 | 42.7 |
+| box given by hand, new fill | 43% | 59% | 0.74 | 45.6 |
+
+- **The locator is most of the gain**: giving the shipped fill the locator's region flags already takes "fixed" from
+  14% to 34%.
+- **The new fill adds a smaller, real part**: new fill minus B4 with the same locator flags: recovered +3.3 points
+  [0.0, +6.6], tolerant mIoU +1.5 [+0.6, +2.4]; with the box given: recovered +12.6 [+7.9, +17.2], tolerant mIoU +3.0
+  [+1.9, +4.0]. Strict "fixed" does not separate the two fills (+1.3 [-1.3, +4.3] / +2.0 [-2.0, +6.3]).
+- The automatic hybrid (46% recovered) now equals the shipped fill with the box given by hand (46%).
+
+### 5.3 By kind and on intact drawings
+
+| omission kind | n | shipped, fixed | hybrid v1, fixed | box given, new fill |
+|---|---|---|---|---|
+| whole room | 115 | 11% | 30% | 33% |
+| erased rectangle | 187 | 15% | 39% | 49% |
+| small kinds (wall, window, doors, room walls, fixture, railing) | 151 | 42% | 42% | - |
+
+Cost: a region flag on 13% of the intact drawings (shipped: 1%; 0.15 region flags per drawing, inside the 0.2
+budget set on tuning drawings). Added components per intact drawing rise from 0.68 to 1.38, and on erased drawings
+the region fill draws more components that do not touch the omission (0.79 -> 1.99 per drawing).
+
+### 5.4 Honest reading
+
+- Large omissions went from "almost never" (13% fixed) to about one in three by the strict rule and four in ten by
+  the 2 px rule. Most are still not repaired.
+- The limit differs by kind (tuning breakdown, section 4.3): a missing whole room is nearly always flagged but its
+  outline must be guessed; an erased rectangle is filled well once flagged but is flagged only two times in three.
+- A third of the cost of a false region flag is paid by intact drawings; the hybrid is for a user who prefers a
+  proposal to check over silence.
+- Tolerant mIoU in the omission region moves by only +2.6 points: it compares every class of the box with ONE
+  ground truth, and a redrawn room rarely has the same room types and fixtures as the erased one.
 
 ## 6. Status and open items
 
