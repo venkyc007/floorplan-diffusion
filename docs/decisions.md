@@ -1143,3 +1143,56 @@ Own choices:
   comparable with the shipped ones; arms: shipped auto, hybrid auto, locator + B4 (ablation), shipped manual,
   hybrid manual. Added columns for a fairer judgement of large fills (report section 8.1): violations per hole,
   tolerant wall F1 (2 px), and the best of the N samples by wall IoU (oracle).
+
+## 2026-11-13 (morning): first results, choices made on the tuning drawings
+
+Runs: floorplan-novelty-data (37 min), -fill-ffc (U-Net 8,052 steps, diffusion 8,103 steps, 2.97 h each),
+-locate (22.4k / 22.2k steps, 1.1 h each), -baseline (shipped pipeline on the held-out cases), -eval v1-v3 (tuning).
+Kaggle counts session hours, not GPU hours x 2 (0.78 h used after the first two kernels).
+
+- **Shipped baseline on the held-out evaluation cases** (`outputs/novelty/e2e_heldout_base.md`, 151 drawings): large
+  omissions fixed 13% automatically / 35% with the box given; medium 15% / 47%; small 42%; region flag on 1-3%.
+  The shipped pipeline is frozen, so running its held-out baseline before the hybrid was frozen leaks nothing.
+- **Fill v1 with the hole given, tuning** (`outputs/novelty/tune_maps_v1.md`, 120 erased versions): strict "fixed"
+  does not move (B4 40%, new 38%); tolerant mIoU 29.9 -> 33.5. Looking for the reason gave two facts that changed
+  how large fills are judged:
+  - the TRUE layout pasted into the hole scores only 72% "fixed" (mean wall IoU 0.45) and 2% "valid": the erased
+    structure contains doors, windows and fixtures (not walls), strict IoU punishes a 3 px wall drawn 1-2 px off,
+    and the seam between truth and parser's map breaks rules;
+  - the new sketch brings back 60-68% of the truly missing wall pixels within 2 px (precision 0.67).
+- **New column "recovered (2 px)"** (`src/novelty/eval_maps.wall_recovery`), defined before any held-out run of the
+  hybrid: found AND >= 50% of the truly missing wall pixels (erased, wall in the truth, no wall within 2 px in the
+  parsed map) have a wall within 2 px AND >= 50% of the added wall pixels in the omission region lie within 2 px of
+  a true wall. Reported NEXT TO the unchanged "fixed", never instead of it. The ceiling arm ("truth pasted") is
+  reported with every tuning table. Validity is reported as violations per hole (a pass rate of 2% for the truth
+  is not a usable target).
+- **Locator threshold 0.4, 2-model average, blob >= 150 px.** Rule set before reading the sweep: highest recall with
+  at most 0.2 region flags per intact tuning drawing (half of CHECK's 0.4 budget). Result
+  (`outputs/novelty/tune_locator_v1.md`): 75% found (whole rooms 83%, rectangles 67%), 0.18 flags per intact
+  drawing; at 0.5 the two models must agree: 67% / 0.11. The outputs are near-binary (0.3 and 0.9 differ by < 3
+  points for a single model), so the threshold is not a fine knob.
+- **Fill-consistency gate: off** (`outputs/novelty/tune_gate_v1.md`). Idea: keep a region flag only if the fill
+  U-Net would draw >= G new wall pixels in the box. It removes true and false flags at about the same rate (75% ->
+  65% found for 0.18 -> 0.14 false flags at G = 40), so it is not used (`locate.min_change` absent = 0).
+- **Re-noising step t0 = 700 kept** (the Stage 1 / B4 value for large holes): t0 500 / 700 / 900 give 46-48%
+  recovered and 33.0-33.6 tolerant mIoU, inside the noise of 120 cases; N = 2, 15 steps as the shipped fast mode.
+- **Why the fill is the limit, and what was tried next** (all on tuning drawings):
+  - If the missing room's AREA were known exactly, walls drawn on its outline alone would be "fixed" in 84% of
+    whole-room cases (truth pasted: 80%); with only the bounding box, 35% - which is where the learned fills are
+    (29-36%). So for whole rooms the missing information is the room's outline, not the drawing skill.
+  - The parser's map inside the hole still shows that outline in part (room-type boundaries: 0.28-0.31 recall of
+    the missing walls at 0.38-0.49 precision as a crude rule), but an inpainting model hides exactly that area.
+  - The locator's flag outlines a missing room well (pixel IoU 0.68 when found): walls on the flag's outline
+    alone recover 46% of whole rooms automatically (recall 0.57, precision 0.56), and almost nothing for
+    rectangles (5%).
+- **Fill v2 = "edit mode"** (`configs/novelty/fill_*_edit.yaml`, kernel floorplan-novelty-fill-edit, launched 07:16):
+  the parser's map stays visible inside the hole (cond = full one-hot + mask) and half of the erased-version windows
+  use the LOCATOR's box as the hole (what the pipeline really hands over). Reasons: the hidden area carries the
+  outline hints above; on a false region flag an edit model can keep what is there instead of redrawing a correct
+  area from nothing. Warm start from v1; otherwise identical recipe. v1 vs v2 is decided on tuning drawings.
+- **Outline prior** (`pipeline.outline_walls`, off by default): the wall band on the locator flag's outline is
+  painted into the sketch before the diffusion finish (the Stage 2 "sketch prior" idea at room scale). Compared
+  on tuning drawings as an extra arm ("hybrid auto + outline"); used only if it helps there.
+- **Held-out protocol with two versions**: v1 is frozen now (threshold 0.4, t0 700) and gets its held-out run;
+  v2 gets one only after its tuning numbers are in. Which version is "the final hybrid" is decided on TUNING
+  numbers only; both held-out tables are reported.
