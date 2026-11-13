@@ -11,6 +11,8 @@ erased drawing, the ground truth and the omission. So everything that only needs
   locator sweep   threshold x minimum blob size -> omissions found (a flag's box overlaps the erased structure),
                   found with a box IoU >= 0.5, region flags per intact drawing
   hole given      the hole = the box of the true omission area (what a user would draw). Arms:
+                    truth     the true layout pasted into the hole: the ceiling of every score (the seam with the
+                              parser's map costs validity, the erased fixtures / doors cost wall IoU)
                     b4        the shipped large-hole fill (B4 models, big window)            = the baseline
                     sketch    the new U-Net alone
                     hybrid@T  new U-Net sketch -> noised to T -> new diffusion, best of N
@@ -56,9 +58,30 @@ def wall_f1(plan, gt, box, tol=2):
     return float(2 * prec * rec / max(prec + rec, 1e-9))
 
 
+_CASE = {}                 # per-case values that do not depend on the arm (the violation counts are slow)
+
+
 def score(plan, parsed, gt, rm, box, holes=None):
-    s = lfc.score(plan, parsed, gt, rm, box, holes)
-    s.update(viol=lfc.violations(plan, box), viol_gt=lfc.violations(gt, box), wall_f1=round(wall_f1(plan, gt, box), 3))
+    """large_fill_compare.score + violation counts + wall F1; the ground truth's and the parse's own numbers are
+    computed once per case and reused for every arm."""
+    key = (id(parsed), id(gt), tuple(box))
+    if key not in _CASE:
+        _CASE.clear()
+        reg = np.zeros(rm.shape, bool)
+        reg[box[0]:box[2] + 1, box[1]:box[3] + 1] = True
+        _CASE[key] = {"reg": reg, "rmg": grown(rm, 3), "viol_gt": lfc.violations(gt, box), "viol_parse": lfc.violations(parsed, box),
+                      "tol_parse": round(100 * lfc.hole_ious(parsed, gt, reg)[1], 1)}
+    c = _CASE[key]
+    s = {}
+    if holes is not None:
+        over = [h for h in holes if c["rmg"][h["box"][0]:h["box"][2] + 1, h["box"][1]:h["box"][3] + 1].any()]
+        s["found"] = bool(over)
+    iou = e2e_val.right_class_iou(plan, WALL, rm, c["rmg"], local=True)
+    viol = lfc.violations(plan, box)
+    s.update(fix_iou=round(iou, 3), fixed=s.get("found", True) and iou >= e2e_val.FIX_IOU,
+             tol=round(100 * lfc.hole_ious(plan, gt, c["reg"])[1], 1), tol_parse=c["tol_parse"], valid=viol <= c["viol_gt"],
+             valid_parse=c["viol_parse"] <= c["viol_gt"], viol=viol, viol_gt=c["viol_gt"],
+             wall_f1=round(wall_f1(plan, gt, box), 3))
     return s
 
 
@@ -119,6 +142,8 @@ def run_cases(args):
         done += 1
         if (done - 1) % sn != si:
             continue
+        if "truth" in arms:                               # ceiling: the true layout pasted into the parser's map
+            add(s, "truth pasted (ceiling)", score(np.where(hole, gt, parsed), parsed, gt, rm, box), 0.0)
         if "b4" in arms:
             t = time.time()
             plan, _ = large_fill.fill_large(parsed, hole, "big", fc, fast, base.generator(0))
@@ -302,7 +327,7 @@ def main():
     ap.add_argument("--n", type=int, default=120)
     ap.add_argument("--n-intact", type=int, default=100)
     ap.add_argument("--seed", type=int, default=5)
-    ap.add_argument("--arms", default="b4,sketch,hybrid,auto")
+    ap.add_argument("--arms", default="truth,b4,sketch,hybrid,auto")
     ap.add_argument("--t0", default="500,700,900")
     ap.add_argument("--samples", type=int, default=4, help="N of the hybrid arm (best of N; the oracle looks at all N)")
     ap.add_argument("--shard", default="0/1")
