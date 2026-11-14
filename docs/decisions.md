@@ -1333,3 +1333,22 @@ Own choices:
   4th extra input: walls visible in 100% of the tuning drawings; trace check: 0.96% of erased-wall pixels flagged
   vs 1.21% of the blank area (a lower threshold of 12-16 did show an excess, so 32 was taken). Retrain running
   (kernel floorplan-novelty-structure2, two seeds, 2.6 h); it replaces v3b only if it is better on tuning drawings.
+- **Held-out result of v3b (2026-11-14 05:45, kernel floorplan-novelty-eval v8; ran once)**
+  (`outputs/novelty/e2e_heldout_v3b.md`; all arms of both rounds in `e2e_heldout_round2.md`, built by adding the v3b
+  rows, renamed "hybrid v3", to `e2e_heldout_all_arms.csv`; the 604 cases were checked identical to the shipped
+  rows): large omissions recovered 11% (shipped) / 52% (v2) -> 75% [67, 81], strict fixed 13% / 36% -> 48% [40, 56];
+  medium + large recovered 14% / 51% -> 73%, fixed 14% / 37% -> 51%; small fixed 42% (unchanged); intact drawings
+  with a region flag 7% (v2: 13%), added components 1.02 per intact drawing (shipped 0.68, v2 1.69). Whole rooms
+  80% recovered, erased rectangles 69%. With the box given: medium + large recovered 81%, fixed 62%. Held-out came
+  out slightly above the tuning check (70% -> 75% on large), inside the intervals.
+- **Reading against the user's target (60-70%)**: met by the 2 px rule (75%), not by the strict pixel rule (48%; that
+  rule gives 72% to the true layout pasted in, measured on tuning cases). Both numbers are reported side by side
+  everywhere; no new metric was introduced in round 2.
+- **Wall thickness is not what holds the strict rule back** (tuning maps, structure net alone, local check
+  2026-11-14): 3 px (shipped decode) fixed 44.2%; 5 px 38.3%; the heat band itself 43.7%; band eroded 1 px 43.7-44.7%;
+  band at heat >= 0.7 / 0.8 44.4% / 44.9%. All inside the noise or worse, so the decode stays at 3 px and v3b was not
+  changed after its held-out run. The strict rule is limited by the exact pixel position of the walls.
+- **v3b is the default configuration** of `src/novelty/pipeline.py` (was v2); the earlier versions still run through
+  the environment variable NOVELTY_CONFIG.
+- Tests for round 2 added (`tests/novelty/test_structure.py`: rays, ink / stroke maps, decode, region groups,
+  training targets).

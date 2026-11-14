@@ -89,6 +89,25 @@ locator with the shipped fill gives 34% / 43%; the new fill adds recovered +7.9 
 about one point of tolerant mIoU only. Cost: a region flag on 13% of intact drawings (added components per intact
 drawing 0.68 -> 1.69).
 
+**Round 2 (2026-11-14, the final hybrid; `docs/novelty.md` section 8, file `outputs/novelty/e2e_heldout_round2.md`).**
+The locator is replaced by a structure net that marks the missing walls on the whole plan (inputs: parsed map,
+wall-continuation rays, ink map); its walls give the region flags and are painted into the fill; the fill draws a
+wall wherever its wall probability is >= 0.18. Same 151 held-out drawings and cases, frozen before the run, ran once.
+
+| omissions | pipeline | found | flagged as a region | fixed (strict) | recovered (2 px) | tol. mIoU in the region |
+|---|---|---|---|---|---|---|
+| large (151) | round 1 hybrid | 95% | 80% | 36% [29, 44] | 52% [44, 59] | 45.3 |
+| large (151) | **round 2 hybrid** | 96% | 91% | **48%** [40, 56] | **75%** [67, 81] | 44.0 |
+| medium + large (302) | round 1 hybrid | 91% | 75% | 37% [32, 42] | 51% [45, 57] | 46.3 |
+| medium + large (302) | **round 2 hybrid** | 93% | 85% | **51%** [45, 57] | **73%** [68, 78] | 45.0 |
+| small (151) | round 2 hybrid | 62% | 5% | 42% [34, 50] | - | 65.4 |
+
+Paired, round 2 minus shipped, large: fixed +35.1 points [+27.2, +43.0], recovered +64.2 [+55.6, +72.2]; round 2
+minus round 1, large: fixed +11.9 [+5.3, +19.2], recovered +23.2 [+15.9, +31.1]. Whole rooms 80% recovered, erased
+rectangles 69%. Intact drawings: a region flag on 7% (round 1: 13%), added components per drawing 1.02. Caveat: the
+gain needs the ink map (without it 55% recovered on tuning drawings); it carries no traces of the erased walls
+(checked) but does show the blank area a large omission leaves.
+
 ## 1. The final system in one page
 
 ### Stage 1 — mask-given inpainting (ResPlan, 128 × 128, 6 classes)
