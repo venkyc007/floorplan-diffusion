@@ -294,7 +294,10 @@ def report(args):
                      # the combined held-out table (outputs/novelty/e2e_heldout_all_arms.csv: v1 and v2 side by side)
                      ("shipped auto", "hybrid v2 auto"), ("shipped auto", "hybrid v1 auto"), ("locator + B4", "hybrid v2 auto"),
                      ("hybrid v1 auto", "hybrid v2 auto"), ("shipped manual", "hybrid v2 manual"),
-                     ("hybrid v1 manual", "hybrid v2 manual")):
+                     ("hybrid v1 manual", "hybrid v2 manual"),
+                     # round 2 (v3 = structure first), same combined table
+                     ("shipped auto", "hybrid v3 auto"), ("hybrid v2 auto", "hybrid v3 auto"),
+                     ("shipped manual", "hybrid v3 manual"), ("hybrid v2 manual", "hybrid v3 manual")):
             A = {key(r): r for r in sub if r["arm"] == a}
             C = {key(r): r for r in sub if r["arm"] == c}
             ks = sorted(set(A) & set(C))
