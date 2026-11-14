@@ -1352,3 +1352,21 @@ Own choices:
   the environment variable NOVELTY_CONFIG.
 - Tests for round 2 added (`tests/novelty/test_structure.py`: rays, ink / stroke maps, decode, region groups,
   training targets).
+- **Stroke-map structure net (kernel floorplan-novelty-structure2, done 2026-11-14 06:23; 2 seeds, 2.6 h each)**:
+  same recipe as the first structure net plus the stroke map as a 4th extra input (`n_extra: 4`). Tuning maps,
+  map level, fully automatic (`outputs/novelty/tune_structure_sweep_stroke.txt`): seed 0 at threshold 0.5 recovered
+  79.4% (large 77.1%; whole rooms 90%, rectangles 70%), recall 0.81, precision 0.79, 7% of intact drawings flagged;
+  first net: 73.5% (70.8%; 86%, 62%), 6%. Paired, new minus old, 423 cases: +5.9 points [+2.8, +9.0]; large only
+  +6.3 [+2.8, +9.9]. Seed 1: 77.5%; the 2-seed average 79.4-79.7% at 0.3-0.4 (no gain) -> one net, seed 0, threshold
+  0.5 unchanged. Faint drawings (ink on the parsed walls < 0.15, 83 cases): 55% -> 67%; ink 0.30-0.45: 67% -> 82%.
+- **v3c** (`configs/novelty/pipeline_structure_c.yaml`) = v3b with only the structure checkpoint replaced by
+  struct4_s0. End-to-end check on the same 100 tuning drawings (`outputs/novelty/e2e_tuning_v3c.md`): large omissions
+  recovered 70% (v3b) -> 74% [65, 82], strict fixed 46% -> 47%; medium + large recovered 67% -> 70%, fixed 44% -> 48%;
+  small fixed 51% -> 50%; intact drawings with a region flag 6% -> 3%, added components per intact drawing
+  1.27 -> 1.05. Paired v3c minus v3b, medium + large (200 cases): fixed +3.5 points [-0.5, +7.5], recovered +3.0
+  [-1.5, +7.5]; intact added components -0.2 [-0.6, 0.0]. The end-to-end intervals include 0 (100 drawings); the
+  map-level one (423 cases) does not. Rule stated before the retrain was read ("it replaces v3b only if it is
+  better on tuning drawings"): better on every medium / large measure and fewer false alarms -> **v3c frozen and
+  sent to its one held-out run** (kernel floorplan-novelty-eval v10, 09:42). v3b's held-out result stays in the
+  tables next to it; nothing was changed in response to v3b's held-out numbers (the retrain was launched at 03:18,
+  before v3b's held-out run started at 04:42).
