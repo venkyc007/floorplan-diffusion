@@ -3,7 +3,7 @@
 Material for the novelty assessment (numbers, tables, figures, what each part does). It is not report prose.
 Every number names its file in `outputs/novelty/`; every choice and its reason is in `docs/decisions.md`
 ("Novelty assessment"). Code: `src/novelty/` (its README lists the files). **Status: two rounds done. The final
-hybrid is the round-2 one ("structure first", v3b, section 8), chosen on tuning drawings and evaluated once on the
+hybrid is the round-2 one ("structure first", v3c, section 8), chosen on tuning drawings and evaluated once on the
 held-out drawings; test split not used (section 6).** Sections 1-5 describe round 1 (locator + retrained fill, v1 / v2)
 as it was run; section 8 describes round 2, which builds on it.
 
@@ -14,10 +14,11 @@ as it was run; section 8 describes round 2, which builds on it.
 |---|---|---|---|---|
 | shipped Stage 2 | 3% | 11% [7, 17] | 13% [8, 19] | 1% |
 | round 1 final (v2: locator + edit fill) | 80% | 52% [44, 59] | 36% [29, 44] | 13% |
-| **round 2 final (v3b: structure net + edit fill)** | **91%** | **75%** [67, 81] | **48%** [40, 56] | **7%** |
+| round 2, first version (v3b: structure net + edit fill) | 91% | 75% [67, 81] | 48% [40, 56] | 7% |
+| **round 2 final (v3c: v3b + stroke map for faint drawings)** | **94%** | **80%** [73, 86] | **55%** [47, 63] | **3%** |
 
 "Recovered" and "fixed" are defined in section 3; a perfect answer (the true layout pasted in) scores 96% recovered
-but only 72% fixed on the tuning cases, so 48% fixed is two thirds of what the strict rule can give.
+but only 72% fixed on the tuning cases, so 55% fixed is about three quarters of what the strict rule can give.
 
 ## 1. The problem, in the shipped system's own numbers
 
@@ -260,7 +261,8 @@ erased drawings the region fill also draws more components that do not touch the
 - Done, round 1: large-omission set, locator, fill v1 and v2, Fourier ablation, tuning choices, one held-out run per
   version.
 - Done, round 2 (section 8): bigger set with ink maps, wall-continuation rays, structure net (+ ablations without
-  ink / without rays), wall-probability threshold, pipeline v3a / v3b, tuning choice, one held-out run of v3b.
+  ink / without rays), wall-probability threshold, stroke map, pipeline v3a / v3b / v3c, tuning choices, one
+  held-out run each of v3b and v3c.
 - Not done: the room-graph idea of the report's section 8.2; the Gradio app still runs the shipped pipeline
   (`src/novelty/pipeline.run(image)` is the drop-in call for a hybrid tab).
 - Open decision for the user: one test-split run of the final hybrid (prepared, guarded, not run).
@@ -278,11 +280,11 @@ erased drawings the region fill also draws more components that do not touch the
 | tuning tables | `kaggle/kernels/novelty/eval` with `STAGE = "tune"` or `"e2e_tuning"` | `outputs/novelty/tune_*.md`, `e2e_tuning_*.md` |
 | held-out tables | `kaggle/kernels/novelty/eval` with `STAGE = "e2e_heldout"`; `baseline` for the shipped arms | `outputs/novelty/e2e_heldout_*.md` |
 | round 2: set | `kaggle/kernels/novelty/large_data2` (`build_set.py --versions 9 --ink`) | `large9_train_*.zip`, `large9_tune_*.zip` |
-| round 2: structure net | `kaggle/kernels/novelty/structure` (ablations: `structure_abl`; stroke map: `structure2`) | `runs/struct_full_s{0,1}/checkpoints/best.pt` |
-| round 2: tuning / held-out | `kaggle/kernels/novelty/eval` re-pointed with `point_eval.py` (`e2e_tuning`, `e2e_heldout`) | `outputs/novelty/e2e_tuning_v3{a,b}.md`, `e2e_heldout_v3b.md`, `e2e_heldout_round2.md` |
-| local use | `from src.novelty.pipeline import run; result = run(image)` with the checkpoints at the paths in `configs/novelty/pipeline_structure_b.yaml` (the default) | same result dict as `run_pipeline` |
+| round 2: structure net | `kaggle/kernels/novelty/structure2` (final, with the stroke map); `structure` (first version), `structure_abl` (ablations) | `runs/struct4_s{0,1}/checkpoints/best.pt` (final: s0); `runs/struct_full_s{0,1}/` |
+| round 2: tuning / held-out | `kaggle/kernels/novelty/eval` re-pointed with `point_eval.py` (`e2e_tuning`, `e2e_heldout`) | `outputs/novelty/e2e_tuning_v3{a,b,c}.md`, `e2e_heldout_v3{b,c}.md`, `e2e_heldout_round2.md` |
+| local use | `from src.novelty.pipeline import run; result = run(image)` with the checkpoints at the paths in `configs/novelty/pipeline_structure_c.yaml` (the default) | same result dict as `run_pipeline` |
 
-Kaggle GPU time: round 1 about 17 session hours, round 2 about 9 more in the same week (of 30) plus the last two runs, which ended after the weekly reset of 2026-11-14.
+Kaggle GPU time: round 1 about 17 session hours, round 2 about 9 more in the same week (of 30) plus the runs that ended after the weekly reset of 2026-11-14 (the stroke-map retrain, 3 h, and three evaluation runs, about 1 h each).
 
 ## 8. Round 2: "structure first" (the final hybrid)
 
@@ -303,85 +305,109 @@ how walls are decided.
 
 ```
 drawing -> PARSE -> CHECK (shipped) -> small flags -> shipped small-hole fill                          (unchanged)
-        -> ink map
-   parsed map + rays + ink -> STRUCTURE NET -> missing walls -> groups of walls = region flags
-                                                             -> edit fill (v2) with the walls painted in -> diffusion finish
+        -> ink map, stroke map
+   parsed map + rays + ink + strokes -> STRUCTURE NET -> missing walls -> groups of walls = region flags
+                                                                       -> edit fill (v2) with the walls painted in -> diffusion finish
 ```
 
 | part | what it is | file |
 |---|---|---|
 | Bigger set | Same training drawings, same generator and seeds, 9 erased versions per drawing instead of 3 (35,339 erased + 3,944 intact). Tuning and held-out cases are byte-identical to round 1. | `src/novelty/build_set.py --versions 9 --ink` |
 | Ink map | For each map pixel, the share of drawing pixels darker than grey 128 under it. Tells "nothing is drawn here", which the parser's 16 classes cannot. | `src/novelty/data.py: ink_map` |
+| Stroke map (v3c) | For each map pixel: is it at least 32 grey levels darker than its surroundings (a 7 px grey closing)? Unlike the ink map it also sees the walls of FAINT drawings (lighter than grey 128: 20% of the tuning cases). | `src/novelty/data.py: stroke_map` |
 | Wall-continuation rays | From every end of a straight wall run, a ray through free space until the next wall; two channels (ends in free space / reaches a wall). | `src/novelty/rays.py` |
-| Structure net | U-Net (ImageNet ResNet-34) on the WHOLE plan, no box: input parsed map + rays + ink; output "a missing wall runs here" and "this area is missing" (helper task). | `src/novelty/structure.py`, `configs/novelty/structure.yaml` |
+| Structure net | U-Net (ImageNet ResNet-34) on the WHOLE plan, no box: input parsed map + rays + ink (+ strokes in v3c); output "a missing wall runs here" and "this area is missing" (helper task). | `src/novelty/structure.py`, `configs/novelty/structure.yaml` |
 | Decode | wall heat >= 0.5 -> centre line -> pieces shorter than 6 px dropped -> redrawn 3 px wide. | `structure.decode_walls` |
 | Region flags | Groups of added walls (pieces within 8 px, at least 12 px, 6 px margin). The round-1 locator is no longer used for flags. | `structure.wall_clusters`, `pipeline.structure_holes` |
 | Fill | Round-1 edit U-Net + diffusion in each flagged box, with three changes: walls where the U-Net's wall probability >= 0.18; the structure net's walls painted into the sketch; structure walls the diffusion dropped are put back, except over a door / window it drew. | `pipeline.hybrid_fill` (`fill.wall_tau`, `fill.keep_walls`) |
-| Configuration | v3b (final): one structure net (seed 0), locator off. v3a: two nets averaged + locator. | `configs/novelty/pipeline_structure_b.yaml`, `pipeline_structure.yaml` |
+| Configurations | **v3c (final)**: one structure net with the stroke map (struct4, seed 0), locator off. v3b: the same with the first structure net (no stroke map). v3a: two first-version nets averaged + locator. | `configs/novelty/pipeline_structure_c.yaml`, `pipeline_structure_b.yaml`, `pipeline_structure.yaml` |
 
 ### 8.3 Chosen on the tuning drawings
 
-Structure net alone, map level, fully automatic (`outputs/novelty/tune_structure_sweep.txt`; 423 erased + 212 intact):
+Structure net alone, map level, fully automatic (`outputs/novelty/tune_structure_sweep.txt`,
+`tune_structure_sweep_stroke.txt`; 423 erased + 212 intact):
 
-| structure net | recovered (2 px) | large | whole rooms | rectangles | recall / precision | intact drawings flagged |
-|---|---|---|---|---|---|---|
-| **all inputs, seed 0, threshold 0.5 (chosen)** | **73.5%** | 70.8% | 86% | 62% | 0.76 / 0.76 | 6% |
-| all inputs, thresholds 0.2-0.7 | 73.5-74.0% | | | | | 6% |
-| two seeds averaged, threshold 0.4 | 74.0% | 70.1% | 86% | 63% | 0.79 / 0.74 | 11% |
-| **without the ink map** | **55%** | 53% | 66% | 45% | 0.59 / 0.71 | 20% |
-| without the rays | 71-72% | | | | | |
-| + round-1 locator boxes and fill walls | 74-75% | | | | | 21% |
+| structure net | recovered (2 px) | large | whole rooms | rectangles | recall / precision | fixed (strict) | intact drawings flagged |
+|---|---|---|---|---|---|---|---|
+| first version (ink + rays), seed 0, threshold 0.5 = v3b | 73.5% | 70.8% | 86% | 62% | 0.76 / 0.76 | 44.7% | 6% |
+| first version, thresholds 0.2-0.7 | 73.5-74.0% | | | | | | 6% |
+| first version, two seeds averaged, threshold 0.4 | 74.0% | 70.1% | 86% | 63% | 0.79 / 0.74 | 45.6% | 11% |
+| **without the ink map** | **55%** | 53% | 66% | 45% | 0.59 / 0.71 | 33% | 20% |
+| without the rays | 71-72% | | | | | | |
+| first version + round-1 locator boxes and fill walls | 74-75% | | | | | | 21% |
+| **+ stroke map, seed 0, threshold 0.5 = v3c (chosen)** | **79.4%** | 77.1% | 90% | 70% | 0.81 / 0.79 | 48.2% | 7% |
+| + stroke map, seed 1 | 77.5% | 74.6% | 88% | 68% | 0.80 / 0.79 | 47.3% | 5% |
+| + stroke map, two seeds averaged, threshold 0.4 | 79.4% | 76.4% | 90% | 70% | 0.83 / 0.78 | 50.1% | 8% |
 
-End to end on 100 tuning drawings (`e2e_tuning_v3a.md`, `e2e_tuning_v3b.md`; same cases as sections 4.3 / 4.4):
+Stroke map against the first version, same 423 cases, paired: recovered +5.9 points [+2.8, +9.0]; large only +6.3
+[+2.8, +9.9]. Where it helps: faint drawings (ink on the parsed walls < 0.15, 83 cases) 55% -> 67%; ink 0.30-0.45
+(66 cases) 67% -> 82%; well-inked drawings 82% -> 83%.
+
+End to end on 100 tuning drawings (`e2e_tuning_v3a.md`, `e2e_tuning_v3b.md`, `e2e_tuning_v3c.md`; same cases as
+sections 4.3 / 4.4):
 
 | large omissions (100) | found | fixed (strict) | recovered (2 px) | small omissions fixed | intact with a region flag | added components / intact drawing |
 |---|---|---|---|---|---|---|
 | shipped | 77% | 7% | 9% | 52% | 1% | 0.92 |
 | round 1 final (v2) | 99% | 30% | 47% | 50% | 16% | 1.63 |
 | v3a (2 nets + locator) | 99% | 48% | 72% [63, 80] | 48% | 18% | 2.01 |
-| **v3b (1 net, no locator) - chosen** | 98% | 46% | 70% [60, 78] | 51% | 6% | 1.27 |
+| v3b (1 net, no locator) | 98% | 46% | 70% [60, 78] | 51% | 6% | 1.27 |
+| **v3c (v3b + stroke map) - chosen** | 98% | 47% | 74% [65, 82] | 50% | 3% | 1.05 |
 
-v3b chosen: the same accuracy as v3a within the noise, a third of the false alarms, small omissions untouched.
+Choices, each made on these drawings before the corresponding held-out run:
+- v3b over v3a: the same accuracy within the noise, a third of the false alarms, small omissions untouched.
+- v3c over v3b: better on every medium / large measure (medium + large, paired: fixed +3.5 points [-0.5, +7.5],
+  recovered +3.0 [-1.5, +7.5]) and fewer false alarms (added components per intact drawing -0.2 [-0.6, 0.0]). On
+  100 drawings the end-to-end intervals include 0; the map-level comparison above (423 cases) does not.
+  The retrain was launched before v3b's held-out run, and nothing in v3c was set by looking at held-out numbers.
 
-### 8.4 Held-out result (the reported numbers; v3b frozen before the run, ran once)
+### 8.4 Held-out result (the reported numbers; each version frozen before its run, ran once)
 
 Files: `outputs/novelty/e2e_heldout_round2.md` (all arms of both rounds, intervals, paired differences; rows in
-`e2e_heldout_all_arms.csv`), `e2e_heldout_v3b.md`, figure `e2e_heldout_v3b_examples_0.png` (first six medium / large
-cases as they come). Same 151 drawings and the same erased cases as section 5 (checked case by case).
+`e2e_heldout_all_arms.csv`), `e2e_heldout_v3b.md`, `e2e_heldout_v3c.md`, figures `e2e_heldout_v3b_examples_0.png`,
+`e2e_heldout_v3c_examples_0.png` (first six medium / large cases as they come). Same 151 drawings and the same erased
+cases as section 5 (checked case by case).
 
 | omissions | pipeline | found | flagged as a region | fixed (strict) | recovered (2 px) | recall / precision | tol. mIoU | violations per hole (truth) |
 |---|---|---|---|---|---|---|---|---|
 | large (151) | shipped | 80% | 3% | 13% [8, 19] | 11% [7, 17] | 0.13 / 0.70 | 38.6 | 29.6 (10.2) |
 | large (151) | round 1 (v2) | 95% | 80% | 36% [29, 44] | 52% [44, 59] | 0.51 / 0.80 | 45.3 | 22.5 |
-| large (151) | **round 2 (v3b)** | **96%** | **91%** | **48%** [40, 56] | **75%** [67, 81] | 0.79 / 0.74 | 44.0 | 22.0 |
+| large (151) | round 2, v3b | 96% | 91% | 48% [40, 56] | 75% [67, 81] | 0.79 / 0.74 | 44.0 | 22.0 |
+| large (151) | **round 2, v3c (final)** | **99%** | **94%** | **55%** [47, 63] | **80%** [73, 86] | 0.83 / 0.75 | 44.3 | 22.3 |
 | medium (151) | shipped | 73% | 1% | 15% [10, 21] | 17% [12, 24] | 0.21 / 0.79 | 42.6 | 19.9 (6.5) |
 | medium (151) | round 1 (v2) | 87% | 70% | 38% [30, 46] | 50% [42, 58] | 0.52 / 0.83 | 47.3 | 15.3 |
-| medium (151) | **round 2 (v3b)** | **91%** | **79%** | **54%** [46, 62] | **72%** [64, 78] | 0.75 / 0.79 | 45.9 | 14.4 |
+| medium (151) | round 2, v3b | 91% | 79% | 54% [46, 62] | 72% [64, 78] | 0.75 / 0.79 | 45.9 | 14.4 |
+| medium (151) | **round 2, v3c (final)** | **95%** | **87%** | **57%** [49, 65] | **79%** [72, 85] | 0.84 / 0.80 | 46.9 | 14.5 |
 | medium + large (302) | shipped | 76% | 2% | 14% [10, 18] | 14% [10, 18] | 0.17 / 0.75 | 40.6 | 24.7 (8.4) |
 | medium + large (302) | round 1 (v2) | 91% | 75% | 37% [32, 42] | 51% [45, 57] | 0.52 / 0.82 | 46.3 | 18.9 |
-| medium + large (302) | **round 2 (v3b)** | **93%** | **85%** | **51%** [45, 57] | **73%** [68, 78] | 0.77 / 0.77 | 45.0 | 18.2 |
+| medium + large (302) | round 2, v3b | 93% | 85% | 51% [45, 57] | 73% [68, 78] | 0.77 / 0.77 | 45.0 | 18.2 |
+| medium + large (302) | **round 2, v3c (final)** | **97%** | **91%** | **56%** [50, 61] | **80%** [75, 84] | 0.84 / 0.77 | 45.6 | 18.4 |
 | small (151) | shipped | 61% | 1% | 42% [34, 50] | - | | 65.6 | 9.2 (3.4) |
-| small (151) | round 2 (v3b) | 62% | 5% | 42% [34, 50] | - | | 65.4 | 9.3 |
+| small (151) | round 2, v3b | 62% | 5% | 42% [34, 50] | - | | 65.4 | 9.3 |
+| small (151) | round 2, v3c (final) | 62% | 7% | 41% [34, 49] | - | | 65.0 | 9.4 |
 
 Paired differences (bootstrap over cases, 95%):
 
-| large omissions | fixed, points | recovered, points | tol. mIoU |
+| comparison | fixed, points | recovered, points | tol. mIoU |
 |---|---|---|---|
-| round 2 minus shipped | +35.1 [+27.2, +43.0] | +64.2 [+55.6, +72.2] | +5.4 [+3.7, +7.0] |
-| round 2 minus round 1 | +11.9 [+5.3, +19.2] | +23.2 [+15.9, +31.1] | -1.3 [-2.6, +0.1] |
-| medium + large: round 2 minus shipped | +37.4 [+32.1, +43.0] | +59.3 [+53.6, +64.6] | +4.4 [+3.1, +5.6] |
-| medium + large: round 2 minus round 1 | +14.2 [+9.3, +19.2] | +22.2 [+16.6, +27.8] | -1.4 [-2.4, -0.3] |
-| small: round 2 minus shipped | 0.0 [-2.0, +2.0] | - | -0.2 [-0.5, +0.1] |
+| large: final minus shipped | +42.4 [+34.4, +50.3] | +69.5 [+61.6, +76.8] | +5.7 [+3.9, +7.4] |
+| large: final minus round 1 | +19.2 [+11.9, +26.5] | +28.5 [+21.2, +36.4] | -1.0 [-2.3, +0.4] |
+| large: v3c minus v3b | +7.3 [+1.3, +13.2] | +5.3 [+0.7, +10.6] | +0.3 [-0.5, +1.2] |
+| medium + large: final minus shipped | +42.4 [+37.1, +48.3] | +65.9 [+60.3, +71.2] | +5.0 [+3.8, +6.2] |
+| medium + large: final minus round 1 | +19.2 [+14.2, +24.5] | +28.8 [+22.5, +34.8] | -0.7 [-1.8, +0.3] |
+| medium + large: v3c minus v3b | +5.0 [+1.3, +8.6] | +6.6 [+2.6, +10.6] | +0.6 [0.0, +1.3] |
+| small: final minus shipped | -0.7 [-3.3, +1.3] | - | -0.6 [-1.2, 0.0] |
 
 By kind (held-out, automatic; recovered / fixed / flagged as a region):
 
-| omission kind | n | shipped | round 1 (v2) | round 2 (v3b) | round 2, box given by hand |
-|---|---|---|---|---|---|
-| whole room | 115 | 8% / 11% / 3% | 52% / 35% / 86% | **80% / 52% / 94%** | 83% / 68% |
-| erased rectangle | 187 | 18% / 15% / 2% | 50% / 38% / 68% | **69% / 50% / 80%** | 80% / 59% |
+| omission kind | n | shipped | round 1 (v2) | round 2, v3b | round 2, v3c (final) | final, box given by hand |
+|---|---|---|---|---|---|---|
+| whole room | 115 | 8% / 11% / 3% | 52% / 35% / 86% | 80% / 52% / 94% | **85% / 58% / 95%** | 87% / 70% |
+| erased rectangle | 187 | 18% / 15% / 2% | 50% / 38% / 68% | 69% / 50% / 80% | **76% / 55% / 88%** | 81% / 61% |
 
-With the box given by hand (medium + large): recovered 46% (shipped B4) / 66% (round 1) -> 81% [77, 85]; fixed
-41% / 45% -> 62% [57, 68]. Of the large omissions flagged as a region (138 of 151), 81% are recovered.
+With the box given by hand (medium + large): recovered 46% (shipped B4) / 66% (round 1) -> 83% [79, 87]; fixed
+41% / 45% -> 65% [59, 70]. The automatic pipeline (80% / 56%) is now close to the box-given one: finding the place
+is no longer the main loss. Of the large omissions flagged as a region (142 of 151), 85% are recovered.
 
 Intact drawings (151):
 
@@ -389,15 +415,19 @@ Intact drawings (151):
 |---|---|---|---|---|
 | shipped | 0.64 | 0.01 | 1% | 0.68 |
 | round 1 (v2) | 0.74 | 0.15 | 13% | 1.69 |
-| round 2 (v3b) | 0.70 | 0.08 | 7% | 1.02 |
+| round 2, v3b | 0.70 | 0.08 | 7% | 1.02 |
+| round 2, v3c (final) | 0.66 | 0.03 | 3% | 0.93 |
 
-### 8.5 The ink map: what it reads, and the check
+### 8.5 The ink and stroke maps: what they read, and the check
 
-- Most of the round-2 gain needs the ink map: without it the same net recovers 55% of the tuning cases (with it
-  73.5%) and flags 20% of intact drawings (with it 6%).
-- Trace check on the tuning drawings (does the erasure leave a ghost of the wall?): erased wall pixels carry ink on
-  0.2% of their pixels, the blank area around them 0.8%, kept walls 47%; mean grey 248.2 vs 248.7. The map is
-  binarised at grey 128, so paper tone and smudges are invisible. The net does not read leftover wall traces.
+- Most of the round-2 gain needs these maps: without the ink map the first structure net recovers 55% of the tuning
+  cases (with it 73.5%, with the stroke map as well 79.4%) and flags 20% of intact drawings (with it 6-7%).
+- Trace check on the tuning drawings (does the erasure leave a ghost of the wall?):
+  - ink map: erased wall pixels carry ink on 0.2% of their pixels, the blank area around them 0.8%, kept walls 47%;
+    mean grey 248.2 vs 248.7. The map is binarised at grey 128, so paper tone and smudges are invisible.
+  - stroke map: 0.96% of erased-wall pixels flagged vs 1.21% of the blank area. A lower contrast threshold
+    (12-16 grey levels) did show an excess on erased walls, which is why 32 was taken.
+  So the net does not read leftover wall traces.
 - What it does read: the BLANK AREA the omission leaves. The generators clear every stroke in the omitted room or
   rectangle (labels, furniture, dimensions too - the project's definition of a large omission since 2026-10-20), so
   "an area with no ink at all inside a building" is a strong cue. For an erased rectangle the edge where the
@@ -407,19 +437,24 @@ Intact drawings (151):
 
 ### 8.6 Honest reading and what is left
 
-- By the 2 px rule the target is met on held-out drawings: three large omissions in four are found and redrawn with
-  nothing given (75% [67, 81]); by the strict pixel rule it is about one in two (48% [40, 56]). The strict rule tops
-  out at 72% for these omissions (section 3), so both numbers have to be shown together.
+- By the 2 px rule the target (60-70%) is met on held-out drawings: four large omissions in five are found and
+  redrawn with nothing given (80% [73, 86]). By the strict pixel rule it is 55% [47, 63]: close to the target's
+  lower end but not at it. The strict rule tops out at 72% for these omissions (section 3), so both numbers have to
+  be shown together.
+- Four hybrid versions have now each run once on the held-out drawings (v1, v2, v3b, v3c). Each was chosen on the
+  tuning drawings and frozen before its run, and all four results are in the tables; no setting was ever changed
+  after a held-out run. The held-out numbers of v3b and v3c came out a few points above their tuning checks
+  (70% -> 75%, 74% -> 80% recovered on large), inside the intervals.
 - The strict rule is limited by exact wall position, not by wall thickness: redrawing the structure net's walls at
-  5 px, at the predicted band width, or eroded gives 38-45% against 44% on the tuning maps (2026-11-14 check,
-  decisions.md), so the 3 px decode stays.
-- Whole rooms: 80% recovered. Erased rectangles: 69%; they are the weaker kind (flagged 80% of the time).
-- Faint drawings (walls lighter than grey 128, 20% of the tuning cases) recover 55% against 82% for the rest: the
-  ink map is nearly empty there. A stroke-map input (local contrast instead of a fixed grey level) was trained to
-  address this; outcome in decisions.md.
-- Region tolerant mIoU is slightly below round 1 (44.0 vs 45.3 on large; interval touches 0): round 2 draws more
-  walls, and room types around them are not better.
-- Costs: a region flag on 7% of intact drawings (round 1: 13%, shipped: 1%); on erased drawings 2.3 added
-  components per drawing that do not touch the omission (shipped 0.8, round 1 2.3); 7 s per drawing on CPU for a
-  region fill (shipped 3 s). "Valid" pass rate stays low (13%), as for the true layout pasted in (2%).
+  5 px, at the predicted band width, or eroded gives 38-45% against 44% on the tuning maps (decisions.md), so the
+  3 px decode stays.
+- Whole rooms: 85% recovered. Erased rectangles: 76%; still the weaker kind (flagged 88% of the time).
+- Faint drawings remain behind the rest on the tuning maps (67% against 79-84%) even with the stroke map.
+- Region tolerant mIoU is not better than round 1 (44.3 vs 45.3 on large, interval includes 0): round 2 draws many
+  more of the missing walls, but the room types around them are not improved.
+- Costs: a region flag on 3% of intact drawings (round 1: 13%, shipped: 1%) and 0.93 added components per intact
+  drawing (shipped 0.68); on erased drawings 2.5 added components per drawing that do not touch the omission
+  (shipped 0.8, round 1 2.3); about 7 s per drawing for a region fill on the Kaggle GPU (shipped 3 s). "Valid" pass
+  rate stays low (10-13%), as for the true layout pasted in (2%). Small omissions: 41% fixed against 42%
+  (-0.7 points [-3.3, +1.3]), tolerant mIoU -0.6 [-1.2, 0.0].
 - The Stage 2 test split has still not been used.

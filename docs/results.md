@@ -91,20 +91,25 @@ drawing 0.68 -> 1.69).
 
 **Round 2 (2026-11-14, the final hybrid; `docs/novelty.md` section 8, file `outputs/novelty/e2e_heldout_round2.md`).**
 The locator is replaced by a structure net that marks the missing walls on the whole plan (inputs: parsed map,
-wall-continuation rays, ink map); its walls give the region flags and are painted into the fill; the fill draws a
-wall wherever its wall probability is >= 0.18. Same 151 held-out drawings and cases, frozen before the run, ran once.
+wall-continuation rays, ink map, and in the final version v3c a stroke map for faint drawings); its walls give the
+region flags and are painted into the fill; the fill draws a wall wherever its wall probability is >= 0.18. Same
+151 held-out drawings and cases; each version chosen on tuning drawings, frozen, and run once.
 
 | omissions | pipeline | found | flagged as a region | fixed (strict) | recovered (2 px) | tol. mIoU in the region |
 |---|---|---|---|---|---|---|
 | large (151) | round 1 hybrid | 95% | 80% | 36% [29, 44] | 52% [44, 59] | 45.3 |
-| large (151) | **round 2 hybrid** | 96% | 91% | **48%** [40, 56] | **75%** [67, 81] | 44.0 |
+| large (151) | round 2, first version (v3b) | 96% | 91% | 48% [40, 56] | 75% [67, 81] | 44.0 |
+| large (151) | **round 2 final (v3c)** | 99% | 94% | **55%** [47, 63] | **80%** [73, 86] | 44.3 |
 | medium + large (302) | round 1 hybrid | 91% | 75% | 37% [32, 42] | 51% [45, 57] | 46.3 |
-| medium + large (302) | **round 2 hybrid** | 93% | 85% | **51%** [45, 57] | **73%** [68, 78] | 45.0 |
-| small (151) | round 2 hybrid | 62% | 5% | 42% [34, 50] | - | 65.4 |
+| medium + large (302) | round 2, first version (v3b) | 93% | 85% | 51% [45, 57] | 73% [68, 78] | 45.0 |
+| medium + large (302) | **round 2 final (v3c)** | 97% | 91% | **56%** [50, 61] | **80%** [75, 84] | 45.6 |
+| small (151) | round 2 final (v3c) | 62% | 7% | 41% [34, 49] | - | 65.0 |
 
-Paired, round 2 minus shipped, large: fixed +35.1 points [+27.2, +43.0], recovered +64.2 [+55.6, +72.2]; round 2
-minus round 1, large: fixed +11.9 [+5.3, +19.2], recovered +23.2 [+15.9, +31.1]. Whole rooms 80% recovered, erased
-rectangles 69%. Intact drawings: a region flag on 7% (round 1: 13%), added components per drawing 1.02. Caveat: the
+Paired, final minus shipped, large: fixed +42.4 points [+34.4, +50.3], recovered +69.5 [+61.6, +76.8]; final minus
+round 1, large: fixed +19.2 [+11.9, +26.5], recovered +28.5 [+21.2, +36.4]; v3c minus v3b, large: fixed +7.3
+[+1.3, +13.2], recovered +5.3 [+0.7, +10.6]. Whole rooms 85% recovered, erased rectangles 76%. Small omissions:
+final minus shipped -0.7 points [-3.3, +1.3]. Intact drawings: a region flag on 3% (round 1: 13%, shipped 1%),
+added components per drawing 0.93 (shipped 0.68). Strict "fixed" tops out at 72% for the true layout. Caveat: the
 gain needs the ink map (without it 55% recovered on tuning drawings); it carries no traces of the erased walls
 (checked) but does show the blank area a large omission leaves.
 

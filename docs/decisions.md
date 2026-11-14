@@ -1370,3 +1370,20 @@ Own choices:
   sent to its one held-out run** (kernel floorplan-novelty-eval v10, 09:42). v3b's held-out result stays in the
   tables next to it; nothing was changed in response to v3b's held-out numbers (the retrain was launched at 03:18,
   before v3b's held-out run started at 04:42).
+- **Held-out result of v3c (2026-11-14 10:41, kernel floorplan-novelty-eval v10; ran once)**
+  (`outputs/novelty/e2e_heldout_v3c.md`; combined file `e2e_heldout_round2.md`, where the two round-2 versions are now
+  named "hybrid v3b" and "hybrid v3c"; cases checked identical): large omissions recovered 80% [73, 86], strict fixed
+  55% [47, 63] (v3b: 75% / 48%; shipped 11% / 13%); medium + large recovered 80%, fixed 56%; small fixed 41%
+  (shipped 42%; paired -0.7 points [-3.3, +1.3]); intact drawings with a region flag 3%, added components 0.93 per
+  intact drawing (shipped 0.68). Paired v3c minus v3b: large fixed +7.3 [+1.3, +13.2], recovered +5.3 [+0.7, +10.6];
+  medium + large fixed +5.0 [+1.3, +8.6], recovered +6.6 [+2.6, +10.6]. Whole rooms 85% recovered, erased rectangles
+  76%. With the box given (medium + large): recovered 83%, fixed 65%.
+- **v3c is the final hybrid and the default configuration** of `src/novelty/pipeline.py` (chosen on tuning before
+  its held-out run, see above). v3b's held-out result stays in every table. Four hybrid versions have each run once
+  on held-out (v1, v2, v3b, v3c); none was changed after its run.
+- **Against the user's target (60-70%)**: 80% by the 2 px rule; 55% by the strict pixel rule (ceiling 72%). Reported
+  as both, with the ink-map caveat (docs/novelty.md 8.5).
+- **Stopped here (own choice)**: the automatic pipeline (80% / 56% on medium + large) is now within a few points of
+  the same fill with the box given by hand (83% / 65%), so finding the place is no longer the main loss; the
+  remaining gap to the strict rule is the pixel-exact wall position inside the fill, which needs a new fill model
+  (not attempted in round 2).

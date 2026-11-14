@@ -16,7 +16,7 @@ optional arguments that are off by default.
 | `models.py` | Builds the large-hole U-Net / diffusion (the Stage 2 16-class models + the Fourier blocks), warm start from B4, loading. | Used by the trainer and the pipeline. |
 | `train_fill.py` | Trains a large-hole fill model (U-Net or diffusion). Same recipe as B4, new data. | Kernels `fill_ffc`, `fill_plain` (ablation). |
 | `locate.py` | The region locator: the parser's map of the whole plan in, "a large part is missing here" probability out; training and inference. | Kernel `locate`; gave the round-1 pipeline its region flags (off in the final config). |
-| `pipeline.py` | The hybrid: shipped pipeline + structure net (region flags, walls) + large-hole fill. `run(image)` / `run(image, boxes=...)`. | Entry point; settings in `configs/novelty/pipeline_structure_b.yaml` (v3b, the final hybrid; the default). Earlier versions run with the environment variable `NOVELTY_CONFIG`: `pipeline_structure.yaml` (v3a), `pipeline_large_edit.yaml` (v2, round-1 final), `pipeline_large.yaml` (v1), `pipeline_large_plain.yaml` (no Fourier blocks). |
+| `pipeline.py` | The hybrid: shipped pipeline + structure net (region flags, walls) + large-hole fill. `run(image)` / `run(image, boxes=...)`. | Entry point; settings in `configs/novelty/pipeline_structure_c.yaml` (v3c, the final hybrid; the default). Earlier versions run with the environment variable `NOVELTY_CONFIG`: `pipeline_structure_b.yaml` (v3b, structure net without the stroke map), `pipeline_structure.yaml` (v3a), `pipeline_large_edit.yaml` (v2, round-1 final), `pipeline_large.yaml` (v1), `pipeline_large_plain.yaml` (no Fourier blocks). |
 | `eval_maps.py` | Tuning drawings, map level: locator threshold sweep, fills with the hole given, locator -> fill. | Where settings are chosen. |
 | `eval_e2e.py` | Drawings, end to end: shipped vs hybrid on small / medium / large omissions and intact drawings. | The reported numbers (held-out val drawings). |
 
@@ -32,6 +32,8 @@ it was chosen over v1 on the tuning drawings. Round-1 result (151 held-out drawi
 Round 2 ("structure first", the final hybrid) keeps the v2 fill and replaces the locator by the structure net:
 it marks the missing walls on the whole plan, groups of them are the region flags, and they are painted into the
 fill's sketch; the fill also draws a wall wherever its wall probability is at least 0.18. Result on the same
-held-out drawings: large omissions recovered within 2 px 75%, fixed 48%; small omissions unchanged; a region flag
-on 7% of intact drawings (`docs/novelty.md` section 8). The gain depends on the ink map (without it 55% recovered
-on the tuning drawings): it shows the blank area a large omission leaves, not traces of the erased walls.
+held-out drawings, first version (v3b): large omissions recovered within 2 px 75%, fixed 48%. The final version
+(v3c) gives the structure net one more input, the stroke map, so that it also sees the walls of faint drawings:
+recovered 80%, fixed 55%, small omissions 41% (shipped 42%), a region flag on 3% of intact drawings
+(`docs/novelty.md` section 8). The gain depends on the ink map (without it 55% recovered on the tuning
+drawings): it shows the blank area a large omission leaves, not traces of the erased walls.

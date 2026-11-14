@@ -200,8 +200,8 @@ Large omissions (a whole room or region missing, nothing given) were the shipped
 fixed. `src/novelty/` adds a path for them and joins it to the shipped pipeline as one hybrid. Round 1: a region
 locator and a large-hole fill trained on the parser's own maps (large omissions fixed 13% -> 36%, recovered within
 2 px 11% -> 52% on 151 held-out drawings). Round 2, the final hybrid: a structure net that marks the missing walls
-on the whole plan from the parsed map, wall-continuation rays and an ink map; its walls give the region flags and
-are painted into the fill. Same held-out drawings, nothing given: large omissions recovered within 2 px **75%**,
-fixed by the strict pixel rule **48%** (a perfect answer scores 72% by that rule); small omissions unchanged (42%);
-a region flag on 7% of intact drawings. Write-up with every table: `docs/novelty.md` (section 8 = round 2);
+on the whole plan from the parsed map, wall-continuation rays, an ink map and a stroke map; its walls give the
+region flags and are painted into the fill. Same held-out drawings, nothing given: large omissions recovered
+within 2 px **80%**, fixed by the strict pixel rule **55%** (a perfect answer scores 72% by that rule); small
+omissions 41% (shipped 42%); a region flag on 3% of intact drawings. Write-up with every table: `docs/novelty.md` (section 8 = round 2);
 files: `src/novelty/README.md`; choices: `docs/decisions.md` ("Novelty assessment").

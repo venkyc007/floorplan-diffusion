@@ -34,22 +34,24 @@ round 2 target (user, 2026-11-13 evening): at least 60-70% end to end on large o
 Write-up: `docs/novelty.md` (sections 1-5 round 1, section 8 round 2); code `src/novelty/` (README lists the files);
 configs `configs/novelty/`; kernels `kaggle/kernels/novelty/`; results `outputs/novelty/`; choices `docs/decisions.md`
 ("Novelty assessment" and "round 2").
-- **Final hybrid (round 2, v3b, "structure first")** = shipped pipeline + STRUCTURE NET (whole plan; inputs parsed
-  map + wall-continuation rays + ink map; marks missing walls; groups of them = region flags) + round-1 edit fill
-  (v2) with walls drawn at wall probability >= 0.18 and the structure walls kept. Config
-  `configs/novelty/pipeline_structure_b.yaml` (the default of `src/novelty/pipeline.run(image)`; other versions via
-  env `NOVELTY_CONFIG`). Checkpoints (git-ignored): `outputs/kaggle/novelty_structure/` (struct_full_s0),
-  `novelty_fill_edit/`; round 1: `novelty_locate/`, `novelty_fill_ffc/`, `novelty_fill_plain/`; ablations
-  `novelty_structure_abl/`; sets `novelty_data/`, `novelty_data2/`.
+- **Final hybrid (round 2, v3c, "structure first")** = shipped pipeline + STRUCTURE NET (whole plan; inputs parsed
+  map + wall-continuation rays + ink map + stroke map; marks missing walls; groups of them = region flags) +
+  round-1 edit fill (v2) with walls drawn at wall probability >= 0.18 and the structure walls kept. Config
+  `configs/novelty/pipeline_structure_c.yaml` (the default of `src/novelty/pipeline.run(image)`; other versions via
+  env `NOVELTY_CONFIG`; v3b = the same with the first structure net, no stroke map). Checkpoints (git-ignored):
+  `outputs/kaggle/novelty_structure2/` (struct4_s0, final), `novelty_fill_edit/`; earlier: `novelty_structure/`
+  (v3b), `novelty_locate/`, `novelty_fill_ffc/`, `novelty_fill_plain/`; ablations `novelty_structure_abl/`; sets
+  `novelty_data/`, `novelty_data2/`.
 - **Held-out result** (151 drawings, `outputs/novelty/e2e_heldout_round2.md`), large omissions, nothing given:
-  recovered (2 px) 11% (shipped) -> 52% (round 1) -> **75%** [67, 81]; strict fixed 13% -> 36% -> **48%** [40, 56]
-  (a perfect answer scores 72% strict); medium + large recovered 14% -> 51% -> 73%, fixed 14% -> 37% -> 51%; small
-  42% -> 42% -> 42%. Region flag on 7% of intact drawings (round 1: 13%, shipped 1%).
+  recovered (2 px) 11% (shipped) -> 52% (round 1) -> 75% (v3b) -> **80%** [73, 86]; strict fixed 13% -> 36% -> 48%
+  -> **55%** [47, 63] (a perfect answer scores 72% strict); medium + large recovered 14% -> 51% -> 73% -> 80%, fixed
+  14% -> 37% -> 51% -> 56%; small 42% -> 42% -> 42% -> 41%. Region flag on 3% of intact drawings (v3b 7%, round 1
+  13%, shipped 1%). The user's 60-70% target is met by the 2 px rule, not by the strict rule (55%).
 - **Caveat to carry into any write-up**: the gain needs the ink map (without it 55% recovered on tuning). Checked:
   no traces of erased walls in it; it shows the BLANK AREA a large omission leaves (all strokes cleared by the
   generators), so the numbers are for "a part of the plan not drawn at all".
 - Protocol: everything chosen on the 212 TUNING val drawings, reported on the 151 HELD-OUT ones; each hybrid version
-  (v1, v2, v3b) frozen first and run once on held-out. Kaggle quota counts session hours (30 / week).
+  (v1, v2, v3b, v3c) frozen first and run once on held-out. Kaggle quota counts session hours (30 / week).
 - **Open (user's call)**: one test-split run of the final hybrid
   (`python -m src.novelty.eval_e2e --split test --test-approved-by-user`, prepared, never run); merging `novelty` into
   `final` / `main`; a hybrid tab in the Gradio app (not built). Not attempted: the room-graph idea (report 8.2).

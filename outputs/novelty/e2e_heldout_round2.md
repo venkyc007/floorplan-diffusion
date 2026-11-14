@@ -9,7 +9,8 @@
 | shipped auto | 151 | 61% | 1% | **42%** [34, 50] | **50%** [31, 69] | 0.63 | 0.77 | 63.0 -> 65.6 | 12% -> 13% | 9.2 (3.4) | 0.74 | 3.1 |
 | hybrid v1 auto | 151 | 64% | 8% | **42%** [35, 50] | **55%** [35, 73] | 0.68 | 0.77 | 63.0 -> 64.8 | 12% -> 13% | 9.1 (3.4) | 1.45 | 4.0 |
 | hybrid v2 auto | 151 | 64% | 8% | **42%** [34, 50] | **55%** [35, 73] | 0.64 | 0.80 | 63.0 -> 65.5 | 12% -> 12% | 9.2 (3.4) | 1.72 | 3.7 |
-| hybrid v3 auto | 151 | 62% | 5% | **42%** [34, 50] | **55%** [35, 73] | 0.69 | 0.75 | 63.0 -> 65.4 | 12% -> 11% | 9.3 (3.4) | 1.16 | 3.6 |
+| hybrid v3b auto | 151 | 62% | 5% | **42%** [34, 50] | **55%** [35, 73] | 0.69 | 0.75 | 63.0 -> 65.4 | 12% -> 11% | 9.3 (3.4) | 1.16 | 3.6 |
+| hybrid v3c auto | 151 | 62% | 7% | **41%** [34, 49] | **55%** [35, 73] | 0.70 | 0.77 | 63.0 -> 65.0 | 12% -> 12% | 9.4 (3.4) | 1.09 | 3.4 |
 
 hybrid v2 auto minus shipped auto (paired, 151 cases): fixed, points +0.0 [-2.0, +2.0]; tol. mIoU -0.0 [-0.4, +0.3]; valid, points -0.7 [-2.0, +0.0].
 
@@ -17,9 +18,15 @@ hybrid v1 auto minus shipped auto (paired, 151 cases): fixed, points +0.7 [-1.3,
 
 hybrid v2 auto minus hybrid v1 auto (paired, 151 cases): fixed, points -0.7 [-2.0, +0.0]; tol. mIoU +0.7 [+0.2, +1.3]; valid, points -0.7 [-2.0, +0.0].
 
-hybrid v3 auto minus shipped auto (paired, 151 cases): fixed, points +0.0 [-2.0, +2.0]; tol. mIoU -0.2 [-0.5, +0.1]; valid, points -1.3 [-3.3, +0.0].
+hybrid v3b auto minus shipped auto (paired, 151 cases): fixed, points +0.0 [-2.0, +2.0]; tol. mIoU -0.2 [-0.5, +0.1]; valid, points -1.3 [-3.3, +0.0].
 
-hybrid v3 auto minus hybrid v2 auto (paired, 151 cases): fixed, points +0.0 [-2.6, +2.6]; tol. mIoU -0.1 [-0.7, +0.4]; valid, points -0.7 [-2.0, +0.0].
+hybrid v3b auto minus hybrid v2 auto (paired, 151 cases): fixed, points +0.0 [-2.6, +2.6]; tol. mIoU -0.1 [-0.7, +0.4]; valid, points -0.7 [-2.0, +0.0].
+
+hybrid v3c auto minus shipped auto (paired, 151 cases): fixed, points -0.7 [-3.3, +1.3]; tol. mIoU -0.6 [-1.2, -0.0]; valid, points -0.7 [-2.0, +0.0].
+
+hybrid v3c auto minus hybrid v2 auto (paired, 151 cases): fixed, points -0.7 [-3.3, +2.0]; tol. mIoU -0.5 [-1.2, +0.1]; valid, points +0.0 [+0.0, +0.0].
+
+hybrid v3c auto minus hybrid v3b auto (paired, 151 cases): fixed, points -0.7 [-4.0, +2.0]; tol. mIoU -0.4 [-1.1, +0.2]; valid, points +0.7 [+0.0, +2.0].
 
 ## medium omissions
 
@@ -29,11 +36,13 @@ hybrid v3 auto minus hybrid v2 auto (paired, 151 cases): fixed, points +0.0 [-2.
 | locator + B4 | 151 | 87% | 70% | **38%** [30, 46] | **45%** [37, 53] | 0.50 | 0.74 | 41.1 -> 43.4 | 4% -> 15% | 13.8 (6.5) | 1.97 | 3.8 |
 | hybrid v1 auto | 151 | 87% | 70% | **39%** [32, 47] | **50%** [42, 58] | 0.52 | 0.77 | 41.1 -> 44.0 | 4% -> 15% | 14.9 (6.5) | 2.09 | 6.2 |
 | hybrid v2 auto | 151 | 87% | 70% | **38%** [30, 46] | **50%** [42, 58] | 0.52 | 0.83 | 41.1 -> 47.3 | 4% -> 9% | 15.3 (6.5) | 2.33 | 5.9 |
-| hybrid v3 auto | 151 | 91% | 79% | **54%** [46, 62] | **72%** [64, 78] | 0.75 | 0.79 | 41.1 -> 45.9 | 4% -> 11% | 14.4 (6.5) | 1.76 | 6.5 |
+| hybrid v3b auto | 151 | 91% | 79% | **54%** [46, 62] | **72%** [64, 78] | 0.75 | 0.79 | 41.1 -> 45.9 | 4% -> 11% | 14.4 (6.5) | 1.76 | 6.5 |
+| hybrid v3c auto | 151 | 95% | 87% | **57%** [49, 65] | **79%** [72, 85] | 0.84 | 0.80 | 41.1 -> 46.9 | 4% -> 13% | 14.5 (6.5) | 2.07 | 6.7 |
 | shipped manual | 151 | 100% | 0% | **47%** [39, 55] | **58%** [50, 65] | 0.63 | 0.77 | 41.1 -> 46.0 | 4% -> 9% | 15.3 (6.5) | 0.22 | 1.3 |
 | hybrid v1 manual | 151 | 100% | 0% | **50%** [42, 58] | **68%** [60, 75] | 0.69 | 0.80 | 41.1 -> 47.9 | 4% -> 6% | 16.6 (6.5) | 0.25 | 4.6 |
 | hybrid v2 manual | 151 | 100% | 0% | **48%** [40, 56] | **70%** [62, 76] | 0.69 | 0.85 | 41.1 -> 50.2 | 4% -> 7% | 16.6 (6.5) | 0.25 | 4.5 |
-| hybrid v3 manual | 151 | 100% | 0% | **69%** [61, 76] | **84%** [77, 89] | 0.89 | 0.79 | 41.1 -> 48.2 | 4% -> 3% | 18.8 (6.5) | 0.44 | 4.5 |
+| hybrid v3b manual | 151 | 100% | 0% | **69%** [61, 76] | **84%** [77, 89] | 0.89 | 0.79 | 41.1 -> 48.2 | 4% -> 3% | 18.8 (6.5) | 0.44 | 4.5 |
+| hybrid v3c manual | 151 | 100% | 0% | **69%** [61, 76] | **83%** [77, 89] | 0.91 | 0.79 | 41.1 -> 48.5 | 4% -> 4% | 18.5 (6.5) | 0.38 | 4.4 |
 
 hybrid v2 auto minus shipped auto (paired, 151 cases): fixed, points +23.2 [+15.9, +31.1]; recovered, points +33.1 [+25.2, +41.1]; tol. mIoU +4.8 [+3.4, +6.2]; valid, points +2.6 [-2.0, +7.3].
 
@@ -47,13 +56,23 @@ hybrid v2 manual minus shipped manual (paired, 151 cases): fixed, points +0.7 [-
 
 hybrid v2 manual minus hybrid v1 manual (paired, 151 cases): fixed, points -2.6 [-8.6, +3.3]; recovered, points +2.0 [-4.6, +7.9]; tol. mIoU +2.3 [+0.9, +3.7]; valid, points +0.7 [-2.6, +4.0].
 
-hybrid v3 auto minus shipped auto (paired, 151 cases): fixed, points +39.7 [+31.8, +47.7]; recovered, points +54.3 [+46.4, +62.3]; tol. mIoU +3.3 [+1.7, +5.1]; valid, points +4.0 [-1.3, +8.6].
+hybrid v3b auto minus shipped auto (paired, 151 cases): fixed, points +39.7 [+31.8, +47.7]; recovered, points +54.3 [+46.4, +62.3]; tol. mIoU +3.3 [+1.7, +5.1]; valid, points +4.0 [-1.3, +8.6].
 
-hybrid v3 auto minus hybrid v2 auto (paired, 151 cases): fixed, points +16.6 [+9.3, +24.5]; recovered, points +21.2 [+12.6, +29.8]; tol. mIoU -1.4 [-3.0, +0.1]; valid, points +1.3 [-4.0, +6.6].
+hybrid v3b auto minus hybrid v2 auto (paired, 151 cases): fixed, points +16.6 [+9.3, +24.5]; recovered, points +21.2 [+12.6, +29.8]; tol. mIoU -1.4 [-3.0, +0.1]; valid, points +1.3 [-4.0, +6.6].
 
-hybrid v3 manual minus shipped manual (paired, 151 cases): fixed, points +21.9 [+13.9, +29.1]; recovered, points +26.5 [+17.9, +34.4]; tol. mIoU +2.2 [+0.7, +3.7]; valid, points -6.0 [-10.6, -1.3].
+hybrid v3b manual minus shipped manual (paired, 151 cases): fixed, points +21.9 [+13.9, +29.1]; recovered, points +26.5 [+17.9, +34.4]; tol. mIoU +2.2 [+0.7, +3.7]; valid, points -6.0 [-10.6, -1.3].
 
-hybrid v3 manual minus hybrid v2 manual (paired, 151 cases): fixed, points +21.2 [+13.2, +28.5]; recovered, points +14.6 [+7.9, +21.2]; tol. mIoU -2.0 [-3.1, -1.0]; valid, points -3.3 [-7.3, +0.0].
+hybrid v3b manual minus hybrid v2 manual (paired, 151 cases): fixed, points +21.2 [+13.2, +28.5]; recovered, points +14.6 [+7.9, +21.2]; tol. mIoU -2.0 [-3.1, -1.0]; valid, points -3.3 [-7.3, +0.0].
+
+hybrid v3c auto minus shipped auto (paired, 151 cases): fixed, points +42.4 [+34.4, +50.3]; recovered, points +62.3 [+54.3, +70.2]; tol. mIoU +4.3 [+2.5, +6.1]; valid, points +6.0 [+1.3, +11.3].
+
+hybrid v3c auto minus hybrid v2 auto (paired, 151 cases): fixed, points +19.2 [+11.9, +26.5]; recovered, points +29.1 [+19.9, +38.4]; tol. mIoU -0.5 [-2.1, +1.2]; valid, points +3.3 [-2.6, +8.6].
+
+hybrid v3c auto minus hybrid v3b auto (paired, 151 cases): fixed, points +2.6 [-2.0, +7.3]; recovered, points +7.9 [+2.0, +14.6]; tol. mIoU +1.0 [-0.0, +2.0]; valid, points +2.0 [-2.0, +6.6].
+
+hybrid v3c manual minus shipped manual (paired, 151 cases): fixed, points +21.9 [+13.9, +29.8]; recovered, points +25.8 [+17.2, +34.4]; tol. mIoU +2.5 [+1.0, +4.1]; valid, points -5.3 [-9.9, -1.3].
+
+hybrid v3c manual minus hybrid v3b manual (paired, 151 cases): fixed, points +0.0 [-4.0, +4.0]; recovered, points -0.7 [-5.3, +4.0]; tol. mIoU +0.3 [-0.2, +0.9]; valid, points +0.7 [-1.3, +3.3].
 
 ## large omissions
 
@@ -63,11 +82,13 @@ hybrid v3 manual minus hybrid v2 manual (paired, 151 cases): fixed, points +21.2
 | locator + B4 | 151 | 95% | 80% | **30%** [24, 38] | **41%** [34, 49] | 0.46 | 0.63 | 37.4 -> 39.9 | 5% -> 17% | 20.1 (10.2) | 1.87 | 3.8 |
 | hybrid v1 auto | 151 | 95% | 80% | **32%** [25, 40] | **42%** [35, 50] | 0.46 | 0.67 | 37.4 -> 42.3 | 5% -> 15% | 21.4 (10.2) | 1.89 | 6.5 |
 | hybrid v2 auto | 151 | 95% | 80% | **36%** [29, 44] | **52%** [44, 59] | 0.51 | 0.80 | 37.4 -> 45.3 | 5% -> 13% | 22.5 (10.2) | 2.23 | 6.2 |
-| hybrid v3 auto | 151 | 96% | 91% | **48%** [40, 56] | **75%** [67, 81] | 0.79 | 0.74 | 37.4 -> 44.0 | 5% -> 13% | 22.0 (10.2) | 2.84 | 7.2 |
+| hybrid v3b auto | 151 | 96% | 91% | **48%** [40, 56] | **75%** [67, 81] | 0.79 | 0.74 | 37.4 -> 44.0 | 5% -> 13% | 22.0 (10.2) | 2.84 | 7.2 |
+| hybrid v3c auto | 151 | 99% | 94% | **55%** [47, 63] | **80%** [73, 86] | 0.83 | 0.75 | 37.4 -> 44.3 | 5% -> 10% | 22.3 (10.2) | 2.99 | 7.2 |
 | shipped manual | 151 | 100% | 0% | **35%** [28, 43] | **35%** [28, 43] | 0.45 | 0.56 | 37.4 -> 39.4 | 5% -> 13% | 21.1 (10.2) | 0.75 | 1.5 |
 | hybrid v1 manual | 151 | 100% | 0% | **36%** [29, 44] | **50%** [42, 58] | 0.54 | 0.69 | 37.4 -> 43.4 | 5% -> 10% | 22.9 (10.2) | 0.72 | 4.6 |
 | hybrid v2 manual | 151 | 100% | 0% | **42%** [34, 50] | **62%** [54, 70] | 0.60 | 0.82 | 37.4 -> 46.6 | 5% -> 11% | 23.5 (10.2) | 0.64 | 4.5 |
-| hybrid v3 manual | 151 | 100% | 0% | **56%** [48, 63] | **79%** [72, 85] | 0.86 | 0.73 | 37.4 -> 45.2 | 5% -> 5% | 28.1 (10.2) | 1.21 | 4.5 |
+| hybrid v3b manual | 151 | 100% | 0% | **56%** [48, 63] | **79%** [72, 85] | 0.86 | 0.73 | 37.4 -> 45.2 | 5% -> 5% | 28.1 (10.2) | 1.21 | 4.5 |
+| hybrid v3c manual | 151 | 100% | 0% | **60%** [52, 68] | **83%** [77, 89] | 0.89 | 0.74 | 37.4 -> 45.5 | 5% -> 5% | 28.1 (10.2) | 1.26 | 4.5 |
 
 hybrid v2 auto minus shipped auto (paired, 151 cases): fixed, points +23.2 [+15.9, +30.5]; recovered, points +41.1 [+32.5, +49.0]; tol. mIoU +6.7 [+4.9, +8.5]; valid, points +6.0 [+1.3, +10.6].
 
@@ -81,13 +102,23 @@ hybrid v2 manual minus shipped manual (paired, 151 cases): fixed, points +6.6 [-
 
 hybrid v2 manual minus hybrid v1 manual (paired, 151 cases): fixed, points +6.0 [-1.3, +12.6]; recovered, points +11.9 [+4.0, +19.9]; tol. mIoU +3.2 [+1.9, +4.5]; valid, points +0.7 [-2.6, +4.0].
 
-hybrid v3 auto minus shipped auto (paired, 151 cases): fixed, points +35.1 [+27.2, +43.0]; recovered, points +64.2 [+55.6, +72.2]; tol. mIoU +5.4 [+3.7, +7.0]; valid, points +6.0 [+1.3, +11.3].
+hybrid v3b auto minus shipped auto (paired, 151 cases): fixed, points +35.1 [+27.2, +43.0]; recovered, points +64.2 [+55.6, +72.2]; tol. mIoU +5.4 [+3.7, +7.0]; valid, points +6.0 [+1.3, +11.3].
 
-hybrid v3 auto minus hybrid v2 auto (paired, 151 cases): fixed, points +11.9 [+5.3, +19.2]; recovered, points +23.2 [+15.9, +31.1]; tol. mIoU -1.3 [-2.6, +0.1]; valid, points +0.0 [-5.3, +5.3].
+hybrid v3b auto minus hybrid v2 auto (paired, 151 cases): fixed, points +11.9 [+5.3, +19.2]; recovered, points +23.2 [+15.9, +31.1]; tol. mIoU -1.3 [-2.6, +0.1]; valid, points +0.0 [-5.3, +5.3].
 
-hybrid v3 manual minus shipped manual (paired, 151 cases): fixed, points +20.5 [+13.2, +28.5]; recovered, points +43.7 [+35.1, +51.7]; tol. mIoU +5.8 [+4.3, +7.2]; valid, points -7.9 [-12.6, -4.0].
+hybrid v3b manual minus shipped manual (paired, 151 cases): fixed, points +20.5 [+13.2, +28.5]; recovered, points +43.7 [+35.1, +51.7]; tol. mIoU +5.8 [+4.3, +7.2]; valid, points -7.9 [-12.6, -4.0].
 
-hybrid v3 manual minus hybrid v2 manual (paired, 151 cases): fixed, points +13.9 [+7.3, +20.5]; recovered, points +16.6 [+9.3, +23.8]; tol. mIoU -1.4 [-2.2, -0.5]; valid, points -5.3 [-9.3, -1.3].
+hybrid v3b manual minus hybrid v2 manual (paired, 151 cases): fixed, points +13.9 [+7.3, +20.5]; recovered, points +16.6 [+9.3, +23.8]; tol. mIoU -1.4 [-2.2, -0.5]; valid, points -5.3 [-9.3, -1.3].
+
+hybrid v3c auto minus shipped auto (paired, 151 cases): fixed, points +42.4 [+34.4, +50.3]; recovered, points +69.5 [+61.6, +76.8]; tol. mIoU +5.7 [+3.9, +7.4]; valid, points +3.3 [-2.0, +8.6].
+
+hybrid v3c auto minus hybrid v2 auto (paired, 151 cases): fixed, points +19.2 [+11.9, +26.5]; recovered, points +28.5 [+21.2, +36.4]; tol. mIoU -1.0 [-2.3, +0.4]; valid, points -2.6 [-8.6, +3.3].
+
+hybrid v3c auto minus hybrid v3b auto (paired, 151 cases): fixed, points +7.3 [+1.3, +13.2]; recovered, points +5.3 [+0.7, +10.6]; tol. mIoU +0.3 [-0.5, +1.2]; valid, points -2.6 [-6.6, +0.7].
+
+hybrid v3c manual minus shipped manual (paired, 151 cases): fixed, points +25.2 [+17.2, +33.8]; recovered, points +48.3 [+39.7, +55.6]; tol. mIoU +6.1 [+4.5, +7.6]; valid, points -7.9 [-12.6, -3.3].
+
+hybrid v3c manual minus hybrid v3b manual (paired, 151 cases): fixed, points +4.6 [+0.7, +8.6]; recovered, points +4.6 [+0.7, +8.6]; tol. mIoU +0.3 [+0.0, +0.6]; valid, points +0.0 [-2.6, +2.6].
 
 ## medium + large omissions
 
@@ -97,11 +128,13 @@ hybrid v3 manual minus hybrid v2 manual (paired, 151 cases): fixed, points +13.9
 | locator + B4 | 302 | 91% | 75% | **34%** [29, 40] | **43%** [38, 49] | 0.48 | 0.68 | 39.3 -> 41.6 | 5% -> 16% | 17.0 (8.4) | 1.92 | 3.8 |
 | hybrid v1 auto | 302 | 91% | 75% | **35%** [30, 41] | **46%** [41, 52] | 0.49 | 0.72 | 39.3 -> 43.2 | 5% -> 15% | 18.2 (8.4) | 1.99 | 6.4 |
 | hybrid v2 auto | 302 | 91% | 75% | **37%** [32, 42] | **51%** [45, 57] | 0.52 | 0.82 | 39.3 -> 46.3 | 5% -> 11% | 18.9 (8.4) | 2.28 | 6.0 |
-| hybrid v3 auto | 302 | 93% | 85% | **51%** [45, 57] | **73%** [68, 78] | 0.77 | 0.77 | 39.3 -> 45.0 | 5% -> 12% | 18.2 (8.4) | 2.30 | 6.8 |
+| hybrid v3b auto | 302 | 93% | 85% | **51%** [45, 57] | **73%** [68, 78] | 0.77 | 0.77 | 39.3 -> 45.0 | 5% -> 12% | 18.2 (8.4) | 2.30 | 6.8 |
+| hybrid v3c auto | 302 | 97% | 91% | **56%** [50, 61] | **80%** [75, 84] | 0.84 | 0.77 | 39.3 -> 45.6 | 5% -> 11% | 18.4 (8.4) | 2.53 | 6.9 |
 | shipped manual | 302 | 100% | 0% | **41%** [36, 47] | **46%** [41, 52] | 0.54 | 0.66 | 39.3 -> 42.7 | 5% -> 11% | 18.2 (8.4) | 0.49 | 1.4 |
 | hybrid v1 manual | 302 | 100% | 0% | **43%** [38, 49] | **59%** [53, 64] | 0.62 | 0.74 | 39.3 -> 45.6 | 5% -> 8% | 19.8 (8.4) | 0.49 | 4.6 |
 | hybrid v2 manual | 302 | 100% | 0% | **45%** [39, 50] | **66%** [60, 71] | 0.65 | 0.84 | 39.3 -> 48.4 | 5% -> 9% | 20.1 (8.4) | 0.45 | 4.5 |
-| hybrid v3 manual | 302 | 100% | 0% | **62%** [57, 68] | **81%** [77, 85] | 0.88 | 0.76 | 39.3 -> 46.7 | 5% -> 4% | 23.5 (8.4) | 0.83 | 4.5 |
+| hybrid v3b manual | 302 | 100% | 0% | **62%** [57, 68] | **81%** [77, 85] | 0.88 | 0.76 | 39.3 -> 46.7 | 5% -> 4% | 23.5 (8.4) | 0.83 | 4.5 |
+| hybrid v3c manual | 302 | 100% | 0% | **65%** [59, 70] | **83%** [79, 87] | 0.90 | 0.77 | 39.3 -> 47.0 | 5% -> 5% | 23.3 (8.4) | 0.82 | 4.5 |
 
 hybrid v2 auto minus shipped auto (paired, 302 cases): fixed, points +23.2 [+18.2, +28.5]; recovered, points +37.1 [+31.5, +42.7]; tol. mIoU +5.7 [+4.6, +6.9]; valid, points +4.3 [+1.0, +7.6].
 
@@ -115,27 +148,37 @@ hybrid v2 manual minus shipped manual (paired, 302 cases): fixed, points +3.6 [-
 
 hybrid v2 manual minus hybrid v1 manual (paired, 302 cases): fixed, points +1.7 [-3.0, +6.3]; recovered, points +7.0 [+2.0, +11.9]; tol. mIoU +2.7 [+1.8, +3.7]; valid, points +0.7 [-1.7, +3.0].
 
-hybrid v3 auto minus shipped auto (paired, 302 cases): fixed, points +37.4 [+32.1, +43.0]; recovered, points +59.3 [+53.6, +64.6]; tol. mIoU +4.4 [+3.1, +5.6]; valid, points +5.0 [+1.7, +8.3].
+hybrid v3b auto minus shipped auto (paired, 302 cases): fixed, points +37.4 [+32.1, +43.0]; recovered, points +59.3 [+53.6, +64.6]; tol. mIoU +4.4 [+3.1, +5.6]; valid, points +5.0 [+1.7, +8.3].
 
-hybrid v3 auto minus hybrid v2 auto (paired, 302 cases): fixed, points +14.2 [+9.3, +19.2]; recovered, points +22.2 [+16.6, +27.8]; tol. mIoU -1.4 [-2.4, -0.3]; valid, points +0.7 [-3.0, +4.3].
+hybrid v3b auto minus hybrid v2 auto (paired, 302 cases): fixed, points +14.2 [+9.3, +19.2]; recovered, points +22.2 [+16.6, +27.8]; tol. mIoU -1.4 [-2.4, -0.3]; valid, points +0.7 [-3.0, +4.3].
 
-hybrid v3 manual minus shipped manual (paired, 302 cases): fixed, points +21.2 [+15.6, +26.8]; recovered, points +35.1 [+29.1, +41.1]; tol. mIoU +4.0 [+2.9, +5.1]; valid, points -7.0 [-10.3, -4.0].
+hybrid v3b manual minus shipped manual (paired, 302 cases): fixed, points +21.2 [+15.6, +26.8]; recovered, points +35.1 [+29.1, +41.1]; tol. mIoU +4.0 [+2.9, +5.1]; valid, points -7.0 [-10.3, -4.0].
 
-hybrid v3 manual minus hybrid v2 manual (paired, 302 cases): fixed, points +17.5 [+12.6, +22.5]; recovered, points +15.6 [+10.6, +20.5]; tol. mIoU -1.7 [-2.4, -1.0]; valid, points -4.3 [-7.3, -1.7].
+hybrid v3b manual minus hybrid v2 manual (paired, 302 cases): fixed, points +17.5 [+12.6, +22.5]; recovered, points +15.6 [+10.6, +20.5]; tol. mIoU -1.7 [-2.4, -1.0]; valid, points -4.3 [-7.3, -1.7].
+
+hybrid v3c auto minus shipped auto (paired, 302 cases): fixed, points +42.4 [+37.1, +48.3]; recovered, points +65.9 [+60.3, +71.2]; tol. mIoU +5.0 [+3.8, +6.2]; valid, points +4.6 [+1.0, +7.9].
+
+hybrid v3c auto minus hybrid v2 auto (paired, 302 cases): fixed, points +19.2 [+14.2, +24.5]; recovered, points +28.8 [+22.5, +34.8]; tol. mIoU -0.7 [-1.8, +0.3]; valid, points +0.3 [-3.6, +4.3].
+
+hybrid v3c auto minus hybrid v3b auto (paired, 302 cases): fixed, points +5.0 [+1.3, +8.6]; recovered, points +6.6 [+2.6, +10.6]; tol. mIoU +0.6 [+0.0, +1.3]; valid, points -0.3 [-3.0, +2.6].
+
+hybrid v3c manual minus shipped manual (paired, 302 cases): fixed, points +23.5 [+17.5, +29.1]; recovered, points +37.1 [+31.1, +43.0]; tol. mIoU +4.3 [+3.2, +5.4]; valid, points -6.6 [-9.9, -3.3].
+
+hybrid v3c manual minus hybrid v3b manual (paired, 302 cases): fixed, points +2.3 [-0.3, +5.0]; recovered, points +2.0 [-1.0, +5.3]; tol. mIoU +0.3 [+0.0, +0.7]; valid, points +0.3 [-1.3, +2.0].
 
 ## By omission kind (fixed)
 
-| kind | n | shipped auto | locator + B4 | hybrid v1 auto | hybrid v2 auto | hybrid v3 auto | shipped manual | hybrid v1 manual | hybrid v2 manual | hybrid v3 manual |
-|---|---|---|---|---|---|---|---|---|---|---|
-| wall | 24 | 54% | - | 58% | 54% | 54% | - | - | - | - |
-| room (whole) | 115 | 11% | 27% | 30% | 35% | 52% | 26% | 33% | 38% | 68% |
-| region | 187 | 15% | 39% | 39% | 38% | 50% | 50% | 49% | 49% | 59% |
-| window | 26 | 65% | - | 65% | 65% | 65% | - | - | - | - |
-| door (a) | 18 | 28% | - | 28% | 28% | 28% | - | - | - | - |
-| room | 22 | 73% | - | 73% | 73% | 68% | - | - | - | - |
-| railing | 19 | 0% | - | 0% | 0% | 0% | - | - | - | - |
-| door (b) | 23 | 48% | - | 48% | 48% | 48% | - | - | - | - |
-| fixture | 19 | 5% | - | 5% | 5% | 11% | - | - | - | - |
+| kind | n | shipped auto | locator + B4 | hybrid v1 auto | hybrid v2 auto | hybrid v3b auto | hybrid v3c auto | shipped manual | hybrid v1 manual | hybrid v2 manual | hybrid v3b manual | hybrid v3c manual |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| wall | 24 | 54% | - | 58% | 54% | 54% | 50% | - | - | - | - | - |
+| room (whole) | 115 | 11% | 27% | 30% | 35% | 52% | 58% | 26% | 33% | 38% | 68% | 70% |
+| region | 187 | 15% | 39% | 39% | 38% | 50% | 55% | 50% | 49% | 49% | 59% | 61% |
+| window | 26 | 65% | - | 65% | 65% | 65% | 65% | - | - | - | - | - |
+| door (a) | 18 | 28% | - | 28% | 28% | 28% | 28% | - | - | - | - | - |
+| room | 22 | 73% | - | 73% | 73% | 68% | 73% | - | - | - | - | - |
+| railing | 19 | 0% | - | 0% | 0% | 0% | 0% | - | - | - | - | - |
+| door (b) | 23 | 48% | - | 48% | 48% | 48% | 48% | - | - | - | - | - |
+| fixture | 19 | 5% | - | 5% | 5% | 11% | 5% | - | - | - | - | - |
 
 ## Intact drawings (false alarms)
 
@@ -144,4 +187,5 @@ hybrid v3 manual minus hybrid v2 manual (paired, 302 cases): fixed, points +17.5
 | shipped auto | 151 | 0.64 | 0.01 | 1% | 0.68 |
 | hybrid v1 auto | 151 | 0.74 | 0.15 | 13% | 1.38 |
 | hybrid v2 auto | 151 | 0.74 | 0.15 | 13% | 1.69 |
-| hybrid v3 auto | 151 | 0.70 | 0.08 | 7% | 1.02 |
+| hybrid v3b auto | 151 | 0.70 | 0.08 | 7% | 1.02 |
+| hybrid v3c auto | 151 | 0.66 | 0.03 | 3% | 0.93 |

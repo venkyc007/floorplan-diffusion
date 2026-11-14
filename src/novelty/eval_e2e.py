@@ -296,8 +296,11 @@ def report(args):
                      ("hybrid v1 auto", "hybrid v2 auto"), ("shipped manual", "hybrid v2 manual"),
                      ("hybrid v1 manual", "hybrid v2 manual"),
                      # round 2 (v3 = structure first), same combined table
-                     ("shipped auto", "hybrid v3 auto"), ("hybrid v2 auto", "hybrid v3 auto"),
-                     ("shipped manual", "hybrid v3 manual"), ("hybrid v2 manual", "hybrid v3 manual")):
+                     ("shipped auto", "hybrid v3b auto"), ("hybrid v2 auto", "hybrid v3b auto"),
+                     ("shipped manual", "hybrid v3b manual"), ("hybrid v2 manual", "hybrid v3b manual"),
+                     ("shipped auto", "hybrid v3c auto"), ("hybrid v2 auto", "hybrid v3c auto"),
+                     ("hybrid v3b auto", "hybrid v3c auto"), ("shipped manual", "hybrid v3c manual"),
+                     ("hybrid v3b manual", "hybrid v3c manual")):
             A = {key(r): r for r in sub if r["arm"] == a}
             C = {key(r): r for r in sub if r["arm"] == c}
             ks = sorted(set(A) & set(C))

@@ -21,8 +21,9 @@ Round 2 (a config with a `structure` section): STRUCTURE FIRST.
     the diffusion model then adds the details around them (doors, room types, fixtures), and with fill.keep_walls
     any structure wall the diffusion finish dropped is put back.
 Models: src/novelty/models.py, structure.py, locate.py. Settings: the file named by the environment variable
-NOVELTY_CONFIG, default configs/novelty/pipeline_structure_b.yaml (v3b, the round-2 final: one structure net is
-the only source of region flags; the locator is loaded but switched off by locate.use: false).
+NOVELTY_CONFIG, default configs/novelty/pipeline_structure_c.yaml (v3c, the round-2 final: one structure net,
+trained with the stroke map, is the only source of region flags; the locator is loaded but switched off by
+locate.use: false). pipeline_structure_b.yaml (v3b) is the same with the first structure net (no stroke map).
 """
 
 import os
@@ -44,7 +45,7 @@ from src.stage2.data.classes16 import C16
 from src.stage2.pipeline import run as base
 from src.utils import PROJECT_ROOT
 
-CFG_FILE = Path(os.environ.get("NOVELTY_CONFIG", PROJECT_ROOT / "configs" / "novelty" / "pipeline_structure_b.yaml"))
+CFG_FILE = Path(os.environ.get("NOVELTY_CONFIG", PROJECT_ROOT / "configs" / "novelty" / "pipeline_structure_c.yaml"))
 BG = C16.index["background"]
 WALL = C16.index["wall"]
 OPENINGS = [C16.index["door"], C16.index["window"]]
