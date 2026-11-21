@@ -78,7 +78,7 @@ configs `configs/novelty/`; kernels `kaggle/kernels/novelty/`; results `outputs/
   `outputs/novelty/soundness_{tuning,heldout}.md`, figures `outputs/novelty/assessment/`, write-up `docs/novelty.md`
   section 10, point-by-point `docs/review_response.md` (all coding points DONE). "The eight constraints" of the
   review = the parser v2 fine-tune losses (decisions.md, round 4); the reason given is my reading of the code: the
-  USER should confirm it. Test split still unused (user's call).
+  user confirmed it (2026-11-21; plus: rules that added nothing were dropped). Test split still unused (user's call).
 
 ## Standing rules (always apply)
 

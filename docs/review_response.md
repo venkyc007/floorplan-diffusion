@@ -14,7 +14,7 @@ Status key: DONE = evidence exists in the repo. All coding points are DONE (2026
 | 4 | Define what counts as a completed omission | found + right class back at the spot with IoU >= 0.3 (strict); for walls also "recovered within 2 px"; new: "sound" | `outputs/novelty/completion_by_size.md` top section | DONE |
 | 5 | For large omissions show corrupted plan, reconstruction and violation map together | Figure per case: corrupted drawing, reconstruction (drawn and as a map), violation map of the reconstruction, of the corrupted plan and of the true layout, with the three checks PASS / FAIL; first K held-out cases, no picking | `outputs/novelty/assessment/large_heldout_*.png` (`src/novelty/assessment_figures.py large`; v4c, first 6 held-out cases, 5 of 6 sound) | DONE |
 | 6 | Show whether a plausible alternative preserves wall connectivity, opening placement and room closure (one ground truth captures only part of the task) | The three checks are implemented exactly as named and judge a plan WITHOUT the true layout; reported for the fill, the corrupted plan, the oracle and the true layout; "sound but not matching the truth" counted; several diffusion samples of one omission shown, each with its checks | `src/novelty/soundness.py`, `outputs/novelty/soundness_*.md`, `outputs/novelty/assessment/alternatives_*.png`. Held-out, v4c, large: 64% sound and matching the truth, 17% sound with a different layout, 19% not sound; walls connect 87%, openings in walls 95%, rooms closed 94% | DONE |
-| 7 | Explain why the final eight constraints were chosen; one floor plan to illustrate their effect | The eight = the parser v2 fine-tune losses (C3, C6, C9, C10, C11, C12, C15, C16); why (below); the fill uses 14, the verifier 17 + R1 + R3 | this file, section "The eight constraints"; `docs/decisions.md` (gates G2, G3; round 4) | DONE (text) - user to confirm the reason |
+| 7 | Explain why the final eight constraints were chosen; one floor plan to illustrate their effect | The eight = the parser v2 fine-tune losses (C3, C6, C9, C10, C11, C12, C15, C16); why (below); the fill uses 14, the verifier 17 + R1 + R3 | this file, section "The eight constraints"; `docs/decisions.md` (gates G2, G3; round 4); `outputs/stage2/constraint_weights.md` | DONE (reason confirmed by the user, 2026-11-21) |
 | 8 | Report the experimental settings / modest parsing performance | Parser v2B on 159 held-out drawings: mIoU 70.1, wall IoU 77.6 | `outputs/stage2/parser_v2.md`, `docs/results.md` section 3 | DONE (existing) |
 | 9 | Brisker walkthrough of the early pipeline; more time for results | presentation | - | user (non-coding) |
 
@@ -42,3 +42,15 @@ in four places, with different subsets:
 
 Gate G2 (1,000 real windows) decided each rule's mode: where more than 10% of real windows already break a rule
 (e.g. C4 thickness 43%, C7 width 41%, C12 windows 24%), the rule only penalises being WORSE than the real plan.
+
+Confirmed by the user (2026-11-21): the reading above is right, and a second reason applies across the project -
+rules were dropped where they added nothing because the learned model already obeyed them. The records show this:
+in the gradient-size calibration (`outputs/stage2/constraint_weights.md`, 50 batches of real windows) four rules
+gave almost no training signal - C10 (median gradient 8.3e-6), C13 (1.0e-4), C5 (2.7e-4), C2 (5.5e-4), against
+1.7e-3 for the reconstruction loss - i.e. the model rarely broke them. Forcing them in (their weights hit the cap)
+cost accuracy: all 18 rules at full strength -6.1 points (gate G3), the 14 without them -1.8 points (within seed
+spread). C2, C5 and C13 are also outside the parser's eight; C10 is in the parser's set (it is measured at the
+parser's own scale there). Related evidence: in the Stage 2 test, switching the constraint losses off in the fill
+changed nothing measurable (`outputs/stage2/final_test.md`, "Ablation: constrained vs control diffusion"), and in round 4 the
+constraint-trained diffusion lowered the rule count (43 -> 25 per case) but not the structural problems
+(`docs/novelty.md` 10.3).
