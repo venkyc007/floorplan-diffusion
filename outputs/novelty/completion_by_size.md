@@ -92,14 +92,40 @@ Same definitions; one small, one medium and one large omission per drawing (sepa
 | large | 151 | 99% [95, 100] | 44% [37, 52] | 74% [66, 80] | 81% [74, 86] |
 
 
-## 4. Round 4 final v4c on the TEST drawings (one run, approved by the user 2026-11-21)
+## 4. TEST drawings (each version run once; v4c kernel v17, the others kernel v18, 2026-11-21)
 
-Same definitions and omission generator; every typed test drawing (369-371). Only v4c was run.
+Same definitions and omission generator; every typed test drawing (369-371), the same cases for every version. v4c is the final hybrid (frozen before its run); v3c, v4b and the shipped pipeline were run afterwards for the comparison only (user request), nothing was chosen on them.
+
+**round 4 final v4c (structurally sound fills)**:
 
 | omissions | n | found | completed (fixed, strict) | recovered (2 px) | sound (3 structural checks) |
 |---|---|---|---|---|---|
 | small | 371 | 65% [61, 70] | 40% [35, 45] | 45% [32, 59] (n 51) | 51% [38, 64] (n 51) |
 | medium | 369 | 88% [85, 91] | 40% [35, 45] | 63% [58, 68] | 85% [81, 88] |
 | large | 369 | 98% [96, 99] | 47% [42, 53] | 66% [61, 71] | 78% [74, 82] |
+
+**v4b (most sound on tuning)**:
+
+| omissions | n | found | completed (fixed, strict) | recovered (2 px) | sound (3 structural checks) |
+|---|---|---|---|---|---|
+| small | 371 | 65% [61, 70] | 40% [35, 45] | 47% [34, 60] (n 51) | 53% [40, 66] (n 51) |
+| medium | 369 | 88% [85, 91] | 40% [35, 45] | 63% [58, 68] | 87% [83, 90] |
+| large | 369 | 98% [96, 99] | 49% [43, 54] | 68% [63, 72] | 85% [81, 88] |
+
+**v3c (round 2 final, accuracy first)**:
+
+| omissions | n | found | completed (fixed, strict) | recovered (2 px) | sound (3 structural checks) |
+|---|---|---|---|---|---|
+| small | 371 | 65% [61, 70] | 41% [36, 46] | 51% [38, 64] (n 51) | 45% [32, 59] (n 51) |
+| medium | 369 | 88% [85, 91] | 54% [49, 59] | 71% [66, 75] | 37% [32, 42] |
+| large | 369 | 98% [96, 99] | 56% [50, 61] | 78% [74, 82] | 19% [15, 23] |
+
+**shipped pipeline**:
+
+| omissions | n | found | completed (fixed, strict) | recovered (2 px) | sound (3 structural checks) |
+|---|---|---|---|---|---|
+| small | 371 | 65% [60, 70] | 40% [35, 45] | 51% [38, 64] (n 51) | 47% [34, 60] (n 51) |
+| medium | 369 | 70% [65, 74] | 11% [8, 14] | 9% [7, 13] | 45% [40, 50] |
+| large | 369 | 82% [78, 86] | 10% [8, 14] | 8% [5, 11] | 36% [31, 41] |
 
 Reading: completion falls with size in the shipped system (single small components about 2 in 5, large erased regions almost never). The novelty work targets the large end; small omissions are unchanged by it. Round 4 trades some accuracy for structurally sound fills (`outputs/novelty/soundness_heldout.md`).

@@ -624,8 +624,10 @@ Honest reading:
 
 ### 10.6 Test result (the one run on the official test drawings; user-approved 2026-11-21, kernel v17)
 
-v4c as frozen, every typed test drawing (369 per size; 371 intact), arm "hybrid auto" only; v3c, v4b and the
-shipped pipeline were not run on test. `outputs/novelty/soundness_test.md`, rows `outputs/novelty/e2e_test_round4.csv`.
+v4c as frozen, every typed test drawing (369 per size; 371 intact), arm "hybrid auto" only. v3c, v4b and the
+shipped pipeline were run afterwards on the same cases for comparison (kernel v18, user request; below).
+`outputs/novelty/soundness_test.md`, rows `outputs/novelty/e2e_test_round4.csv` (v4c) and
+`e2e_test_all_arms.csv` (all four).
 
 | v4c, test | n | found | recovered (2 px) | fixed (strict) | sound | walls connect | openings in walls | rooms closed |
 |---|---|---|---|---|---|---|---|---|
@@ -639,6 +641,50 @@ shipped pipeline were not run on test. `outputs/novelty/soundness_test.md`, rows
 - Against held-out (section 10.5): soundness holds (large 81% -> 78%, medium 83% -> 85%); recovered is about 8
   points lower (large 74% -> 66%, medium 71% -> 63%); strict fixed large 44% -> 47%, medium 51% -> 40%; small
   unchanged (40%). The test drawings are a separate set of CubiCasa plans; the drop in recovered is the honest
-  generalisation gap of the whole chain (structure net, fill), not of the repair.
+  generalisation gap of the whole chain (structure net, fill), not of the repair. *Corrected by the comparison
+  run below: v3c (structure net + fill, no clean-up / repair) keeps its held-out accuracy on test, so most of the
+  gap comes from the round-4 rules.*
 - For scale: the shipped Stage 2 pipeline on its own size-balanced test (2026-10-22, a different case set of 40
   large omissions) fixed 0% of large omissions.
+
+**Comparison run on test (kernel v18, 2026-11-21, user request after the v4c result).** v3c, v4b and the shipped
+Stage 2 pipeline, each as frozen, run once on exactly the same test cases (same generator and seeds; checked: same
+drawings and the same erased sizes in every arm). Nothing was chosen or changed on these results; v4c stays the final
+hybrid. Brackets of the paired rows: bootstrap 95% intervals.
+
+| large omissions, test (369) | found | recovered (2 px) | fixed (strict) | sound | walls connect | openings in walls | rooms closed |
+|---|---|---|---|---|---|---|---|
+| shipped Stage 2 | 82% | 8% | 10% | 36% | 52% | 75% | 86% |
+| v3c (accuracy first) | 98% | 78% [74, 82] | 56% [50, 61] | 19% [15, 23] | 59% | 93% | 35% |
+| v4b (most sound on tuning) | 98% | 68% [63, 72] | 49% [43, 54] | 85% [81, 88] | 95% | 96% | 92% |
+| **v4c (final)** | 98% | 66% [61, 71] | 47% [42, 53] | 78% [74, 82] | 86% | 96% | 92% |
+| *true layout* | - | - | - | 68% | 77% | 93% | 96% |
+
+| medium omissions, test (369) | found | recovered | fixed | sound |
+|---|---|---|---|---|
+| shipped Stage 2 | 70% | 9% | 11% | 45% |
+| v3c | 88% | 71% | 54% | 37% |
+| v4b | 88% | 63% | 40% | 87% |
+| v4c | 88% | 63% | 40% | 85% |
+
+Small omissions: fixed 40-41% for all four. Intact drawings with a region flag: shipped 2.2%, the three hybrids 6.7%.
+
+- **Every hybrid against the shipped pipeline** (paired, large, v4c minus shipped): recovered +58.5 [+53.1, +63.7],
+  fixed +37.1 [+32.0, +42.3], sound +42.8 [+36.9, +48.5], rule violations -5.1 [-6.3, -3.9]. The shipped
+  pipeline's 36% "sound" is mostly the parser's map left unfilled (parser's map alone: 31%).
+- **v4c against v3c** (paired, large): sound +59.3 [+53.9, +64.5], recovered -11.9 [-16.0, -8.4], fixed -8.1
+  [-11.7, -4.3]. The same trade as on held-out (+57 / -7 / -11), a little more costly in accuracy on test.
+- **Held-out -> test, by version** (large, recovered / fixed / sound): v3c 80 / 55 / 24 -> 78 / 56 / 19; v4b
+  71 / 47 / 83 -> 68 / 49 / 85; v4c 74 / 44 / 81 -> 66 / 47 / 78. The structure net + fill (v3c) generalise; v4c
+  loses 8 points of recovered, v4b 3. So the gap seen in the v4c-only run is mostly in v4c's round-4 rules (clean-up
+  without the wall-end rule + repair + selection), not in the trained models.
+- **v4b against v4c** (paired, large, v4c minus v4b): sound -6.2 [-9.2, -3.5], recovered -1.6 [-4.9, +1.4], fixed
+  -1.1 [-3.3, +1.1]; medium: sound -1.9 [-4.1, +0.0], recovered +0.3. On test v4b is more sound at no measurable
+  cost in accuracy (on held-out: sound 83% vs 81%, recovered 71% vs 74%). v4c was chosen on the tuning drawings by
+  the rule written before the results (v4b failed its recovered guard there, section 10.4); that choice is kept,
+  because changing the final version after seeing test results would make the test number a selected one. On test
+  v4b is again about 10 points below v3c in recovered (68% vs 78%), at the guard's limit, so the guard measured a
+  real cost; what did not carry over is v4c's advantage in recovered over v4b (tuning +7, held-out +3, test -2).
+  For the write-up: v4c paid about 6 points of soundness on test for an accuracy gain that appeared on tuning and
+  held-out but not on test.
+

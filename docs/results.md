@@ -138,6 +138,15 @@ drawings per size, end to end: large omissions sound 78% [74, 82] (true layout 6
 holds from held-out to test; recovered is about 8 points lower. (Shipped Stage 2 on its own size-balanced test: large
 fixed 0% of 40.)
 
+**Test comparison (kernel v18; v3c, v4b and the shipped pipeline, each run once on the same test cases; nothing chosen
+on it; `outputs/novelty/soundness_test.md`, rows `e2e_test_all_arms.csv`, figure
+`outputs/novelty/poster/results_test.png`).** Large omissions, recovered / fixed / sound: shipped 8% / 10% / 36%;
+v3c 78% / 56% / 19%; v4b 68% / 49% / 85%; **v4c 66% / 47% / 78%** (true layout sound 68%). Medium: shipped
+9 / 11 / 45, v3c 71 / 54 / 37, v4b 63 / 40 / 87, v4c 63 / 40 / 85. Small fixed 40-41% for all; intact flags shipped
+2.2%, hybrids 6.7%. v3c keeps its held-out accuracy on test (80 / 55 -> 78 / 56), so the v4c gap is in its round-4
+rules; v4b is more sound than v4c on test (paired -6.2 points for v4c [-9.2, -3.5]) at the same accuracy. v4c stays
+the final hybrid (chosen on tuning before any test run; `docs/novelty.md` 10.6).
+
 ## 1. The final system in one page
 
 ### Stage 1 — mask-given inpainting (ResPlan, 128 × 128, 6 classes)

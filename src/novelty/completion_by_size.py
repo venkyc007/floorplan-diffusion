@@ -139,15 +139,23 @@ def main():
                    [("found", "found"), ("completed (fixed, strict)", "fixed"), ("recovered (2 px)", "recovered"),
                     ("sound (3 structural checks)", "s_sound")])
         L.append("")
-    T4 = NOV / "e2e_test_round4.csv"                      # the one test-split run of v4c (user-approved), kernel v17
+    T4 = NOV / "e2e_test_all_arms.csv"                    # test split: v4c (kernel v17), v3c / v4b / shipped (v18)
     if T4.exists():
-        A = list(csv.DictReader(open(T4, encoding="utf-8")))
-        L += ["", "## 4. Round 4 final v4c on the TEST drawings (one run, approved by the user 2026-11-21)", "",
-              "Same definitions and omission generator; every typed test drawing (369-371). Only v4c was run.", ""]
-        L += table([(t, [r for r in A if r["target"] == t]) for t in ("small", "medium", "large")],
-                   [("found", "found"), ("completed (fixed, strict)", "fixed"), ("recovered (2 px)", "recovered"),
-                    ("sound (3 structural checks)", "s_sound")])
-        L.append("")
+        R = list(csv.DictReader(open(T4, encoding="utf-8")))
+        L += ["", "## 4. TEST drawings (each version run once; v4c kernel v17, the others kernel v18, 2026-11-21)", "",
+              "Same definitions and omission generator; every typed test drawing (369-371), the same cases for every "
+              "version. v4c is the final hybrid (frozen before its run); v3c, v4b and the shipped pipeline were run "
+              "afterwards for the comparison only (user request), nothing was chosen on them.", ""]
+        for name, arm in (("round 4 final v4c (structurally sound fills)", "hybrid v4c auto"),
+                          ("v4b (most sound on tuning)", "hybrid v4b auto"),
+                          ("v3c (round 2 final, accuracy first)", "hybrid v3c auto"),
+                          ("shipped pipeline", "shipped auto")):
+            A = [r for r in R if r["arm"] == arm]
+            L += [f"**{name}**:", ""]
+            L += table([(t, [r for r in A if r["target"] == t]) for t in ("small", "medium", "large")],
+                       [("found", "found"), ("completed (fixed, strict)", "fixed"), ("recovered (2 px)", "recovered"),
+                        ("sound (3 structural checks)", "s_sound")])
+            L.append("")
     L += ["Reading: completion falls with size in the shipped system (single small components about 2 in 5, large "
           "erased regions almost never). The novelty work targets the large end; small omissions are unchanged by it. "
           "Round 4 trades some accuracy for structurally sound fills (`outputs/novelty/soundness_heldout.md`)."]

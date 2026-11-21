@@ -1591,6 +1591,17 @@ connectivity, opening placement and room closure.
   (the frozen Stage 2 pipeline) in the v3c job; each as frozen, run once. Purpose: test-split comparison rows for
   the report. v4c stays the final hybrid whatever these show (chosen on tuning, before any test run); no setting is
   changed after this run and the test split is not used again.
+- **Test comparison result (kernel v18, run once, reported as it came; `outputs/novelty/soundness_test.md`, rows
+  `e2e_test_all_arms.csv` = v4c from v17 + the three arms of v18, renamed to "hybrid v3c/v4b/v4c auto" and "shipped
+  auto"; checked: same test drawings and same erased sizes in every arm)**: large omissions (369), recovered / fixed /
+  sound: shipped 8 / 10 / 36%, v3c 78 / 56 / 19%, v4b 68 / 49 / 85%, v4c 66 / 47 / 78%. v3c holds its held-out
+  accuracy (80 / 55), so v4c's held-out -> test drop in recovered (74 -> 66) lies in its round-4 rules, not the
+  models (the v17 reading "gap of the structure net and fill" is corrected in novelty.md 10.6). v4b beats v4c on
+  soundness on test (paired -6.2 [-9.2, -3.5] for v4c) with accuracy within noise. **Decision: v4c stays the final
+  hybrid and the default** (chosen on tuning by a rule written before any result; switching after seeing test would
+  make the test number a selected one). Reported openly: on test v4b is again about 10 points below v3c in recovered
+  (68 vs 78, at the guard's limit), but v4c's recovered advantage over v4b (tuning, held-out) did not carry over, so
+  on test v4c gives up some soundness for no accuracy. The test split is not used again.
 - **App: a novelty tab (user, 2026-11-21: "add models v3c and v4b to the interface, along with images in the
   gallery")**: `src/novelty/app_demo.py`, `configs/novelty/app.yaml`, tab in `demo_app/app.py`. Versions offered:
   v4c (final), v4b (asked for) and v3c (the most accurate on held-out: recovered 80%, fixed 55%). All three use the

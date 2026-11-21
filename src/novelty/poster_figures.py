@@ -116,12 +116,11 @@ def arms_for(split):
                 "v3c (accuracy first)": [r for r in r4 if r["arm"] == "hybrid v3c auto"],
                 "v4b (most sound)": [r for r in r4 if r["arm"] == "hybrid v4b auto"],
                 "v4c (final)": [r for r in r4 if r["arm"] == "hybrid v4c auto"]}
-    v18 = rows(PROJECT_ROOT / "outputs" / "kaggle" / "novelty_eval18" / "novelty" / "e2e_test_v3c_[01].csv")
-    v18b = rows(PROJECT_ROOT / "outputs" / "kaggle" / "novelty_eval18" / "novelty" / "e2e_test_v4b_[01].csv")
-    out = {"shipped Stage 2": [r for r in v18 if r["arm"] == "shipped auto"],
-           "v3c (accuracy first)": [r for r in v18 if r["arm"] == "hybrid auto"],
-           "v4b (most sound)": [r for r in v18b if r["arm"] == "hybrid auto"],
-           "v4c (final)": rows(NOV / "e2e_test_round4.csv")}
+    t = rows(NOV / "e2e_test_all_arms.csv")             # v4c from kernel v17, the other three from kernel v18
+    out = {"shipped Stage 2": [r for r in t if r["arm"] == "shipped auto"],
+           "v3c (accuracy first)": [r for r in t if r["arm"] == "hybrid v3c auto"],
+           "v4b (most sound)": [r for r in t if r["arm"] == "hybrid v4b auto"],
+           "v4c (final)": [r for r in t if r["arm"] == "hybrid v4c auto"]}
     return {k: v for k, v in out.items() if v}
 
 

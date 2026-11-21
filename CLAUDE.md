@@ -82,6 +82,11 @@ configs `configs/novelty/`; kernels `kaggle/kernels/novelty/`; results `outputs/
   **Test split: ONE run of v4c done (user-approved, 2026-11-21, kernel v17; never run again)**: large omissions sound
   78% [74, 82] (true layout 68%), recovered 66% [61, 71], fixed 47% [42, 53]; medium sound 85%, recovered 63%;
   small fixed 40%; intact flags 6.7%. `outputs/novelty/soundness_test.md`, `docs/novelty.md` 10.6.
+  **Test comparison (user request, kernel v18, once each, same cases)**: large recovered / fixed / sound: shipped
+  8 / 10 / 36%, v3c 78 / 56 / 19%, v4b 68 / 49 / 85%, v4c 66 / 47 / 78%. v4b more sound than v4c on test at the same
+  accuracy; v4c stays final (chosen on tuning). Rows `outputs/novelty/e2e_test_all_arms.csv`; poster figures
+  `outputs/novelty/poster/`, guide `docs/poster_guide.md`. App: novelty tab (v4c / v4b / v3c, held-out gallery).
+  The test split is now closed for good.
 
 ## Standing rules (always apply)
 

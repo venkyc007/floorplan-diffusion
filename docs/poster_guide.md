@@ -33,7 +33,7 @@ leave the sentences to the student.
 | 5 | Methods (full combined architecture) | **`outputs/novelty/poster/hybrid_pipeline.png`**; Stage 2 parts `docs/report_figures/fig06_stage2_pipeline.png`; details `docs/novelty.md` 2 (round 1), 8.2 (structure net, ink / stroke maps, rays), 10.2 (clean-up, repair, selection by soundness) |
 | 6 | Dataset table | `outputs/stage2/data_stats.md` (CubiCasa5K: 5,000 plans, official split 4,200 / 400 / 400; 16 classes, `configs/stage2/classes16.yaml`); novelty training set `docs/novelty.md` 8.2 ("Bigger set": 3,944 train drawings, 35,339 erased + 3,944 intact versions); evaluation: 212 tuning / 151 held-out val drawings, 369 test drawings per size; omission sizes small < 2.7%, medium 2.7–7.7%, large >= 7.7% of the building |
 | 7 | Novelty assessment (tasks attempted) | `docs/novelty.md` sections 1–10; review points and what was done: `docs/review_response.md`; constraint ablation (how each use of the rules changes the result): `docs/novelty.md` 10.3 + `outputs/novelty/assessment/constraints_tuning_*.png` |
-| 8 | Results | quantitative: **`outputs/novelty/poster/results_heldout.png`**, **`results_test.png`** (after kernel v18), `outputs/novelty/soundness_test.md`, `soundness_heldout.md`, `completion_by_size.md`; qualitative: `outputs/novelty/assessment/large_heldout_*.png` (corrupted / reconstruction / problem maps), `alternatives_tuning_*.png` (sound but different layouts), app screenshots of the novelty tab; Stage 1 / Stage 2 (intensive assessment): `docs/results.md`, `docs/report_figures/` |
+| 8 | Results | quantitative: **`outputs/novelty/poster/results_heldout.png`**, **`results_test.png`** (all four versions on test), `outputs/novelty/soundness_test.md`, `soundness_heldout.md`, `completion_by_size.md`; qualitative: `outputs/novelty/assessment/large_heldout_*.png` (corrupted / reconstruction / problem maps), `alternatives_tuning_*.png` (sound but different layouts), app screenshots of the novelty tab; Stage 1 / Stage 2 (intensive assessment): `docs/results.md`, `docs/report_figures/` |
 | 9 | Conclusions + future work | `docs/novelty.md` 8.6, 10.5–10.6 (honest readings); not attempted: room-graph idea (`docs/novelty.md` 6 / report 8.2); generalisation gap held-out -> test |
 | 10 | References | `docs/report_guide.md` "References" (already in the course's format; add LaMa for the Fourier blocks if they are mentioned: Roman Suvorov et al. Resolution-robust Large Mask Inpainting with Fourier Convolutions, WACV, 2022. https://arxiv.org/abs/2109.07161) |
 | 11–13 | Acknowledgements, GitHub QR, demo QR | student |
@@ -51,9 +51,21 @@ Large omissions (>= 7.7% of the building), end to end, nothing given. Final hybr
 | true layout's own soundness | 70% | 68% |
 | intact drawings with a false region flag | 3.3% | 6.7% [5, 10] |
 
-Baseline (shipped Stage 2) on held-out large: recovered 11%, fixed 13%; on its own size-balanced test: fixed 0 of
-40. v3c / v4b / shipped on the test split: kernel v18 (added to `outputs/novelty/soundness_test.md` and
-`results_test.png` when it finishes). Metric definitions: `outputs/novelty/completion_by_size.md` (top).
+All versions on TEST, large omissions (369, same cases, each run once; `outputs/novelty/soundness_test.md`):
+
+| TEST, large | found | recovered (2 px) | fixed (strict) | sound |
+|---|---|---|---|---|
+| shipped Stage 2 (baseline) | 82% | 8% | 10% | 36% |
+| v3c (accuracy first) | 98% | 78% | 56% | 19% |
+| v4b (most sound) | 98% | 68% | 49% | 85% |
+| **v4c (final)** | 98% | 66% | 47% | 78% |
+| true layout | - | - | - | 68% |
+
+Medium (369): shipped 9 / 11 / 45, v3c 71 / 54 / 37, v4b 63 / 40 / 87, v4c 63 / 40 / 85 (recovered / fixed /
+sound). Small: fixed 40-41% for all. Intact flags: shipped 2.2%, hybrids 6.7%. Points to state honestly (the
+student's words): v4b came out more sound than v4c on test at the same accuracy, but v4c was chosen on tuning before
+any test run and is kept; v3c keeps its held-out accuracy on test, v4c loses 8 points of recovered (the round-4
+rules, not the models). `docs/novelty.md` 10.6. Metric definitions: `outputs/novelty/completion_by_size.md` (top).
 
 ## 2-page report ("approaches tried and experiments for novelty")
 
