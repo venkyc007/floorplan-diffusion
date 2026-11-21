@@ -458,3 +458,166 @@ Intact drawings (151):
   rate stays low (10-13%), as for the true layout pasted in (2%). Small omissions: 41% fixed against 42%
   (-0.7 points [-3.3, +1.3]), tolerant mIoU -0.6 [-1.2, 0.0].
 - The Stage 2 test split has still not been used.
+
+## 9. Round 3: validity of what is added (2026-11-14, tuning drawings only)
+
+Why: the step-by-step pictures of the final hybrid (v3c) show additions that break basic drawing rules: walls of
+changing thickness, ragged or curved pieces, loose blobs, small patches of another room type. The numbers had said
+so already: on held-out large omissions only 10% of v3c's fills pass the project's rule check (section 8.4 table,
+column "valid"). Round 2 was chosen by "recovered within 2 px" alone, and two of its settings buy that number with
+wide wall bands and unfiltered shapes (`docs/decisions.md`, "Novelty round 3").
+
+What was added: a rule-based clean-up of every region fill, `src/novelty/regularise.py` (no model, no training),
+switched on by `configs/novelty/pipeline_valid.yaml` ("v3d" = v3c + clean-up). It keeps where the fill puts walls
+and rooms and redraws them by rule; the rules are listed at the top of the file, one toy test per rule in
+`tests/novelty/test_regularise.py`.
+
+Result on the 208 tuning drawings, end to end, nothing given (`outputs/novelty/validity_tuning.md`; this run is the
+clean-up without its last rule, the wall-end rule):
+
+| large omissions | recovered (2 px) | fixed (strict) | rule violations | valid | thickness spread | loose wall groups | specks | unrelated additions |
+|---|---|---|---|---|---|---|---|---|
+| v3c | 74% | 53% | 24.3 | 12% | 0.67 px | 0.62 | 1.59 | 2.9 |
+| v3d (clean-up) | 73% | 46% | 28.0 | 6% | 0.25 px | 0.03 | 0.05 | 0.8 |
+| true layout | - | - | 11.2 | 100% | 0.58 px | 0.23 | 1.69 | - |
+
+Paired differences (v3d minus v3c, large): recovered -1.4 points [-4.3, +1.4], fixed -7.2 [-11.6, -2.9], rule
+violations +3.7 [+2.4, +5.1]. Small omissions and the flags on intact drawings are unchanged; added components on
+intact drawings 1.27 -> 0.86.
+
+Honest reading:
+- The clean-up removes the drawing defects (thickness jumps, loose pieces, specks, most unrelated additions) at a
+  small cost by the 2 px rule and a clear cost by the strict rule, which rewards wide bands.
+- It does NOT make the layout valid. By the project's own rule check v3d is slightly worse than v3c and both are far
+  from the true layout: thin straight walls show where a room is left unfinished, which a wide band hid. A redraw
+  cannot complete a layout; that needs a fill model trained and selected with validity in the criterion.
+- The specks count of the true layout is not zero (real drawings have small pieces), so "0 specks" also means some
+  real small pieces are not attempted.
+- Before/after pictures on four tuning drawings: `outputs/novelty/walkthrough_tuning_v3c/`, `..._v3d/`.
+
+Status: v3d is not frozen and has not been run on held-out; v3c is still the default. The final clean-up (with the
+wall-end rule) has an offline check on 30 tuning cases only (recovered 70%, rule violations 24.0 against 20.1 raw).
+
+## 10. Round 4: structurally sound fills (2026-11-20 / 21; review feedback)
+
+Why: the review asks whether a reconstruction keeps wall connectivity, opening placement and room closure, also when
+it is a plausible alternative to the true layout, and how the constraints affect the result. The user's priority:
+architectural validity, even at the cost of accuracy. Point-by-point answers: `docs/review_response.md`; choices and
+their reasons: `docs/decisions.md`, "Novelty round 4".
+
+### 10.1 Why the project's "valid" could not answer this
+
+"Valid" = no more rule violations than the clean true drawing. On real drawings the parser's map around the hole has
+its own violations, so even a perfect fill fails: the ORACLE (the parser's map with the true layout pasted into the
+erased area) scores 29.7-31.0 violations per large case on 30-40 tuning cases, more than the fills (20-25); the clean
+true drawing scores about 9. Tables keep the rule count (in four groups) and add "valid vs oracle", but the main
+validity measure is now the review's three checks.
+
+### 10.2 What was added (no new model, no training)
+
+- `src/novelty/soundness.py`: the three checks, on the elements in the omission's region, WITHOUT the true layout
+  (so a different but sensible layout can pass): walls connect (no dead-end wall, no floating wall group), openings
+  in walls (both ends of each door / window meet a wall), rooms closed (no room open to the outside, no closed room
+  without a door); "sound" = all three. Calibrated on the true layouts of tuning cases before any repair was written
+  (true layout sound in about 85%: real drawings have free-standing walls, missing doors, glazed inner walls).
+- `src/novelty/repair.py`: rule-based repair after the clean-up of round 3: join floating wall groups to the nearest
+  wall, close a room's open contact with the outside, finish an opening's wall, extend dead ends to the next wall,
+  give each doorless room one door, repaint loose room-type patches in open areas. A change is kept only if the
+  region's structural problems go down.
+- Selection by soundness (v4b): 4 diffusion samples, each finished (clean-up + repair), the one with the fewest
+  structural problems kept (instead of the raw rule count of v3c).
+- Versions: v3c (round 2 final) -> v3d (+ clean-up, round 3) -> v4 (+ repair, `pipeline_sound.yaml`) -> v4b
+  (+ selection by soundness, `pipeline_sound_select.yaml`). Ablation of the earlier steps: U-Net sketch alone
+  (`pipeline_abl_sketch.yaml`), diffusion finish with one sample (`pipeline_abl_n1.yaml`).
+- The selection rule for the final version was written in `docs/decisions.md` before the tuning results existed.
+- Offline check (48 tuning large cases): clean-up 69% recovered / 38% sound -> repair 67% / 79%; true layout 85%.
+
+### 10.3 How each use of the constraints changes the result (208 tuning drawings, kernel v14)
+
+Same pipeline, same erased cases, one more use of the constraints switched on per row; end to end, nothing given.
+Full table (medium omissions, rule groups, intact drawings, paired intervals): `outputs/novelty/soundness_tuning.md`.
+
+| large omissions | recovered (2 px) | fixed (strict) | walls connect | openings in walls | rooms closed | sound | rule violations |
+|---|---|---|---|---|---|---|---|
+| U-Net sketch alone (no constraint anywhere) | 81% | 57% | 59% | 95% | 50% | 27% | 43.2 |
+| + diffusion finish, 1 sample (trained with 14 constraint losses) | 79% | 58% | 58% | 93% | 45% | 25% | 24.9 |
+| + best of 2 by rule count (verifier) = v3c | 81% | 57% | 55% | 93% | 45% | 25% | 24.1 |
+| + clean-up by drawing rules = v3d | 66% | 47% | 65% | 78% | 46% | 31% | 26.9 |
+| + repair by the structural checks = v4 | 64% | 48% | 87% | 94% | 88% | 75% | 25.9 |
+| + selection of 4 samples by soundness = v4b | 68% | 47% | 89% | 96% | 90% | 79% | 25.6 |
+| *parser's map given (nothing filled)* | - | - | 44% | 72% | 91% | 32% | - |
+| *oracle (true layout pasted in)* | - | - | 64% | 80% | 91% | 48% | 36.7 |
+| *true layout* | - | - | 79% | 97% | 96% | 74% | 10.5 |
+
+Reading:
+- The constraint-trained diffusion model and the verifier act on the project's rule count: violations per case
+  43.2 -> 24.9 (paired -18.3 [-20.5, -16.2]), below the oracle (36.7). They do NOT make the
+  layout structurally sound (27% -> 25%): the soft losses and the rule count reward local correctness (thickness,
+  openings in walls, fixtures) but not "each room closed and reachable", which is a whole-room property.
+- The clean-up (round 3) tidies the drawing but costs 15 points of recovered; most of that is its wall-end rule.
+- The repair, which applies the three checks as hard rules after the fill, is what makes the fills sound (+50 points
+  over v3c, paired [+42, +57]) at a cost of 17 points of recovered against v3c; choosing among 4 samples by soundness
+  adds +5 sound and +4 recovered over v4. v4b's fills are sound as often as the true layout (79% against 74%).
+- Of v4b's fills, 59% are sound and match the true layout, 21% are sound with a different layout (the review's
+  "plausible alternative"), 21% are not sound.
+- Medium omissions show the same pattern (sound 35% -> 82%, recovered 73% -> 62%).
+- Figure, one plan: `outputs/novelty/assessment/constraints_tuning_high_quality_architectural-6022.png`; several
+  sound alternatives for one omission: `outputs/novelty/assessment/alternatives_tuning_high_quality_architectural-6022.png`.
+
+### 10.4 The final version, chosen on tuning by a rule written before the results
+
+Rule (`docs/decisions.md`, round 4): the highest "sound" rate on large omissions wins; within 3 points the higher
+"recovered" wins; guards: recovered at most 10 points below v3c, intact flags at most 2 points above v3c.
+- v4b (most sound, 79%) failed the recovered guard (68% against v3c 81%). The loss came from the clean-up's
+  wall-end rule, whose job the repair now does with a check, so two more versions were added BEFORE their results:
+  v4c (v4b without the wall-end rule) and v4c-keep (v4c, repair never deletes walls).
+
+| large omissions, tuning | recovered (2 px) | fixed (strict) | walls connect | openings in walls | rooms closed | sound | rule violations |
+|---|---|---|---|---|---|---|---|
+| v3c (round 2 final) | 81% | 57% | 55% | 93% | 45% | 25% | 24.1 |
+| v4b | 68% | 47% | 89% | 96% | 90% | 79% | 25.6 |
+| **v4c** (chosen) | 75% | 48% | 80% | 97% | 90% | 71% | 25.3 |
+| v4c-keep | 75% | 45% | 79% | 96% | 89% | 69% | 26.3 |
+| *true layout* | - | - | 79% | 97% | 96% | 74% | 10.5 |
+
+v4c passes both guards and is the most sound of those that do (v4c-keep is within 3 points and recovers one case
+fewer). Against v3c: sound +46 points, recovered -6, fixed -9 (strict IoU rewards v3c's wide wall bands).
+Against v4b: recovered +7.7 [+3.4, +12.0], sound -8.2 [-12.5, -3.8]. v4c is frozen
+(`configs/novelty/pipeline_sound_select_c.yaml`); held-out: section 10.5.
+
+### 10.5 Held-out result (151 drawings, each version frozen and run once; kernel v16)
+
+`outputs/novelty/soundness_heldout.md` (full table: medium, rule groups, intact, paired intervals); rows in
+`outputs/novelty/e2e_heldout_round4.csv`. End to end, nothing given. Brackets: Wilson 95% intervals.
+
+| large omissions, held-out | recovered (2 px) | fixed (strict) | walls connect | openings in walls | rooms closed | sound | rule violations |
+|---|---|---|---|---|---|---|---|
+| v3c (round 2 final, rerun) | 80% [73, 86] | 55% [47, 63] | 57% | 91% | 49% | 24% [18, 31] | 22.3 |
+| v4b (most sound on tuning) | 71% [63, 78] | 47% | 93% | 95% | 93% | 83% [77, 89] | 25.2 |
+| **v4c (round 4 final)** | 74% [66, 80] | 44% [37, 52] | 87% | 95% | 94% | **81% [74, 86]** | 24.8 |
+| *parser's map given (nothing filled)* | - | - | 43% | 67% | 93% | 31% | - |
+| *oracle (true layout pasted in)* | - | - | 63% | 84% | 89% | 48% | 35.5 |
+| *true layout* | - | - | 80% | 91% | 98% | 70% | 10.2 |
+
+- Paired, v4c minus v3c: sound +57.0 points [+47.7, +65.6], recovered -6.6 [-11.9, -2.0], fixed -10.6
+  [-15.9, -6.0], rule violations +2.5 [+1.3, +3.7].
+- Of v4c's fills: 64% sound and matching the true layout, 17% sound with a different layout (plausible
+  alternatives), 19% not sound (v3c: 17% / 7% / 76%).
+- Medium omissions: sound 42% -> 83%, recovered 79% -> 71%, fixed 57% -> 51%. Small: fixed 41% -> 40%. Intact
+  drawings flagged: 3.3% for all three (the flags come before the fill).
+- The v3c rerun gives exactly its round-2 held-out numbers (80% / 55%).
+- Figures, first 6 held-out large cases with no picking (corrupted drawing, reconstruction, violation maps of the
+  reconstruction, the corrupted plan and the true layout, the three checks): `outputs/novelty/assessment/large_heldout_*.png`
+  (v4c sound in 5 of 6; case 2 has one dead-end wall).
+
+Honest reading:
+- The review's three checks are met by v4c's fills more often than by the true layouts (81% against 70%); this
+  says the checks are strict for real drawings (free-standing walls, glazed inner walls), not that v4c is better
+  than the truth. The project's rule count is not improved (24.8 against 22.3 for v3c; true layout 10.2), because
+  most of it comes from the parser's map around the hole (the oracle scores 35.5).
+- The price is accuracy: about 7 points by the 2 px rule and 11 by the strict rule. The user asked for validity
+  first; v3c remains the accuracy-first version.
+- Soundness comes from rules applied after the model (repair, selection), not from the model itself: the
+  constraint-trained diffusion lowers the rule count but does not close rooms (section 10.3). A model trained with
+  closure / reachability in its loss is the natural next step (not attempted).
+- The Stage 2 test split has still not been used.

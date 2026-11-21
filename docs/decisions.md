@@ -1387,3 +1387,191 @@ Own choices:
   the same fill with the box given by hand (83% / 65%), so finding the place is no longer the main loss; the
   remaining gap to the strict rule is the pixel-exact wall position inside the fill, which needs a new fill model
   (not attempted in round 2).
+
+### Novelty round 3: validity of the additions (2026-11-14, after the user's review of the walkthrough pictures)
+
+- **Why (user, 2026-11-14)**: the walkthrough pictures of v3c show additions that break basic drawing rules (walls of
+  changing thickness, ragged / curved pieces, loose blobs, small patches of another room type). "Don't just chase
+  accuracy; validity must be maintained as well." The numbers already said so and were reported but not acted on:
+  on held-out large omissions only 10% of v3c's fills pass the project's own rule check (`valid`; 22.3 violations
+  against 10.2 for the true layout), no better than round 1 (13%).
+- **Cause (own analysis)**: round 2 was chosen by "recovered (2 px)" alone. Two of its settings buy that number with
+  invalid drawings: `fill.wall_tau 0.18` draws a wall wherever the U-Net is 18% sure, which gives wide bands (a band
+  "recovers" a wall anywhere inside it), and the structure net's decoder keeps any thin shape of 6 px, also arcs
+  (door swings). On 30 tuning cases the raw fill adds 331 wall px per case where the true layout adds 208.
+- **Fix chosen: a rule-based clean-up of every region fill** (`src/novelty/regularise.py`, config section
+  `regularise`, new config `configs/novelty/pipeline_valid.yaml` = "v3d"; v3c stays as it is). It keeps where the
+  fill puts walls and rooms and redraws them by rule: straight pieces (horizontal, vertical, straight diagonal) of
+  one thickness (the wall they continue, else the plan's usual thickness), ends extended up to 6 px to meet a wall,
+  corners closed, pieces in line joined; dropped: pieces under 8 px, curved shapes, blobs, pieces that only thicken a
+  full existing wall, the shorter of two pieces drawn side by side under 8 px apart, pieces not connected to the
+  existing walls; doors / windows only inside a wall line; fixtures only at a wall and not specks; a closed new room
+  gets one room type (majority vote), small room-type patches (< 60 px) in open space are absorbed.
+  Reason for rules instead of retraining: these are hard geometric facts, cheap to enforce exactly, and a retrained
+  model would still need them as a check. Alternatives not taken: retraining the fill with the constraint losses
+  (Stage 1 lesson: weights need calibration; days of GPU) and raising `wall_tau` (thinner bands but also fewer
+  walls; does nothing against arcs and blobs).
+- **Choices inside the clean-up, each from a failure seen on TUNING drawings (30 cached large cases; no held-out)**:
+  (1) what the fill removes of the parser's map stays removed (the parser draws stray wall / door bits on erased
+  paper; putting them back raised the opening-rule violations); (2) pieces are read from the ADDED pixels only
+  (reading existing + added together tied a new wall to a parallel existing one through a thick block and lost it);
+  (3) a piece that only thickens an existing wall is dropped unless that wall is thinner than the usual thickness
+  (the parser draws some walls 1 px thin and the fill completes them); (4) room types: only small patches are
+  removed, because the true layouts do have large open-plan zones with no wall between two room types (a first
+  version that reverted every unenclosed change put the parser's speckle back); (5) the structure net's line as
+  the wall's centre instead of the band's middle: tried, no difference (recovered 71% both), not used.
+- **Validity counts added to the evaluation** (`regularise.checks`, columns `v_*` / `t_*` in `eval_e2e` rows, table
+  by `src/novelty/validity_report.py`): share of added wall px not on a straight run, spread of the added walls'
+  thickness, loose wall groups, specks, small room patches; always next to the same counts for the true layout
+  (real drawings do not score zero). The project's rule check (`valid`, violations) stays the main measure.
+- **Offline check on 30 tuning large cases** (region fill alone, raw v3c -> cleaned; true layout in brackets):
+  recovered 73% -> 70%, strict fixed 63% -> 60%, missing-wall recall 0.83 -> 0.80, precision 0.73 -> 0.71; thickness
+  spread 0.74 -> 0.26 px (0.56), loose wall groups 0.47 -> 0.00 (0.13), specks 0.73 -> 0.03 (0.53), added wall px
+  331 -> 320 (208). The project's rule count did NOT improve: 20.1 -> 23.8 violations (9.1), `valid` 7% -> 7%; the
+  rules that got worse are wall ends (C1 3.4 -> 4.6), narrow spaces (C7 3.9 -> 5.3) and closure (C6 1.0 -> 1.9): thin
+  straight walls expose where a room is not closed, which a wide band hid. So the clean-up fixes how the additions
+  are DRAWN, not whether the LAYOUT is complete; the latter needs a better fill model.
+- **End-to-end check on all TUNING drawings (2026-11-14, kernel floorplan-novelty-eval v11, 208 drawings; v3c and the
+  clean-up as it stood then, i.e. WITHOUT the wall-end rule below)** (`outputs/novelty/e2e_tuning_round3.csv`,
+  table `outputs/novelty/validity_tuning.md`). Large omissions, v3c -> cleaned, paired: recovered 74.0% -> 72.6%
+  (-1.4 points [-4.3, +1.4]); strict fixed 52.9% -> 45.7% (-7.2 [-11.6, -2.9]); tolerant mIoU 41.6 -> 42.1;
+  thickness spread 0.67 -> 0.25 px (true layout 0.58); loose wall groups 0.62 -> 0.03 (0.23); specks 1.59 -> 0.05
+  (1.69); added wall px 301 -> 305 (184); unrelated additions per erased drawing 2.9 -> 0.8. The project's rule
+  check got WORSE: violations 24.3 -> 28.0 (+3.7 [+2.4, +5.1]; true layout 11.2), `valid` 12% -> 6%. Medium: recovered
+  67% -> 63% (-3.8 [-6.7, -1.0]), fixed 51% -> 48%, violations 16.7 -> 19.5. Small omissions unchanged (fixed 44.2%
+  both). Intact drawings: region flag on 8.7% (both), added components 1.27 -> 0.86 per drawing.
+- **Reading (own)**: (a) the strict rule (IoU of the plan's wall pixels with ALL erased structure pixels) rewards
+  wide bands, so thin walls lose 7 points there while the 2 px rule barely moves; (b) the rule count rises because
+  thin straight walls expose unfinished layouts that wide bands hid: offline the rules that rise are wall ends
+  (C1), narrow spaces (C7) and closure (C6); rule C1 by its construction does not count the end of a band that is
+  5 px or more thick, so part of v3c's lower count is the rule not seeing its bands; (c) the layout itself is not
+  more complete after a redraw. So neither version is "valid" by the project's check (6% and 12% against 100% for
+  the truth); the clean-up fixes the drawing defects the user listed, not the layout.
+- **Wall-end rule added after that check** (`regularise.finish_ends`): a wall must end at a wall. A free end runs
+  straight on to the next wall (inside the filled area, up to 27 px beyond it); a door-sized gap (6 to 27 px, the
+  p2 / p98 door lengths of `constraint_constants.yaml`) with a room on both sides gets a door; with no wall ahead
+  the piece is cut back to the last wall it touches. Offline, 30 tuning cases: recovered 70% (unchanged), precision
+  0.71 -> 0.69, tolerant mIoU 40.7 -> 40.3, rule violations 23.8 -> 24.0 (C1 4.6 -> 4.4): free ends are gone from the
+  additions, the rule count does not move. Kept because walls ending in mid-air are one of the defects the user
+  named; reported as "no measurable gain by the rule count".
+- **Status of v3d (2026-11-14 evening)**: NOT frozen, NOT run on held-out, NOT the default (`pipeline.run` still
+  uses v3c). The end-to-end tuning run of the final clean-up (with the wall-end rule; kernel v13) was queued on
+  Kaggle for over 100 minutes and had not started when this was written. Whether v3d replaces v3c as the final
+  hybrid, and whether it gets a held-out run, is the user's call: it trades about 1 to 4 points of "recovered" and
+  7 of strict "fixed" for additions that are drawn by the rules.
+- **Walkthrough pictures** (`src/novelty/walkthrough.py`): four held-out cases of v3c in `outputs/novelty/walkthrough/`
+  (shown to the user before round 3; not used for any choice in the clean-up, which was developed on tuning
+  drawings only) and the first four TUNING cases for v3c and v3d in `outputs/novelty/walkthrough_tuning_v3{c,d}/`.
+- **v3d end-to-end tuning run WITH the wall-end rule (kernel v13, finished 2026-11-20)**: large recovered 64%
+  (v3c 74%, v3d without the rule 73%), strict fixed 46%, rule violations 27.8, valid 6%; medium recovered 60%.
+  The wall-end rule costs 9 points of "recovered" end to end (offline on 30 cases it cost nothing). Merged into
+  `outputs/novelty/e2e_tuning_round3.csv` (arm "hybrid v3d auto"; the earlier run is "hybrid v3d-noend auto").
+
+## Novelty round 4: structural soundness (2026-11-20; review feedback; tuning drawings only)
+
+User (2026-11-20): address every point of the review; "architectural validity is important ... even at the cost of
+accuracy". Review points that need code: completion broken down by omission size with a definition of "completed";
+large omissions; how the constraints affect the reconstruction (and why the eight were chosen, on one plan);
+corrupted plan + reconstruction + violation map together; whether a plausible alternative keeps wall
+connectivity, opening placement and room closure.
+- **Finding that changes the validity measure**: the project's "valid" (rule violations <= those of the clean TRUE
+  drawing) cannot judge a fill on real drawings. Pasting the true layout into the erased area of the parser's map
+  (the ORACLE: a perfect fill) scores 29.7-31.0 violations per large case on 30-40 tuning cases, MORE than the raw
+  v3c fill (20.1) or the clean-up (24.0-25.4); the clean true drawing scores 9.1-9.6. The count is dominated by
+  parser errors around the hole and by seams, so "valid" was 0% even for the oracle. Kept in the tables, now with
+  the oracle as its reference ("valid vs oracle").
+- **New measure: the three structural checks of the review** (`src/novelty/soundness.py`, no ground truth used,
+  so a plausible alternative layout can pass): walls connect (no dead-end wall in the region, no floating group),
+  openings in walls (both ends of every door / window meet a wall), rooms closed (no room touching the outside
+  without a wall, no closed room without a door); "sound" = all three. Calibrated on the TRUE layouts of the
+  tuning cases before any repair was written: true layout sound in 77% at first; two fixes after looking at the
+  failures (railings in rooms are not floating walls; a wall may end at a fixture such as a counter) -> 84-87%.
+  Tried and dropped: "a window must face the outside" (rule C12) - CubiCasa has glazed inner walls (3 of 45 true
+  layouts failed it), as gate G2 had found (24% of real windows violate C12). `mixed` (two room types meeting
+  without a wall) is reported but not part of "sound" (real open-plan kitchens / hallways).
+- **Cause of the unsound fills** (40 tuning large cases, pictures): mostly rooms the fill closes with new walls but
+  gives no door (doorless 0.6-0.8 per case), then bits of "outside" left inside the building, openings with a
+  free end, and wall groups touching nothing.
+- **Fix chosen: a rule-based repair after the clean-up** (`src/novelty/repair.py`; no model, no training): join
+  floating groups to the nearest wall (else remove), give enclosed "outside" bits to the room, seal a room's open
+  contact with the outside by a wall, finish openings' walls (else remove the opening), extend dead ends straight to
+  the next wall (else remove stubs <= 24 px), give each doorless room one door (plan's usual door length) in its
+  longest straight shared wall (preferring a neighbour that is already reachable), and in open areas repaint loose
+  room-type patches with the area's own types (patches walled on >= half their border and >= 200 px stay: open-plan
+  rooms). Every change is kept only if the region's structural problems go down - a repair cannot make the plan
+  less sound by these checks. Alternatives not taken now: retraining the fill with soundness in the loss (no time
+  for a training round; the losses C6 / C8 already exist and did not prevent doorless rooms); a learned repair.
+- **Choices made on the pictures** (tuning only): removing floating groups cost 5 points of recovered on 40 cases
+  for +5 sound, so they are joined first; removing long dangling walls deleted an open-plan kitchen (tuning case
+  high_quality_architectural-4), so only stubs <= 24 px go and the open-plan exception was added. Offline, 48
+  tuning cases: cleaned 69% recovered / 38% sound -> repaired 67% / 79% (true layout 85%).
+- **Selection by soundness (v4b)**: the fill draws 4 diffusion samples, finishes each (clean-up + repair) and keeps
+  the one with the fewest structural problems (ties: the old verifier's rule count) - the constraint check used to
+  choose among diffusion samples, instead of the raw rule count of v3c.
+- **Selection rule for the final hybrid, written BEFORE the tuning results of kernel v14**: among v3c, v3d, v4 and
+  v4b on the 208 tuning drawings, large omissions: the highest "sound" rate wins; versions within 3 points of it
+  count as tied and the one with the higher "recovered" wins. Guards: "recovered" not more than 10 points below v3c
+  (a fill that adds nothing must not win by being empty: the parser's map alone is sound in about 43%), and the
+  share of intact drawings with a region flag not more than 2 points above v3c. The winner is frozen and run once
+  on the 151 held-out drawings.
+- **Constraint-use ablation (kernel v14, tuning, medium + large)**: the same pipeline with the uses of the
+  constraints switched on one by one: U-Net sketch alone (`pipeline_abl_sketch.yaml`) -> + diffusion finish, one
+  sample (model trained with 14 constraint losses; `pipeline_abl_n1.yaml`) -> + best of 2 by rule count (v3c) ->
+  + clean-up (v3d) -> + repair (v4) -> + selection by soundness (v4b).
+- **"The eight constraints" of the review = the parser v2 fine-tune losses** C3, C6, C9, C10, C11, C12, C15, C16
+  (user, 2026-10-19, "local constraint losses"; `src/stage2/parse/train_v2.py`). Reading of the code (own): they
+  are the rules that work on a whole drawing without a hole and without a size in px: left out are those defined
+  around a hole (C2, C5, C8, C17, C18), those measuring a size (C4 thickness, C7 width, C13 opening length, C14 door
+  clearance; the parser works at ~8 px walls, the rules at 3 px) and the skeleton-based C1. The fill diffusion uses
+  14 (gate G3: C2, C5, C10, C13 left out of training because their calibrated weights hit the cap), the verifier
+  and the rule check 17 + R1 + R3.
+- **Kernel v14 result (208 tuning drawings, large omissions; `outputs/novelty/soundness_tuning.md`)**: sound / recovered:
+  U-Net sketch alone 27% / 81%; + diffusion finish (1 sample) 25% / 79%; v3c 25% / 81%; v3d 31% / 66%; v4 75% / 64%;
+  v4b 79% / 68%; true layout sound 74%, oracle 48%, parser's map 32%. The diffusion model trained with the constraint
+  losses cuts the rule violations (43.2 -> 24.9 per case) but not the structural problems; the repair is what makes
+  the fills sound (+50 points, paired). Intact flag rate 8.7% for every version (the flags come before the fill).
+- **Selection rule applied (as written above)**: the highest sound rate is v4b (79%; v4 75% is 4 points lower, not
+  tied). But v4b fails the guard "recovered not more than 10 points below v3c" (68% against 81%: -13), as do v4 and
+  v3d. By the rule, no round-4 version can be chosen; v3c would stay. Not accepted as the end: v3c is sound in only
+  25% of large cases, below the true layout's 74%, so it does not meet the review's standard.
+- **Cause of the lost accuracy**: the clean-up (v3c 81% -> v3d 66%), not the repair (v3d -> v4: -2) or the
+  selection (+4). Round 3 had shown that the clean-up without its wall-end rule costs about 1 point
+  (`e2e_tuning_round3.csv`, "v3d-noend": 154 -> 151 recovered of 208) and the wall-end rule the rest (151 -> 133).
+  The wall-end rule's job (a wall must end at a wall) is now done by the repair, which keeps a change only if the
+  structural problems go down; the wall-end rule extends or cuts walls with no such check.
+- **New candidate v4c, added BEFORE its result** (`configs/novelty/pipeline_sound_select_c.yaml`): v4b with the
+  clean-up's wall-end rule switched off (`regularise.finish_ends: false`), nothing else changed. The same selection
+  rule (unchanged, guards unchanged) is applied to v3c, v3d, v4, v4b, v4c with v4c run on the same 208 tuning
+  drawings (kernel v15). If no round-4 version passes the guards then either, both v3c (accuracy first) and v4b
+  (most sound) are run once on held-out and reported side by side, and the user picks the headline version; no
+  further variant is tried on held-out.
+- **Offline check of v4c before its Kaggle run** (58 cached tuning large cases, one sample, no selection): raw fill
+  72% recovered / 29% sound; clean-up without the wall-end rule 69% / 38%; + repair as in v4 (extend 40) 62% / 83%
+  - the same as with the wall-end rule (62% / 83%). The repair's deletions of walls it cannot join take the gain
+  back. Variants: extend 80 or 120 -> 64% / 79%; never delete walls ("keep", extend 80) -> 66% / 74%. So a second
+  candidate is added, also BEFORE its result: **v4c-keep** (`configs/novelty/pipeline_sound_select_ck.yaml`) = v4c
+  with a repair that never deletes a dangling or floating wall (`repair.remove: false`, `extend: 80`). Kernel v15
+  runs v4c and v4c-keep on the same 208 tuning drawings (the case generator is seeded per drawing; checked: the six
+  versions of v14 have identical cases). The rule is applied as written: versions failing a guard are out; of the
+  rest the highest sound rate wins (within 3 points: higher recovered).
+- **Held-out run, decided now**: the rule's winner, plus v3c (the soundness of round 2's final version was never
+  measured on held-out) and v4b (the most sound on tuning, the user's stated priority) if not the winner; each is
+  frozen as it ran on tuning and run once; all are reported, the rule's winner is the headline unless the user
+  picks otherwise.
+- **Kernel v15 result and the rule applied (208 tuning drawings, large; `outputs/novelty/soundness_tuning.md`)**:
+  v4c sound 71% (148 / 208), recovered 75% (157); v4c-keep 69% (144), 75% (156). Offline the wall-end rule made
+  no difference after the repair; on the full set switching it off gives +7.7 recovered [+3.4, +12.0] for -8.2 sound
+  [-12.5, -3.8] against v4b (the offline set of 58 cases was too small to see it). Guards: recovered >= 71% (v3c
+  81% - 10): v4c and v4c-keep pass, v4b / v4 / v3d do not; intact flags 8.7% for all. Highest sound among those
+  passing: v4c (71%); v4c-keep is within 3 points, so the higher recovered decides: v4c (157 against 156).
+  **v4c is frozen** (`configs/novelty/pipeline_sound_select_c.yaml`) as the round-4 final hybrid. As decided above,
+  the held-out run (kernel v16, 151 drawings, all sizes + intact, arm "hybrid auto") covers v4c, v3c (its soundness
+  was never measured on held-out) and v4b (the most sound on tuning); each ran as frozen, once.
+- **Held-out result (kernel v16, 151 drawings, each version once; `outputs/novelty/soundness_heldout.md`,
+  `e2e_heldout_round4.csv`)**: large omissions, v4c: sound 81% [74, 86] (v3c 24%, v4b 83%, true layout 70%),
+  recovered 74% [66, 80] (v3c 80%), fixed 44% [37, 52] (v3c 55%); paired v4c - v3c: sound +57.0 [+47.7, +65.6],
+  recovered -6.6 [-11.9, -2.0], fixed -10.6 [-15.9, -6.0]. Medium: sound 83% (v3c 42%), recovered 71% (79%).
+  Small fixed 40% (v3c 41%); intact flags 3.3% for all three. The v3c rerun reproduces its round-2 held-out numbers
+  exactly (80% / 55%), so the runs are comparable. v4c stays the round-4 final (as decided before the run).
+- **Default of `src/novelty/pipeline.run` switched to v4c** (`pipeline_sound_select_c.yaml`): the round-4 final,
+  in line with the user's priority (validity first). v3c stays available via `NOVELTY_CONFIG`.

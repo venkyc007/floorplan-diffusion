@@ -113,6 +113,25 @@ added components per drawing 0.93 (shipped 0.68). Strict "fixed" tops out at 72%
 gain needs the ink map (without it 55% recovered on tuning drawings); it carries no traces of the erased walls
 (checked) but does show the blank area a large omission leaves.
 
+**Round 4 (2026-11-21, review feedback: architectural validity first; `docs/novelty.md` section 10, files
+`outputs/novelty/soundness_heldout.md`, `soundness_tuning.md`, `docs/review_response.md`).** The project's "valid"
+cannot judge fills on real drawings (a perfect fill pasted into the parser's map has more rule violations than the
+fills), so fills are judged by the review's three structural checks (walls connect, openings in walls, rooms
+closed and reachable; `src/novelty/soundness.py`, no ground truth). Final version v4c = v3c + clean-up (without
+its wall-end rule) + rule-based repair by the three checks + 4 diffusion samples, the most sound kept; chosen on
+208 tuning drawings by a rule written before the results. Held-out, 151 drawings, large omissions:
+
+| version | recovered (2 px) | fixed (strict) | sound (all 3 checks) | walls connect | openings in walls | rooms closed |
+|---|---|---|---|---|---|---|
+| round 2 final (v3c) | 80% [73, 86] | 55% [47, 63] | 24% [18, 31] | 57% | 91% | 49% |
+| **round 4 final (v4c)** | 74% [66, 80] | 44% [37, 52] | **81%** [74, 86] | 87% | 95% | 94% |
+| true layout | - | - | 70% | 80% | 91% | 98% |
+
+Paired v4c minus v3c: sound +57.0 points [+47.7, +65.6], recovered -6.6 [-11.9, -2.0], fixed -10.6 [-15.9, -6.0].
+Medium: sound 42% -> 83%, recovered 79% -> 71%. Small fixed 41% -> 40%; intact flags 3.3% for both. Soundness
+comes from the rules applied after the model; the constraint-trained diffusion lowers the rule count, not the
+structural problems.
+
 ## 1. The final system in one page
 
 ### Stage 1 — mask-given inpainting (ResPlan, 128 × 128, 6 classes)

@@ -1,0 +1,55 @@
+# Novelty round 3 (v3d, "valid"): v3c + the CLEAN-UP of every region fill (src/novelty/regularise.py), so that what
+# the system adds obeys basic drawing rules (straight walls of one thickness, connected, no blobs / specks, one
+# room type per closed new room). Models, thresholds and the fill are exactly those of v3c
+# (pipeline_structure_c.yaml); only the `regularise` section is new. Its values are geometric (px at map scale,
+# where the usual wall is 3 px thick) and were set on TUNING val drawings only; nothing on held-out or test.
+
+checkpoints:                     # local copies of Kaggle outputs (git-ignored)
+  locator:                       # one or more locators; their probabilities are averaged
+    - outputs/kaggle/novelty_locate/runs/locator_s0/checkpoints/best.pt
+    - outputs/kaggle/novelty_locate/runs/locator_s1/checkpoints/best.pt
+  structure:                     # one or more structure nets; their probabilities are averaged
+    - outputs/kaggle/novelty_structure2/runs/struct4_s0/checkpoints/best.pt
+  unet: outputs/kaggle/novelty_fill_edit/runs/fill_unet_edit/checkpoints/best.pt
+  diffusion: outputs/kaggle/novelty_fill_edit/runs/fill_diffusion_edit/checkpoints/best.pt
+
+locate:
+  use: false                     # NO locator flags; region flags come from the structure net only (as v3b / v3c)
+  threshold: 0.4
+  min_area: 150
+  box_pad: 2
+
+structure:
+  tau: 0.5                       # a missing wall is drawn where the structure net's wall heat is at least this
+  min_len: 6                     # px: shorter centre-line pieces are dropped
+  tta: false
+  join: 8                        # px: added walls closer than this form one region flag
+  pad: 6                         # px of margin around a group's box
+  min_px: 12                     # a group needs at least this many added wall px to become a region flag
+
+fill:
+  hide_hole: false               # EDIT models (v2): the parsed map stays visible inside the hole
+  window: 256
+  max_window: 384
+  wall_tau: 0.18                 # the fill U-Net draws a wall where its wall probability is at least this
+  wall_thin: false
+  keep_walls: true               # structure walls the diffusion finish dropped are put back
+  t0: 700
+  n_samples: 2
+  steps_from_t0: 15
+
+regularise:                      # the clean-up of a region fill (rules: see src/novelty/regularise.py)
+  use: true
+  min_len: 8                     # px: shortest wall piece kept (also: a piece thicker than this is a blob)
+  snap: 6                        # px: a wall end this close to a wall is extended to meet it; pieces in line with a
+                                 # gap up to this are joined
+  t_max: 8                       # px: thickest wall in the data (configs/stage2/constraint_constants.yaml T_wall_max)
+  min_new: 6                     # px: a wall piece is redrawn only if the fill adds at least this much to it
+  doorway: 20                    # px: a free wall end facing a wall within this distance closes a room (open doorway)
+  min_fixture: 6                 # px: smaller added fixtures are specks
+  min_opening: 4                 # px: shortest door / window kept
+  min_room: 60                   # px: smaller room-type patches in open space are absorbed by their neighbours
+  min_gap: 8                     # px: of two added walls running side by side closer than this, the shorter is dropped
+  door_min: 6                    # px: a gap between a free wall end and the wall ahead of this size ... (Lmin_door)
+  door_max: 27                   # ... to this size is a doorway and gets a door (Lmax_door, constraint_constants.yaml)
+  window_pad: 48                 # px around the hole that the clean-up looks at

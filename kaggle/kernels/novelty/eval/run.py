@@ -21,10 +21,10 @@ import zipfile
 
 CODE = "/tmp/code"
 STAGE = "e2e_heldout"
-CONFIGS = {"_v3c": "configs/novelty/pipeline_structure_c.yaml"}
+CONFIGS = {"_v4c": "configs/novelty/pipeline_sound_select_c.yaml", "_v3c_r4": "configs/novelty/pipeline_structure_c.yaml", "_v4b": "configs/novelty/pipeline_sound_select.yaml"}
 N_TUNE = 120
 E2E_LIMIT = None           # drawings per shard (None = all)
-EXTRA = '--arms "hybrid auto,hybrid manual" --figure 6'   # extra arguments for the stage's script
+EXTRA = '--arms "hybrid auto" --figure 6'   # extra arguments for the stage's script
 SWEEP = False               # tune: also run the locator and gate sweeps
 
 

@@ -30,6 +30,7 @@ Intervals: Wilson 95%; differences: paired bootstrap over drawings (2,000 resamp
 
 import argparse
 import csv
+import json
 import glob
 import time
 import zipfile
@@ -65,6 +66,13 @@ FIELDS = ["pid", "target", "kind", "size_bin", "size_pct", "arm", "found", "regi
           "recovered", "miss_recall", "add_precision",
           "false_adds", "tol_before", "tol_after", "valid_before", "valid_after", "viol_gt", "viol_after",
           "n_flags", "n_region_flags", "added", "seconds"]
+CHECKS = ["added_wall_px", "ragged", "thick_sd", "loose", "specks", "patches"]   # src/novelty/regularise.checks
+FIELDS += [f"v_{k}" for k in CHECKS] + [f"t_{k}" for k in CHECKS]                # of the plan / of the true layout
+SOUND = ["dead_ends", "floating", "bad_openings", "leaks", "doorless", "mixed", "walls_connect", "openings_in_walls",
+         "rooms_closed", "sound"]                                                  # src/novelty/soundness (round 4)
+FIELDS += [f"{p}_{k}" for p in ("s", "sp", "so", "st") for k in SOUND] + ["viol_oracle", "rules_after", "rules_oracle"]
+# s = the plan, sp = the parser's map given (before), so = ORACLE (the parser's map with the true layout pasted
+# into the erased area: what a perfect fill would give), st = the true layout
 
 
 def drawing_ids(split, z):
@@ -96,13 +104,25 @@ def row_of(pid, target, o, arm, res, sec):
     rmg = grown(s["rm"], 3)
     over = [h for h in res["holes"] if rmg[h["box"][0]:h["box"][2] + 1, h["box"][1]:h["box"][3] + 1].any()]
     rec = {"recovered": "", "miss_recall": "", "add_precision": ""}
+    val = {}
     if o[2] == "room":                                    # wall-type omissions (room walls, whole room, region)
         box = e2e_val.region_box(s["rm"], s["rm"].shape)
         reg = np.zeros(s["rm"].shape, bool)
         reg[box[0]:box[2] + 1, box[1]:box[3] + 1] = True
         rec = wall_recovery(res["completed"], res["parsed"], s["gt"], s["rm"], reg)
         rec["recovered"] = rec["recovered"] and s["found"]
-    return {"pid": pid, "target": target, "kind": o[4]["type"], "size_bin": o[4]["size_bin"], "size_pct": o[4]["size_pct"],
+        from src.novelty.regularise import checks         # validity counts of what was added, and of the truth
+        val = {f"v_{k}": v for k, v in checks(res["parsed"], res["completed"], reg).items()}
+        val.update({f"t_{k}": v for k, v in checks(res["parsed"], s["gt"], reg).items()})
+        from src.novelty.soundness import soundness       # the three structural checks of the review (round 4)
+        oracle = res["parsed"].copy()
+        oracle[s["rm"]] = s["gt"][s["rm"]]
+        for p, plan in (("s", res["completed"]), ("sp", res["parsed"]), ("so", oracle), ("st", s["gt"])):
+            val.update({f"{p}_{k}": v for k, v in soundness(plan, reg).items() if k in SOUND})
+        ro = e2e_val.rule_violations(oracle, box)          # the project's rule check, rule by rule (json)
+        val.update(viol_oracle=sum(ro.values()), rules_oracle=json.dumps(ro),
+                   rules_after=json.dumps(e2e_val.rule_violations(res["completed"], box)))
+    return {**val, "pid": pid, "target": target, "kind": o[4]["type"], "size_bin": o[4]["size_bin"], "size_pct": o[4]["size_pct"],
             "arm": arm, "found": s["found"], "region_flag": any(h["type"] == "region" for h in over), "fixed": s["fixed"],
             "recovered": rec["recovered"], "miss_recall": rec["miss_recall"], "add_precision": rec["add_precision"],
             "fix_iou": s["fix_iou"], "false_adds": s["false_adds"], "tol_before": s["tol_before"], "tol_after": s["tol_after"],

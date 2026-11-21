@@ -56,6 +56,29 @@ configs `configs/novelty/`; kernels `kaggle/kernels/novelty/`; results `outputs/
   (`python -m src.novelty.eval_e2e --split test --test-approved-by-user`, prepared, never run); merging `novelty` into
   `final` / `main`; a hybrid tab in the Gradio app (not built). Not attempted: the room-graph idea (report 8.2).
 - Kaggle note: `kaggle/kernels/novelty/eval` is re-pointed per run with `kaggle/kernels/novelty/point_eval.py`.
+- **Round 3 (2026-11-14, validity; user: "don't just chase accuracy; validity must be maintained")**: rule-based
+  clean-up of region fills, `src/novelty/regularise.py`, config `configs/novelty/pipeline_valid.yaml` (v3d = v3c +
+  clean-up; NOT the default, NOT frozen, NOT run on held-out). Tuning, 208 drawings, large: recovered 74% -> 73%,
+  strict fixed 53% -> 46%, thickness spread / loose pieces / specks / unrelated additions clearly down, but the
+  project's rule check not better (violations 24.3 -> 28.0, valid 12% -> 6%; truth 11.2). Write-up `docs/novelty.md`
+  section 9, table `outputs/novelty/validity_tuning.md`. Open (user's call): make v3d the final hybrid and give it
+  one held-out run; a fill model selected with validity (not attempted). Nothing of round 3 is committed yet.
+- **Round 4 (2026-11-20, review feedback; user: address every review point, "architectural validity ... even at
+  the cost of accuracy")**: the project's "valid" cannot judge fills on real drawings (the ORACLE, true layout pasted
+  into the parser's map, has MORE rule violations than the fills). New: `src/novelty/soundness.py` (the review's
+  three checks: walls connect, openings in walls, rooms closed + reachable; no ground truth), `repair.py` (rule
+  repair after the clean-up, kept only if problems go down), selection of diffusion samples by soundness, configs
+  `pipeline_sound.yaml` (v4) / `pipeline_sound_select.yaml` (v4b), ablation configs `pipeline_abl_*.yaml`,
+  `completion_by_size.py` (the 46% by size + definition), `assessment_figures.py`, `soundness_report.py`.
+  Selection rule written in decisions.md BEFORE the tuning results (kernels v14, v15); v4b failed its recovered
+  guard, so v4c (v4b without the clean-up's wall-end rule, `pipeline_sound_select_c.yaml`) was added before its
+  result and won. **Round 4 final = v4c, now the default of `pipeline.run`** (v3c = accuracy-first alternative).
+  Held-out (kernel v16, each version once): large omissions sound 24% (v3c) -> **81%** [74, 86] (true layout 70%),
+  recovered 80% -> 74%, strict fixed 55% -> 44%; medium sound 42% -> 83%; small and intact unchanged. Tables
+  `outputs/novelty/soundness_{tuning,heldout}.md`, figures `outputs/novelty/assessment/`, write-up `docs/novelty.md`
+  section 10, point-by-point `docs/review_response.md` (all coding points DONE). "The eight constraints" of the
+  review = the parser v2 fine-tune losses (decisions.md, round 4); the reason given is my reading of the code: the
+  USER should confirm it. Test split still unused (user's call).
 
 ## Standing rules (always apply)
 

@@ -21,9 +21,11 @@ Round 2 (a config with a `structure` section): STRUCTURE FIRST.
     the diffusion model then adds the details around them (doors, room types, fixtures), and with fill.keep_walls
     any structure wall the diffusion finish dropped is put back.
 Models: src/novelty/models.py, structure.py, locate.py. Settings: the file named by the environment variable
-NOVELTY_CONFIG, default configs/novelty/pipeline_structure_c.yaml (v3c, the round-2 final: one structure net,
-trained with the stroke map, is the only source of region flags; the locator is loaded but switched off by
-locate.use: false). pipeline_structure_b.yaml (v3b) is the same with the first structure net (no stroke map).
+NOVELTY_CONFIG, default configs/novelty/pipeline_sound_select_c.yaml (v4c, the round-4 final: v3c + the clean-up
+without its wall-end rule + the repair by the three structural checks + 4 diffusion samples, the most sound kept).
+pipeline_structure_c.yaml (v3c, the round-2 final, accuracy first: one structure net, trained with the stroke map,
+is the only source of region flags; the locator is loaded but switched off by locate.use: false).
+pipeline_structure_b.yaml (v3b) is v3c with the first structure net (no stroke map).
 """
 
 import os
@@ -45,7 +47,7 @@ from src.stage2.data.classes16 import C16
 from src.stage2.pipeline import run as base
 from src.utils import PROJECT_ROOT
 
-CFG_FILE = Path(os.environ.get("NOVELTY_CONFIG", PROJECT_ROOT / "configs" / "novelty" / "pipeline_structure_c.yaml"))
+CFG_FILE = Path(os.environ.get("NOVELTY_CONFIG", PROJECT_ROOT / "configs" / "novelty" / "pipeline_sound_select_c.yaml"))
 BG = C16.index["background"]
 WALL = C16.index["wall"]
 OPENINGS = [C16.index["door"], C16.index["window"]]
@@ -255,6 +257,20 @@ def hybrid_fill(label, hole, unet, diffusion=None, t0=700, n=2, steps_from_t0=15
     return pasted(kept(samples[i])), info
 
 
+def finish(label, new, hole, c):
+    """A raw fill -> the type restriction, then (if the config says so) the round-3 clean-up and the round-4 repair.
+    -> (map, info)."""
+    info = {}
+    new = large_fill.region_restrict(label, new, hole)
+    if c.get("regularise", {}).get("use"):                        # round 3: redraw the additions by the drawing rules
+        from src.novelty.regularise import regularise
+        new, info["regularise"] = regularise(label, new, hole, c["regularise"])
+    if c.get("repair", {}).get("use"):                            # round 4: repair by the structural checks
+        from src.novelty.repair import repair_fill
+        new, info["repair"] = repair_fill(label, new, hole, c["repair"])
+    return new, info
+
+
 def fill_region(label, hole, generator, fast=None, outline=None):
     """The pipeline's large-hole fill (run_pipeline's large_fill_fn). outline: use the outline prior (default: the
     config's fill.outline_prior)."""
@@ -274,10 +290,29 @@ def fill_region(label, hole, generator, fast=None, outline=None):
             ink, stroke = (None, None) if img is None else drawing_maps(img, label.shape)
             STATE.update(walls=structure_walls(label, ink, stroke=stroke)[0], shape=label.shape)
         walls = STATE["walls"]
-    new, info = hybrid_fill(label, hole, m["unet"], m["diffusion"], nc["t0"], nc["n_samples"], nc["steps_from_t0"],
-                            generator, nc, blob=blob, walls=walls)
+    diffusion = None if nc.get("sketch_only") else m["diffusion"]  # ablation: the U-Net sketch alone
+    sel = c.get("select", {})
+    by_sound = sel.get("by") == "soundness" and diffusion is not None
+    new, info = hybrid_fill(label, hole, m["unet"], diffusion, nc["t0"], sel.get("n", nc["n_samples"]) if by_sound
+                            else nc["n_samples"], nc["steps_from_t0"], generator, nc, blob=blob, walls=walls,
+                            all_samples=by_sound)
+    if by_sound:                                                  # round 4: every sample is finished (clean-up,
+        from src.novelty.soundness import soundness               # repair) and the one with the fewest structural
+        best = None                                               # problems in the hole is kept (ties: fewest rule
+        for i, s in enumerate(info.pop("samples")):               # violations, the old verifier's count)
+            x, inf = finish(label, s, hole, c)
+            r = soundness(x, hole)
+            key = (sum(r[k] for k in ("dead_ends", "floating", "bad_openings", "leaks", "doorless")), r["mixed"],
+                   info["violations"][i], i)
+            if best is None or key < best[0]:
+                best = (key, x, inf)
+        _, new, inf = best
+        info.update(inf, chosen=best[0][3], select="soundness")
+    else:
+        new, inf = finish(label, new, hole, c)
+        info.update(inf)
     info["seconds"] = round(time.time() - t, 1)
-    return large_fill.region_restrict(label, new, hole), dict(info, route="novelty large-hole fill")
+    return new, dict(info, route="novelty large-hole fill")
 
 
 # ---------------------------------------------------------------- entry point
