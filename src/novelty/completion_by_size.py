@@ -139,6 +139,15 @@ def main():
                    [("found", "found"), ("completed (fixed, strict)", "fixed"), ("recovered (2 px)", "recovered"),
                     ("sound (3 structural checks)", "s_sound")])
         L.append("")
+    T4 = NOV / "e2e_test_round4.csv"                      # the one test-split run of v4c (user-approved), kernel v17
+    if T4.exists():
+        A = list(csv.DictReader(open(T4, encoding="utf-8")))
+        L += ["", "## 4. Round 4 final v4c on the TEST drawings (one run, approved by the user 2026-11-21)", "",
+              "Same definitions and omission generator; every typed test drawing (369-371). Only v4c was run.", ""]
+        L += table([(t, [r for r in A if r["target"] == t]) for t in ("small", "medium", "large")],
+                   [("found", "found"), ("completed (fixed, strict)", "fixed"), ("recovered (2 px)", "recovered"),
+                    ("sound (3 structural checks)", "s_sound")])
+        L.append("")
     L += ["Reading: completion falls with size in the shipped system (single small components about 2 in 5, large "
           "erased regions almost never). The novelty work targets the large end; small omissions are unchanged by it. "
           "Round 4 trades some accuracy for structurally sound fills (`outputs/novelty/soundness_heldout.md`)."]

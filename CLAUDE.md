@@ -53,7 +53,7 @@ configs `configs/novelty/`; kernels `kaggle/kernels/novelty/`; results `outputs/
 - Protocol: everything chosen on the 212 TUNING val drawings, reported on the 151 HELD-OUT ones; each hybrid version
   (v1, v2, v3b, v3c) frozen first and run once on held-out. Kaggle quota counts session hours (30 / week).
 - **Open (user's call)**: one test-split run of the final hybrid
-  (`python -m src.novelty.eval_e2e --split test --test-approved-by-user`, prepared, never run); merging `novelty` into
+  (`python -m src.novelty.eval_e2e --split test --test-approved-by-user`; DONE for v4c, round 4); merging `novelty` into
   `final` / `main`; a hybrid tab in the Gradio app (not built). Not attempted: the room-graph idea (report 8.2).
 - Kaggle note: `kaggle/kernels/novelty/eval` is re-pointed per run with `kaggle/kernels/novelty/point_eval.py`.
 - **Round 3 (2026-11-14, validity; user: "don't just chase accuracy; validity must be maintained")**: rule-based
@@ -78,7 +78,10 @@ configs `configs/novelty/`; kernels `kaggle/kernels/novelty/`; results `outputs/
   `outputs/novelty/soundness_{tuning,heldout}.md`, figures `outputs/novelty/assessment/`, write-up `docs/novelty.md`
   section 10, point-by-point `docs/review_response.md` (all coding points DONE). "The eight constraints" of the
   review = the parser v2 fine-tune losses (decisions.md, round 4); the reason given is my reading of the code: the
-  user confirmed it (2026-11-21; plus: rules that added nothing were dropped). Test split still unused (user's call).
+  user confirmed it (2026-11-21; plus: rules that added nothing were dropped).
+  **Test split: ONE run of v4c done (user-approved, 2026-11-21, kernel v17; never run again)**: large omissions sound
+  78% [74, 82] (true layout 68%), recovered 66% [61, 71], fixed 47% [42, 53]; medium sound 85%, recovered 63%;
+  small fixed 40%; intact flags 6.7%. `outputs/novelty/soundness_test.md`, `docs/novelty.md` 10.6.
 
 ## Standing rules (always apply)
 

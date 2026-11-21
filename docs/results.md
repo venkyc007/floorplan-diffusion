@@ -132,6 +132,12 @@ Medium: sound 42% -> 83%, recovered 79% -> 71%. Small fixed 41% -> 40%; intact f
 comes from the rules applied after the model; the constraint-trained diffusion lowers the rule count, not the
 structural problems.
 
+**Round 4 TEST (one run of v4c, user-approved 2026-11-21; `outputs/novelty/soundness_test.md`).** 369 test
+drawings per size, end to end: large omissions sound 78% [74, 82] (true layout 68%), recovered 66% [61, 71], fixed
+47% [42, 53]; medium sound 85%, recovered 63%, fixed 40%; small fixed 40%; intact drawings flagged 6.7%. Soundness
+holds from held-out to test; recovered is about 8 points lower. (Shipped Stage 2 on its own size-balanced test: large
+fixed 0% of 40.)
+
 ## 1. The final system in one page
 
 ### Stage 1 — mask-given inpainting (ResPlan, 128 × 128, 6 classes)

@@ -91,4 +91,15 @@ Same definitions; one small, one medium and one large omission per drawing (sepa
 | medium | 151 | 95% [91, 98] | 51% [43, 59] | 71% [63, 78] | 83% [77, 89] |
 | large | 151 | 99% [95, 100] | 44% [37, 52] | 74% [66, 80] | 81% [74, 86] |
 
+
+## 4. Round 4 final v4c on the TEST drawings (one run, approved by the user 2026-11-21)
+
+Same definitions and omission generator; every typed test drawing (369-371). Only v4c was run.
+
+| omissions | n | found | completed (fixed, strict) | recovered (2 px) | sound (3 structural checks) |
+|---|---|---|---|---|---|
+| small | 371 | 65% [61, 70] | 40% [35, 45] | 45% [32, 59] (n 51) | 51% [38, 64] (n 51) |
+| medium | 369 | 88% [85, 91] | 40% [35, 45] | 63% [58, 68] | 85% [81, 88] |
+| large | 369 | 98% [96, 99] | 47% [42, 53] | 66% [61, 71] | 78% [74, 82] |
+
 Reading: completion falls with size in the shipped system (single small components about 2 in 5, large erased regions almost never). The novelty work targets the large end; small omissions are unchanged by it. Round 4 trades some accuracy for structurally sound fills (`outputs/novelty/soundness_heldout.md`).

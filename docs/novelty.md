@@ -621,3 +621,24 @@ Honest reading:
   constraint-trained diffusion lowers the rule count but does not close rooms (section 10.3). A model trained with
   closure / reachability in its loss is the natural next step (not attempted).
 - The Stage 2 test split has still not been used.
+
+### 10.6 Test result (the one run on the official test drawings; user-approved 2026-11-21, kernel v17)
+
+v4c as frozen, every typed test drawing (369 per size; 371 intact), arm "hybrid auto" only; v3c, v4b and the
+shipped pipeline were not run on test. `outputs/novelty/soundness_test.md`, rows `outputs/novelty/e2e_test_round4.csv`.
+
+| v4c, test | n | found | recovered (2 px) | fixed (strict) | sound | walls connect | openings in walls | rooms closed |
+|---|---|---|---|---|---|---|---|---|
+| large | 369 | 98% | 66% [61, 71] | 47% [42, 53] | 78% [74, 82] | 86% | 96% | 92% |
+| medium | 369 | 88% | 63% [58, 68] | 40% [35, 45] | 85% [81, 88] | 91% | 96% | 96% |
+| small | 371 | 65% | 45% (n 51) | 40% [35, 45] | 51% (n 51) | - | - | - |
+| *true layout, large* | 369 | - | - | - | 68% | 77% | 93% | 96% |
+
+- Intact drawings with a region flag: 6.7% [5, 10] (held-out 3.3%). Large omissions: 54% of fills sound and
+  matching the truth, 24% sound with a different layout, 22% not sound.
+- Against held-out (section 10.5): soundness holds (large 81% -> 78%, medium 83% -> 85%); recovered is about 8
+  points lower (large 74% -> 66%, medium 71% -> 63%); strict fixed large 44% -> 47%, medium 51% -> 40%; small
+  unchanged (40%). The test drawings are a separate set of CubiCasa plans; the drop in recovered is the honest
+  generalisation gap of the whole chain (structure net, fill), not of the repair.
+- For scale: the shipped Stage 2 pipeline on its own size-balanced test (2026-10-22, a different case set of 40
+  large omissions) fixed 0% of large omissions.

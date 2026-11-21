@@ -1575,3 +1575,13 @@ connectivity, opening placement and room closure.
   exactly (80% / 55%), so the runs are comparable. v4c stays the round-4 final (as decided before the run).
 - **Default of `src/novelty/pipeline.run` switched to v4c** (`pipeline_sound_select_c.yaml`): the round-4 final,
   in line with the user's priority (validity first). v3c stays available via `NOVELTY_CONFIG`.
+- **Test split, one run of v4c (user, 2026-11-21: "Yes, run it once")**: kernel v17, `--split test` (every typed
+  test drawing of parser_test.zip, minus the check set; same omission generator, seed 31 + index), arm "hybrid
+  auto" only, all sizes + intact, config `pipeline_sound_select_c.yaml` as frozen. Not run on test: v3c, v4b and the
+  shipped pipeline (the Stage 2 test stays closed; comparisons are with the held-out numbers). Nothing is changed
+  or chosen after this run; the result is reported as it comes. Code path checked first on one VAL drawing.
+- **Test result (kernel v17, run once, reported as it came; `outputs/novelty/soundness_test.md`,
+  `e2e_test_round4.csv`)**: v4c, 369 large omissions: sound 78% [74, 82] (true layout 68%), recovered 66% [61, 71],
+  fixed 47% [42, 53]; medium (369): sound 85%, recovered 63%, fixed 40%; small (371): fixed 40%; intact drawings
+  with a region flag 6.7% [5, 10]. Against held-out: sound about the same (81% / 83%), recovered 8 points lower on
+  both sizes, strict fixed +3 (large) / -11 (medium), intact flags 3.3% -> 6.7%. No setting was changed after it.

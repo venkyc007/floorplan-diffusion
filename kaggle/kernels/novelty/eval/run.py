@@ -5,6 +5,8 @@
   e2e_tuning    the end-to-end comparison on TUNING drawings (src/novelty/eval_e2e.py; a check before the real one)
   e2e_heldout   the end-to-end comparison on the HELD-OUT val drawings (the reported numbers; run once per
                 frozen configuration)
+  e2e_test      the same on the official TEST drawings (parser_test.zip, from the floorplan-stage2-data output):
+                ONE run of the final hybrid, approved by the user on 2026-11-21 (docs/decisions.md, round 4)
 CONFIGS: {tag: novelty pipeline config}; every config is evaluated (e.g. with and without the Fourier blocks).
 
 Inputs: code dataset venkatesh007c/floorplan-code; outputs of the Stage 2 kernels (data, parser v2, k2a, detv2,
@@ -20,8 +22,8 @@ import sys
 import zipfile
 
 CODE = "/tmp/code"
-STAGE = "e2e_heldout"
-CONFIGS = {"_v4c": "configs/novelty/pipeline_sound_select_c.yaml", "_v3c_r4": "configs/novelty/pipeline_structure_c.yaml", "_v4b": "configs/novelty/pipeline_sound_select.yaml"}
+STAGE = "e2e_test"
+CONFIGS = {"_v4c": "configs/novelty/pipeline_sound_select_c.yaml"}
 N_TUNE = 120
 E2E_LIMIT = None           # drawings per shard (None = all)
 EXTRA = '--arms "hybrid auto" --figure 6'   # extra arguments for the stage's script
@@ -97,9 +99,14 @@ if __name__ == "__main__":
             else:
                 split = STAGE.split("_")[1]
                 lim = f"--limit {E2E_LIMIT}" if E2E_LIMIT else ""
-                both_gpus([f"{py} -m src.novelty.eval_e2e --zip {data}/parser_val.zip --split {split} --shard {i}/2 "
+                if split == "test":                             # the test drawings; the one approved run
+                    zp, flag = find("parser_test.zip")[0], "--test-approved-by-user"
+                else:
+                    zp, flag = f"{data}/parser_val.zip", ""
+                both_gpus([f"{py} -m src.novelty.eval_e2e --zip {zp} --split {split} --shard {i}/2 {flag} "
                            f"--tag {tag} {lim} {EXTRA} > {out}/e2e_{split}{tag}_{i}.log 2>&1" for i in range(2)], env)
                 note = ("held-out: never used to choose a setting" if split == "heldout" else
+                        "TEST drawings: the one run of the frozen final hybrid" if split == "test" else
                         "TUNING drawings: used to choose settings, so optimistic")
                 run(f"{py} -m src.novelty.eval_e2e --report '{out}/e2e_{split}{tag}_*.csv' --tag _{split}{tag} "
                     f"--split-note '{note}'")
