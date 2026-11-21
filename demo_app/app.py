@@ -11,6 +11,9 @@ Stage 2 tab (real black-and-white drawings, 16 classes; the system must FIND wha
   2a. automatic: PARSE -> CHECK -> FILL -> VERIFY, every step shown (parsed map, what was flagged, filled plan,
       additions in red on the drawing);
   2b. manual: if CHECK misses something, brush the missing region yourself -> only PARSE + FILL run.
+Novelty tab (large omissions, the hybrid pipeline of src/novelty/): pick a held-out case (the evaluation's own
+  cases) or upload a drawing, choose a frozen version (v4c final / v4b / v3c, configs/novelty/app.yaml) or compare
+  all three; shows each step plus the structural problems left in the filled regions. Logic: src/novelty/app_demo.py.
 All model work happens in src/stage1/interface/ (Stage 1) and src/stage2/interface/ (Stage 2); this file only builds the
 page. Settings: configs/stage1/app.yaml (Stage 1, frozen Day 7 selection) and configs/stage2/app.yaml (Stage 2 tab; the
 pipeline's frozen settings are in configs/stage2/pipeline.yaml).
@@ -37,6 +40,7 @@ from src.stage1.interface.render import (difference_image, editor_to_labels, lay
                                   mask_layer, plan_image)
 from src.stage1.interface.report import gt_scores, rule_table, to_markdown  # noqa: E402
 from src.stage1.interface.suggest import suggest  # noqa: E402
+from src.novelty import app_demo as NV  # noqa: E402
 from src.stage2.interface import demo as S2  # noqa: E402
 from src.utils import project_path  # noqa: E402
 
@@ -483,6 +487,106 @@ def stage2_tab():
     clear_btn.click(s2_clear, st, editor)
 
 
+# ================================================================== Novelty (large omissions, hybrid versions)
+def nv_pick(evt: gr.SelectData):
+    case = GALLERY3[evt.index]
+    grey, original, _, _, _ = NV.load_case(case)
+    st = s2_state(grey, case, f"held-out val drawing {case['plan_id']}, {NV.case_caption(case)}")
+    return (st, S2.fit(cv2.cvtColor(grey, cv2.COLOR_GRAY2RGB)), s2_status(st),
+            S2.answer_image(original, grey, case["box"]) if case["box"] else None, NV.heldout_markdown(case))
+
+
+def nv_upload(image):
+    st, current, _, status, _ = s2_upload(image)
+    return st, current, status, None, ""
+
+
+def nv_run(st, version, seed):
+    if st is None:
+        raise gr.Error("Choose a drawing first (step 1).")
+    steps = NV.run(st["grey"], version, int(seed))
+    return (steps["parsed"], steps["flags"], steps["completed"], steps["problems"], steps["overlay"],
+            NV.report_markdown(steps, version, st["case"]), steps["rows"])
+
+
+def nv_compare(st, seed):
+    if st is None:
+        raise gr.Error("Choose a drawing first (step 1).")
+    results = [(v, NV.run(st["grey"], v, int(seed))) for v in NV.VERSIONS]
+    text = "\n\n---\n\n".join(NV.report_markdown(s, v, st["case"]) for v, s in results)
+    return NV.compare_image(results), text
+
+
+def novelty_tab():
+    st = gr.State(None)
+    gr.Markdown("**Novelty work: large omissions** (a whole room or a large part of the plan not drawn). Same "
+                "drawings as Stage 2, but the hybrid pipeline adds a **structure net** that marks missing walls on "
+                "the whole plan (region flags) and a new **large-hole fill** (U-Net sketch → diffusion finish). "
+                "Nothing about the omission is given. Three frozen versions: **v4c** (final: the fill is cleaned up "
+                "and repaired until it passes the three structural checks, best of 4 samples), **v4b** (stricter "
+                "clean-up: most sound, a little less accurate) and **v3c** (accuracy first, no repair). "
+                "_About 1–4 minutes per drawing on a laptop CPU; \"compare\" runs all three._")
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Markdown("### 1 · Drawing")
+            with gr.Tabs():
+                with gr.Tab("Examples (held-out val)"):
+                    if not GALLERY3:
+                        gr.Markdown("No examples yet. Make them with `python -m src.novelty.make_gallery`.")
+                        gallery = None
+                    else:
+                        gallery = gr.Gallery([(c["drawing"], NV.case_caption(c)) for c in GALLERY3], columns=3,
+                                             height=520, allow_preview=False,
+                                             label="The held-out evaluation's own cases, in its fixed order "
+                                                   "(8 large, 4 medium, 2 intact)")
+                with gr.Tab("Upload any drawing"):
+                    gr.Markdown("Any floor plan image. Erase a room or a large part first to see whether the "
+                                "system finds it and how it redraws it.")
+                    upload = gr.Image(type="numpy", sources=["upload", "clipboard"], label="Floor plan image")
+                    upload_btn = gr.Button("Use this drawing", variant="primary")
+            status = gr.Markdown("Choose a drawing to start.")
+            heldout = gr.Markdown()
+            with gr.Accordion("Show the answer (zoom: original | erased)", open=False):
+                answer = gr.Image(label="Original drawing (left) and the input (right)", type="numpy",
+                                  interactive=False)
+        with gr.Column(scale=1):
+            gr.Markdown("### 2 · Find and fill")
+            current = gr.Image(label="Input drawing", type="numpy", interactive=False)
+            version = gr.Radio(list(NV.VERSIONS), value=list(NV.VERSIONS)[0], label="Hybrid version")
+            seed = gr.Number(0, precision=0, label="Seed")
+            with gr.Row():
+                run_btn = gr.Button("Run this version", variant="primary")
+                cmp_btn = gr.Button("Compare all three versions")
+    gr.Markdown("### 3 · Every step")
+    gr.HTML(S2.legend_html())
+    gr.HTML(NV.problems_legend_html())
+    with gr.Row():
+        o_parse = gr.Image(label="PARSE: what the parser read", type="numpy", interactive=False)
+        o_flags = gr.Image(label="CHECK + STRUCTURE: flags (region flags = large omissions)", type="numpy",
+                           interactive=False)
+    with gr.Row():
+        o_fill = gr.Image(label="FILL: completed plan (changes outlined in magenta)", type="numpy", interactive=False)
+        o_probs = gr.Image(label="Structural checks: problems left in the filled regions (none = sound)",
+                           type="numpy", interactive=False)
+    o_overlay = gr.Image(label="Result on the drawing: additions in red", type="numpy", interactive=False)
+    o_report = gr.Markdown()
+    o_rows = gr.Dataframe(headers=S2.HOLE_HEADERS, label="Flags: what was flagged, by which rule or net", wrap=True)
+    with gr.Accordion("Compare all three versions (side by side)", open=False):
+        o_cmp = gr.Image(label="Completed plans with their structural problems: v4c | v4b | v3c", type="numpy",
+                         interactive=False)
+        o_cmp_text = gr.Markdown()
+    figs = NV.saved_figures()
+    if figs:
+        with gr.Accordion("Saved results from the evaluation (held-out drawings)", open=False):
+            gr.Gallery(figs, columns=2, height=600, label="Figures in outputs/novelty/assessment/")
+
+    if gallery is not None:
+        gallery.select(nv_pick, None, [st, current, status, answer, heldout])
+    upload_btn.click(nv_upload, upload, [st, current, status, answer, heldout])
+    run_btn.click(nv_run, [st, version, seed], [o_parse, o_flags, o_fill, o_probs, o_overlay, o_report, o_rows])
+    cmp_btn.click(nv_compare, [st, seed], [o_cmp, o_cmp_text])
+
+
 # ================================================================== page
 def build_ui():
     about_file = Path(__file__).with_name("ABOUT.md")
@@ -496,6 +600,8 @@ def build_ui():
                 stage1_tab()
             with gr.Tab("Stage 2 · real drawings: find + fill (CubiCasa5K)"):
                 stage2_tab()
+            with gr.Tab("Novelty · large omissions: hybrid v4c / v4b / v3c"):
+                novelty_tab()
             if about:
                 with gr.Tab("How it works · results"):
                     gr.Markdown(about)
@@ -505,15 +611,18 @@ def build_ui():
 REPAIRER = None    # set by setup(); module-level so the event handlers (and tests) can reach them
 GALLERY = None
 GALLERY2 = []
+GALLERY3 = []
 
 
 def setup():
-    """Prepare the Stage 1 repairer and both galleries (no checkpoint is read yet: models load on first use)."""
-    global REPAIRER, GALLERY, GALLERY2
+    """Prepare the Stage 1 repairer and the three galleries (no checkpoint is read yet: models load on first use)."""
+    global REPAIRER, GALLERY, GALLERY2, GALLERY3
     REPAIRER = load_models()
     GALLERY = load_gallery()
     GALLERY2 = S2.load_gallery()
-    print(f"Running on {REPAIRER.device}; checkpoints load on first use. Stage 2 examples: {len(GALLERY2)}")
+    GALLERY3 = NV.load_gallery()
+    print(f"Running on {REPAIRER.device}; checkpoints load on first use. Stage 2 examples: {len(GALLERY2)}, "
+          f"novelty examples: {len(GALLERY3)}")
 
 
 if __name__ == "__main__":

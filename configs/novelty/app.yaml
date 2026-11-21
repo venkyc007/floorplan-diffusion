@@ -1,0 +1,19 @@
+# Settings of the "Novelty · large omissions" tab of the Gradio app (demo_app/app.py; logic in src/novelty/app_demo.py).
+# The hybrid versions' own settings are their pipeline configs below and are FROZEN (chosen on the tuning drawings,
+# docs/decisions.md). Never tune them on what the app shows.
+
+versions:                   # label shown in the app -> frozen pipeline config (all three use the same checkpoints)
+  "v4c · final (structurally sound first)": configs/novelty/pipeline_sound_select_c.yaml
+  "v4b · most sound (strictest clean-up)": configs/novelty/pipeline_sound_select.yaml
+  "v3c · accuracy first (round 2 final)": configs/novelty/pipeline_structure_c.yaml
+
+# Example drawings: HELD-OUT val drawings (never the test split), the SAME cases as the held-out evaluation
+# (src/novelty/eval_e2e.py: same drawing order, same omission generator, same seed per drawing), taken in that
+# order with no picking by hand. Built once by:  python -m src.novelty.make_gallery
+val_zip: outputs/kaggle/stage2_data_v3/stage2_data/parser_val.zip
+gallery_dir: data/app/novelty_gallery
+gallery_plan:               # [omission size, how many drawings]
+  - ["large", 8]
+  - ["medium", 4]
+  - ["intact", 2]           # nothing erased: shows false alarms honestly
+heldout_results: outputs/novelty/e2e_heldout_round4.csv   # what each version did on these cases in the evaluation

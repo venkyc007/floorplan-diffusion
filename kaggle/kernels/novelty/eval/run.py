@@ -6,7 +6,8 @@
   e2e_heldout   the end-to-end comparison on the HELD-OUT val drawings (the reported numbers; run once per
                 frozen configuration)
   e2e_test      the same on the official TEST drawings (parser_test.zip, from the floorplan-stage2-data output):
-                ONE run of the final hybrid, approved by the user on 2026-11-21 (docs/decisions.md, round 4)
+                ONE run of the final hybrid v4c (kernel v17), then ONE run of v3c, v4b and the shipped pipeline for
+                comparison (kernel v18), both approved by the user on 2026-11-21 (docs/decisions.md, round 4)
 CONFIGS: {tag: novelty pipeline config}; every config is evaluated (e.g. with and without the Fourier blocks).
 
 Inputs: code dataset venkatesh007c/floorplan-code; outputs of the Stage 2 kernels (data, parser v2, k2a, detv2,
@@ -23,10 +24,11 @@ import zipfile
 
 CODE = "/tmp/code"
 STAGE = "e2e_test"
-CONFIGS = {"_v4c": "configs/novelty/pipeline_sound_select_c.yaml"}
+CONFIGS = {"_v3c": "configs/novelty/pipeline_structure_c.yaml", "_v4b": "configs/novelty/pipeline_sound_select.yaml"}
 N_TUNE = 120
 E2E_LIMIT = None           # drawings per shard (None = all)
 EXTRA = '--arms "hybrid auto" --figure 6'   # extra arguments for the stage's script
+EXTRA_BY_TAG = {"_v3c": '--arms "shipped auto,hybrid auto" --figure 6'}   # per-config override of EXTRA
 SWEEP = False               # tune: also run the locator and gate sweeps
 
 
@@ -87,6 +89,7 @@ if __name__ == "__main__":
     py = sys.executable
     try:
         for tag, cfg in configs.items():
+            extra = EXTRA_BY_TAG.get(tag, EXTRA)
             env = {"NOVELTY_CONFIG": f"{CODE}/{cfg}"} if cfg else {}
             if STAGE == "tune":
                 sets = " ".join(sorted(find("large9_tune_*.zip")) or sorted(find("large_tune_*.zip")))
@@ -104,9 +107,9 @@ if __name__ == "__main__":
                 else:
                     zp, flag = f"{data}/parser_val.zip", ""
                 both_gpus([f"{py} -m src.novelty.eval_e2e --zip {zp} --split {split} --shard {i}/2 {flag} "
-                           f"--tag {tag} {lim} {EXTRA} > {out}/e2e_{split}{tag}_{i}.log 2>&1" for i in range(2)], env)
+                           f"--tag {tag} {lim} {extra} > {out}/e2e_{split}{tag}_{i}.log 2>&1" for i in range(2)], env)
                 note = ("held-out: never used to choose a setting" if split == "heldout" else
-                        "TEST drawings: the one run of the frozen final hybrid" if split == "test" else
+                        "TEST drawings: one run per frozen version, nothing chosen on it" if split == "test" else
                         "TUNING drawings: used to choose settings, so optimistic")
                 run(f"{py} -m src.novelty.eval_e2e --report '{out}/e2e_{split}{tag}_*.csv' --tag _{split}{tag} "
                     f"--split-note '{note}'")

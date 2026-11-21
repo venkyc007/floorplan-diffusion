@@ -1585,3 +1585,19 @@ connectivity, opening placement and room closure.
   fixed 47% [42, 53]; medium (369): sound 85%, recovered 63%, fixed 40%; small (371): fixed 40%; intact drawings
   with a region flag 6.7% [5, 10]. Against held-out: sound about the same (81% / 83%), recovered 8 points lower on
   both sizes, strict fixed +3 (large) / -11 (medium), intact flags 3.3% -> 6.7%. No setting was changed after it.
+- **Test split, one comparison run of v3c, v4b and the shipped pipeline (user, 2026-11-21: "you run those tests
+  as well", after the v4c test result)**: kernel v18, same `--split test`, same cases (seeded per drawing), arm
+  "hybrid auto" for v3c (`pipeline_structure_c.yaml`) and v4b (`pipeline_sound_select.yaml`), arm "shipped auto"
+  (the frozen Stage 2 pipeline) in the v3c job; each as frozen, run once. Purpose: test-split comparison rows for
+  the report. v4c stays the final hybrid whatever these show (chosen on tuning, before any test run); no setting is
+  changed after this run and the test split is not used again.
+- **App: a novelty tab (user, 2026-11-21: "add models v3c and v4b to the interface, along with images in the
+  gallery")**: `src/novelty/app_demo.py`, `configs/novelty/app.yaml`, tab in `demo_app/app.py`. Versions offered:
+  v4c (final), v4b (asked for) and v3c (the most accurate on held-out: recovered 80%, fixed 55%). All three use the
+  same checkpoints, so one set of models is loaded and the version only switches the config (tested). The gallery is
+  the held-out evaluation's own cases (same order, generator and seeds; first 8 large, 4 medium, 2 intact, no
+  picking), so each case can show what every version did on it in the evaluation; held-out, never test. The
+  structural problems are drawn as rings in colours the 16-class palette does not use (filled marks looked like
+  doors and fixtures). "Sound" in the app is judged inside the flagged regions (no truth needed); the evaluation's
+  "sound" uses the true omission area, so the two can differ on a case. Live runs use the app's fast settings and
+  seed, so they can differ a little from the evaluation.

@@ -6,11 +6,16 @@ This folder holds the project's web app, built with Gradio. It runs both stages 
 - **Stage 2**: pick or upload a real floor plan drawing. The system finds what is missing and draws it in
   (PARSE → CHECK → FILL → VERIFY), and every step is shown. There is also a manual mode where you mark the region
   yourself.
+- **Novelty · large omissions**: the hybrid pipeline of the novelty work (`src/novelty/`) on drawings with a whole
+  room or a large part not drawn. Choose one of three frozen versions (v4c final, v4b, v3c) or compare all three;
+  the structural problems left in the filled regions are drawn as coloured rings.
 - **How it works · results**: the method and the test numbers (`ABOUT.md`).
 
 | file | what it is |
 |---|---|
 | `app.py` | the page layout and the button handlers. All the model code is in `src/stage1/interface/` and `src/stage2/interface/` |
+| `src/novelty/app_demo.py` | the novelty tab's logic (run a version, draw the structural problems, score gallery cases) |
+| `configs/novelty/app.yaml` | the novelty tab's settings: the three versions and the gallery plan |
 | `ABOUT.md` | the text of the "How it works · results" tab |
 
 ## Why it is not hosted online (Hugging Face Spaces)
@@ -111,6 +116,15 @@ Each time after that, only `conda activate floorplan` and `python demo_app/app.p
   - Open **Show the answer** to see the erased spot.
   - For a missed part, use **2b manual**: brush the missing region, then press **Fill the marked region(s)**.
   - You can also upload any black-and-white floor plan image.
+
+### Novelty tab (large omissions)
+
+It needs two more model folders, which are **not** in the `floorplan-stage2-final` dataset (about 290 MB):
+`outputs/kaggle/novelty_structure2/runs/struct4_s0/checkpoints/best.pt` and
+`outputs/kaggle/novelty_fill_edit/runs/{fill_unet_edit,fill_diffusion_edit}/checkpoints/best.pt`. Its example
+gallery is built once from the val data with `python -m src.novelty.make_gallery` (-> `data/app/novelty_gallery/`;
+these are the held-out evaluation's own cases, and the panel under the gallery shows what each version did on that
+case in the evaluation). A run takes about 45 s (v3c) to 90 s (v4c, v4b) on a laptop CPU; "compare" runs all three.
 
 ## If something goes wrong
 

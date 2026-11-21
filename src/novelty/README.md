@@ -27,6 +27,8 @@ optional arguments that are off by default.
 | `completion_by_size.py` | The completion rate broken down by omission size, with the definition of a completed omission (review request); re-reads saved per-case results only. | `outputs/novelty/completion_by_size.md`. |
 | `assessment_figures.py` | Pictures for the review: (1) corrupted plan, reconstruction and violation maps together for the first K large cases; (2) one plan with each use of the constraints switched on in turn; (3) several reconstructions of one omission, each with its checks (plausible alternatives). | `outputs/novelty/assessment/`. A viewer only. |
 | `eval_e2e.py` | Drawings, end to end: shipped vs hybrid on small / medium / large omissions and intact drawings; per case also the validity counts, the three structural checks (plan, parser's map, oracle, truth) and the rule check rule by rule. | The reported numbers (held-out val drawings). |
+| `app_demo.py` | The Gradio app's novelty tab: runs one frozen version (v4c / v4b / v3c, `configs/novelty/app.yaml`) on a drawing, draws the structural problems left in the filled regions, scores gallery cases with `eval_e2e.row_of`, side-by-side comparison. | `demo_app/app.py`. A viewer only. |
+| `make_gallery.py` | Builds the novelty tab's example gallery: the held-out evaluation's own cases (same order, generator and seeds), with what each version did on them. | `data/app/novelty_gallery/` (git-ignored). |
 
 Order of a full run: `build_set` (Kaggle) -> `locate` + `train_fill` + `structure` (Kaggle) -> `eval_maps` and
 `eval_e2e --split tuning` (choose settings on tuning drawings) -> freeze the pipeline config ->
