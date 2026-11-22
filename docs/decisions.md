@@ -1612,7 +1612,11 @@ connectivity, opening placement and room closure.
   (`outputs/novelty/assessment/large_heldout_*.png`) stays the honest picture of typical behaviour. Result: the first three
   qualifying cases, high_quality-14017, high_quality-3574, high_quality_architectural-8786 (all whole rooms, 10.7%,
   16.5%, 10.8% of the building), were full successes on the laptop re-run too (IoU 0.36 / 0.47 / 0.45); none skipped.
-  Full-success rate in the caption: held-out 56 / 151 (37%), test 111 / 369 (30%).
+  Full-success rate in the caption: held-out 56 / 151 (37%), test 111 / 369 (30%). Two more sets on the user's request
+  (2026-11-22, "2-3 sets of 3 successes, I'll pick"): the next qualifying cases in the same order. Set 2:
+  high_quality-9770, high_quality_architectural-7777, high_quality-14252; set 3: high_quality-9619,
+  high_quality-5080, high_quality_architectural-2148. Skipped: high_quality-14094 (full success on Kaggle, not
+  sound on the laptop re-run). Files `qualitative_successes_2.png`, `_3.png`; the user picks one for the poster.
 - **App: a novelty tab (user, 2026-11-21: "add models v3c and v4b to the interface, along with images in the
   gallery")**: `src/novelty/app_demo.py`, `configs/novelty/app.yaml`, tab in `demo_app/app.py`. Versions offered:
   v4c (final), v4b (asked for) and v3c (the most accurate on held-out: recovered 80%, fixed 55%). All three use the
