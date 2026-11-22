@@ -1602,6 +1602,17 @@ connectivity, opening placement and room closure.
   make the test number a selected one). Reported openly: on test v4b is again about 10 points below v3c in recovered
   (68 vs 78, at the guard's limit), but v4c's recovered advantage over v4b (tuning, held-out) did not carry over, so
   on test v4c gives up some soundness for no accuracy. The test split is not used again.
+- **Poster figure of three successes (user, 2026-11-22: "a similar sort of 3, but all three good successes")**:
+  `src/novelty/success_figure.py` -> `outputs/novelty/poster/qualitative_successes.png`. Rule fixed before any
+  picture was made: held-out large omissions in evaluation order, the first three that v4c got fully right in the
+  held-out evaluation (found + recovered + fixed + sound, `e2e_heldout_round4.csv`); each re-run on the laptop and
+  scored with `eval_e2e.row_of`; a case whose re-run is not a full success is skipped and named. Held-out, never
+  test (no new test runs). Because these are successes by construction, the caption gives the full-success rate
+  (held-out 56 of 151 = 37%; test from `e2e_test_all_arms.csv`). The first-three-as-they-come figure
+  (`outputs/novelty/assessment/large_heldout_*.png`) stays the honest picture of typical behaviour. Result: the first three
+  qualifying cases, high_quality-14017, high_quality-3574, high_quality_architectural-8786 (all whole rooms, 10.7%,
+  16.5%, 10.8% of the building), were full successes on the laptop re-run too (IoU 0.36 / 0.47 / 0.45); none skipped.
+  Full-success rate in the caption: held-out 56 / 151 (37%), test 111 / 369 (30%).
 - **App: a novelty tab (user, 2026-11-21: "add models v3c and v4b to the interface, along with images in the
   gallery")**: `src/novelty/app_demo.py`, `configs/novelty/app.yaml`, tab in `demo_app/app.py`. Versions offered:
   v4c (final), v4b (asked for) and v3c (the most accurate on held-out: recovered 80%, fixed 55%). All three use the
